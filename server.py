@@ -3323,6 +3323,194 @@ def get_channels(
     return result
 
 
+@app.get("/api/channels/search")
+def search_channels(
+    request: Request,
+    q: str = "",
+):
+    user_id = get_auth_user(request)
+    q = q.strip()
+
+    if not q:
+        return []
+
+    connection = db()
+
+    rows = connection.execute(
+        """
+        SELECT
+            c.id,
+            c.name,
+            c.username,
+            c.description,
+            c.owner_id,
+            c.created_at,
+            CASE WHEN s.user_id IS NOT NULL THEN 1 ELSE 0 END AS joined
+        FROM channels c
+        LEFT JOIN channel_subscribers s
+            ON s.channel_id = c.id
+           AND s.user_id = ?
+        WHERE
+            c.name LIKE ?
+            OR c.username LIKE ?
+            OR c.description LIKE ?
+        ORDER BY c.name
+        LIMIT 30
+        """,
+        (
+            user_id,
+            "%" + q + "%",
+            "%" + q + "%",
+            "%" + q + "%",
+        ),
+    ).fetchall()
+
+    connection.close()
+
+    result = []
+    for row in rows:
+        item = dict(row)
+        item["is_owner"] = item["owner_id"] == user_id
+        item["joined"] = bool(item["joined"])
+        result.append(item)
+
+    return result
+
+
+@app.post("/api/channels/{channel_id}/join")
+def join_channel(
+    channel_id: int,
+    request: Request,
+):
+    user_id = get_auth_user(request)
+
+    connection = db()
+
+    channel = connection.execute(
+        "SELECT id FROM channels WHERE id = ?",
+        (channel_id,),
+    ).fetchone()
+
+    if not channel:
+        connection.close()
+        raise HTTPException(404, "Канал не найден")
+
+    existing = connection.execute(
+        """
+        SELECT 1 FROM channel_subscribers
+        WHERE channel_id = ? AND user_id = ?
+        """,
+        (channel_id, user_id),
+    ).fetchone()
+
+    if existing:
+        connection.close()
+        return {"ok": True, "joined": True}
+
+    connection.execute(
+        """
+        INSERT INTO channel_subscribers
+        (channel_id, user_id, created_at)
+        VALUES (?, ?, ?)
+        """,
+        (channel_id, user_id, now()),
+    )
+    connection.commit()
+    connection.close()
+
+    return {"ok": True, "joined": True}
+
+
+@app.get("/api/search")
+def global_search(
+    request: Request,
+    q: str = "",
+):
+    """Unified search: users, channels, groups, communities."""
+    user_id = get_auth_user(request)
+    q = q.strip()
+
+    if not q:
+        return {
+            "users": [],
+            "channels": [],
+            "groups": [],
+            "communities": [],
+        }
+
+    like = "%" + q + "%"
+    connection = db()
+
+    users = connection.execute(
+        """
+        SELECT id, username, display_name, avatar_url, last_seen
+        FROM users
+        WHERE (username LIKE ? OR display_name LIKE ?)
+          AND id != ?
+        ORDER BY username
+        LIMIT 20
+        """,
+        (like, like, user_id),
+    ).fetchall()
+
+    channels = connection.execute(
+        """
+        SELECT
+            c.id, c.name, c.username, c.description, c.owner_id,
+            CASE WHEN s.user_id IS NOT NULL THEN 1 ELSE 0 END AS joined
+        FROM channels c
+        LEFT JOIN channel_subscribers s
+            ON s.channel_id = c.id AND s.user_id = ?
+        WHERE c.name LIKE ? OR c.username LIKE ? OR c.description LIKE ?
+        ORDER BY c.name
+        LIMIT 20
+        """,
+        (user_id, like, like, like),
+    ).fetchall()
+
+    groups = connection.execute(
+        """
+        SELECT g.id, g.name, g.description, g.owner_id
+        FROM groups g
+        JOIN group_members gm ON gm.group_id = g.id
+        WHERE gm.user_id = ?
+          AND (g.name LIKE ? OR g.description LIKE ?)
+        ORDER BY g.name
+        LIMIT 20
+        """,
+        (user_id, like, like),
+    ).fetchall()
+
+    communities = connection.execute(
+        """
+        SELECT c.id, c.name, c.description, c.owner_id
+        FROM communities c
+        JOIN community_members m ON m.community_id = c.id
+        WHERE m.user_id = ?
+          AND (c.name LIKE ? OR c.description LIKE ?)
+        ORDER BY c.name
+        LIMIT 20
+        """,
+        (user_id, like, like),
+    ).fetchall()
+
+    connection.close()
+
+    return {
+        "users": [dict(u) for u in users],
+        "channels": [
+            {
+                **dict(c),
+                "is_owner": c["owner_id"] == user_id,
+                "joined": bool(c["joined"]),
+            }
+            for c in channels
+        ],
+        "groups": [dict(g) for g in groups],
+        "communities": [dict(c) for c in communities],
+    }
+
+
 # =========================================================
 # COMMUNITIES (сообщества: все пишут, внутри чаты)
 # =========================================================
