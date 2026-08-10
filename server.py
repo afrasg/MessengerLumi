@@ -207,6 +207,24 @@ def init_db():
             created_at TEXT NOT NULL,
             UNIQUE(channel_id, user_id)
         );
+
+        CREATE TABLE IF NOT EXISTS group_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_id INTEGER NOT NULL,
+            sender_id INTEGER NOT NULL,
+            text TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            deleted INTEGER DEFAULT 0
+        );
+
+        CREATE TABLE IF NOT EXISTS channel_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            channel_id INTEGER NOT NULL,
+            sender_id INTEGER NOT NULL,
+            text TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            deleted INTEGER DEFAULT 0
+        );
         """
     )
 
@@ -409,6 +427,12 @@ def get_auth_user(
         SESSION_COOKIE
     )
 
+    # Also accept Authorization: Bearer <token> (frontend localStorage)
+    if not token:
+        auth = request.headers.get("Authorization") or ""
+        if auth.lower().startswith("bearer "):
+            token = auth[7:].strip()
+
     if not token:
         raise HTTPException(
             401,
@@ -594,6 +618,18 @@ class ChannelRequest(BaseModel):
     description: str = ""
 
 
+class InviteRequest(BaseModel):
+    username: str
+
+
+class GroupMessageRequest(BaseModel):
+    text: str
+
+
+class ChannelMessageRequest(BaseModel):
+    text: str
+
+
 class DeleteAccountRequest(BaseModel):
     password: str
 
@@ -697,6 +733,7 @@ def register(
 
     return {
         "ok": True,
+        "token": token,
     }
 
 
@@ -766,6 +803,7 @@ def login(
 
     return {
         "ok": True,
+        "token": token,
     }
 
 
@@ -1385,6 +1423,10 @@ def search_users(
     user_id = get_auth_user(request)
 
     q = q.strip()
+
+    # Users appear only via search — empty query returns nothing
+    if not q:
+        return []
 
     connection = db()
 
@@ -2012,7 +2054,7 @@ def feed(request: Request):
                 SELECT COUNT(*)
                 FROM comments
                 WHERE post_id = p.id
-            ) AS comments
+            ) AS comments_count
         FROM posts p
         JOIN users u
             ON u.id = p.author_id
@@ -2059,7 +2101,7 @@ def get_post(
                 SELECT COUNT(*)
                 FROM comments
                 WHERE post_id = p.id
-            ) AS comments
+            ) AS comments_count
         FROM posts p
         JOIN users u
             ON u.id = p.author_id
@@ -2760,6 +2802,348 @@ def get_groups(
     ]
 
 
+@app.post("/api/groups/{group_id}/invite")
+def invite_to_group(
+    group_id: int,
+    data: InviteRequest,
+    request: Request,
+):
+    user_id = get_auth_user(request)
+    username = data.username.strip().lower()
+
+    if not username:
+        raise HTTPException(400, "Укажите username")
+
+    connection = db()
+
+    group = connection.execute(
+        """
+        SELECT *
+        FROM groups
+        WHERE id = ?
+        """,
+        (group_id,),
+    ).fetchone()
+
+    if not group:
+        connection.close()
+        raise HTTPException(404, "Группа не найдена")
+
+    # Only members can invite (or only owner — keep simple: any member)
+    member = connection.execute(
+        """
+        SELECT 1
+        FROM group_members
+        WHERE group_id = ?
+          AND user_id = ?
+        """,
+        (group_id, user_id),
+    ).fetchone()
+
+    if not member:
+        connection.close()
+        raise HTTPException(403, "Вы не состоите в этой группе")
+
+    target = connection.execute(
+        """
+        SELECT id
+        FROM users
+        WHERE username = ?
+        """,
+        (username,),
+    ).fetchone()
+
+    if not target:
+        connection.close()
+        raise HTTPException(404, "Пользователь не найден")
+
+    if target["id"] == user_id:
+        connection.close()
+        raise HTTPException(400, "Нельзя пригласить себя")
+
+    existing = connection.execute(
+        """
+        SELECT 1
+        FROM group_members
+        WHERE group_id = ?
+          AND user_id = ?
+        """,
+        (group_id, target["id"]),
+    ).fetchone()
+
+    if existing:
+        connection.close()
+        raise HTTPException(400, "Пользователь уже в группе")
+
+    connection.execute(
+        """
+        INSERT INTO group_members
+        (group_id, user_id, joined_at)
+        VALUES (?, ?, ?)
+        """,
+        (group_id, target["id"], now()),
+    )
+
+    connection.commit()
+    connection.close()
+
+    return {"ok": True}
+
+
+@app.get("/api/groups/{group_id}/messages")
+def get_group_messages(
+    group_id: int,
+    request: Request,
+):
+    user_id = get_auth_user(request)
+
+    connection = db()
+
+    member = connection.execute(
+        """
+        SELECT 1
+        FROM group_members
+        WHERE group_id = ?
+          AND user_id = ?
+        """,
+        (group_id, user_id),
+    ).fetchone()
+
+    if not member:
+        connection.close()
+        raise HTTPException(403, "Вы не состоите в этой группе")
+
+    messages = connection.execute(
+        """
+        SELECT
+            m.id,
+            m.group_id,
+            m.sender_id,
+            CASE WHEN m.deleted = 1 THEN '' ELSE m.text END AS text,
+            m.created_at,
+            m.deleted,
+            u.username,
+            u.display_name AS sender_name
+        FROM group_messages m
+        JOIN users u ON u.id = m.sender_id
+        WHERE m.group_id = ?
+        ORDER BY m.id ASC
+        """,
+        (group_id,),
+    ).fetchall()
+
+    connection.close()
+
+    return [dict(m) for m in messages]
+
+
+@app.post("/api/groups/{group_id}/messages")
+async def send_group_message(
+    group_id: int,
+    data: GroupMessageRequest,
+    request: Request,
+):
+    user_id = get_auth_user(request)
+    text = data.text.strip()
+
+    if not text:
+        raise HTTPException(400, "Пустое сообщение")
+
+    if len(text) > 5000:
+        raise HTTPException(400, "Сообщение слишком длинное")
+
+    connection = db()
+
+    member = connection.execute(
+        """
+        SELECT 1
+        FROM group_members
+        WHERE group_id = ?
+          AND user_id = ?
+        """,
+        (group_id, user_id),
+    ).fetchone()
+
+    if not member:
+        connection.close()
+        raise HTTPException(403, "Вы не состоите в этой группе")
+
+    created = now()
+
+    cursor = connection.execute(
+        """
+        INSERT INTO group_messages
+        (group_id, sender_id, text, created_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (group_id, user_id, text, created),
+    )
+
+    message_id = cursor.lastrowid
+
+    # Notify all members via WS
+    members = connection.execute(
+        """
+        SELECT user_id
+        FROM group_members
+        WHERE group_id = ?
+        """,
+        (group_id,),
+    ).fetchall()
+
+    connection.commit()
+    connection.close()
+
+    message = {
+        "id": message_id,
+        "group_id": group_id,
+        "sender_id": user_id,
+        "text": text,
+        "created_at": created,
+        "deleted": 0,
+    }
+
+    payload = {
+        "type": "group_message",
+        "message": message,
+    }
+
+    for row in members:
+        await send_ws(row["user_id"], payload)
+
+    return {"ok": True, "message": message}
+
+
+@app.get("/api/channels/{channel_id}/messages")
+def get_channel_messages(
+    channel_id: int,
+    request: Request,
+):
+    user_id = get_auth_user(request)
+
+    connection = db()
+
+    sub = connection.execute(
+        """
+        SELECT 1
+        FROM channel_subscribers
+        WHERE channel_id = ?
+          AND user_id = ?
+        """,
+        (channel_id, user_id),
+    ).fetchone()
+
+    if not sub:
+        connection.close()
+        raise HTTPException(403, "Вы не подписаны на канал")
+
+    messages = connection.execute(
+        """
+        SELECT
+            m.id,
+            m.channel_id,
+            m.sender_id,
+            CASE WHEN m.deleted = 1 THEN '' ELSE m.text END AS text,
+            m.created_at,
+            m.deleted,
+            u.username,
+            u.display_name AS sender_name
+        FROM channel_messages m
+        JOIN users u ON u.id = m.sender_id
+        WHERE m.channel_id = ?
+        ORDER BY m.id ASC
+        """,
+        (channel_id,),
+    ).fetchall()
+
+    connection.close()
+
+    return [dict(m) for m in messages]
+
+
+@app.post("/api/channels/{channel_id}/messages")
+async def send_channel_message(
+    channel_id: int,
+    data: ChannelMessageRequest,
+    request: Request,
+):
+    user_id = get_auth_user(request)
+    text = data.text.strip()
+
+    if not text:
+        raise HTTPException(400, "Пустое сообщение")
+
+    if len(text) > 5000:
+        raise HTTPException(400, "Сообщение слишком длинное")
+
+    connection = db()
+
+    channel = connection.execute(
+        """
+        SELECT *
+        FROM channels
+        WHERE id = ?
+        """,
+        (channel_id,),
+    ).fetchone()
+
+    if not channel:
+        connection.close()
+        raise HTTPException(404, "Канал не найден")
+
+    # Only the owner (creator) can post in the channel
+    if channel["owner_id"] != user_id:
+        connection.close()
+        raise HTTPException(
+            403,
+            "В канал может писать только создатель",
+        )
+
+    created = now()
+
+    cursor = connection.execute(
+        """
+        INSERT INTO channel_messages
+        (channel_id, sender_id, text, created_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (channel_id, user_id, text, created),
+    )
+
+    message_id = cursor.lastrowid
+
+    subscribers = connection.execute(
+        """
+        SELECT user_id
+        FROM channel_subscribers
+        WHERE channel_id = ?
+        """,
+        (channel_id,),
+    ).fetchall()
+
+    connection.commit()
+    connection.close()
+
+    message = {
+        "id": message_id,
+        "channel_id": channel_id,
+        "sender_id": user_id,
+        "text": text,
+        "created_at": created,
+        "deleted": 0,
+    }
+
+    payload = {
+        "type": "channel_message",
+        "message": message,
+    }
+
+    for row in subscribers:
+        await send_ws(row["user_id"], payload)
+
+    return {"ok": True, "message": message}
+
+
 # =========================================================
 # CHANNELS
 # =========================================================
@@ -2876,10 +3260,13 @@ def get_channels(
 
     connection.close()
 
-    return [
-        dict(channel)
-        for channel in channels
-    ]
+    result = []
+    for ch in channels:
+        item = dict(ch)
+        item["is_owner"] = item["owner_id"] == user_id
+        result.append(item)
+
+    return result
 
 
 # =========================================================
