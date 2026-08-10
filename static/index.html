@@ -1090,6 +1090,26 @@ select:focus {
 
                     </div>
 
+
+                    <div class="card">
+
+                        <h3>🌐 Сообщества</h3>
+
+                        <p style="color:#8d929e;font-size:13px;margin:6px 0 10px">
+                            Как каналы, но писать могут все. Внутри — отдельные чаты.
+                        </p>
+
+                        <button
+                            class="primary"
+                            onclick="openCreateCommunity()"
+                        >
+                            ➕ Создать сообщество
+                        </button>
+
+                        <div id="communities"></div>
+
+                    </div>
+
                 </div>
 
             </section>
@@ -1162,6 +1182,10 @@ let selectedGroupId = null;
 let selectedChannelId = null;
 
 let selectedChannelIsOwner = false;
+
+let selectedCommunityId = null;
+
+let selectedCommunityChatId = null;
 
 let selectedMessageId = null;
 
@@ -1435,9 +1459,10 @@ function searchUsers() {
 
 
 async function refreshSidebarLists() {
-    // Перерисовать только группы и каналы (настройки + сайдбар)
+    // Перерисовать группы, каналы и сообщества
     await loadGroups();
     await loadChannels();
+    await loadCommunities();
 }
 
 
@@ -1546,6 +1571,8 @@ async function openChat(
     selectedGroupId = null;
     selectedChannelId = null;
     selectedChannelIsOwner = false;
+    selectedCommunityId = null;
+    selectedCommunityChatId = null;
     setComposerEnabled(true);
 
     showOnly(
@@ -2794,6 +2821,8 @@ async function showSettings() {
     await loadGroups();
 
     await loadChannels();
+
+    await loadCommunities();
 }
 
 
@@ -3792,6 +3821,8 @@ function connectWebSocket() {
                     await loadGroupMessages(selectedGroupId);
                 } else if (selectedChannelId) {
                     await loadChannelMessages(selectedChannelId);
+                } else if (selectedCommunityChatId) {
+                    await loadCommunityChatMessages(selectedCommunityChatId);
                 }
             };
 
@@ -4217,6 +4248,8 @@ async function openGroupChat(groupId, groupName) {
     selectedUserId = null;
     selectedChannelId = null;
     selectedChannelIsOwner = false;
+    selectedCommunityId = null;
+    selectedCommunityChatId = null;
     setComposerEnabled(true);
 
     showOnly("chatView");
@@ -4233,6 +4266,8 @@ async function openChannelChat(channelId, channelName, isOwner) {
     selectedChannelIsOwner = !!isOwner;
     selectedUserId = null;
     selectedGroupId = null;
+    selectedCommunityId = null;
+    selectedCommunityChatId = null;
 
     // Only creator can write in channel
     setComposerEnabled(
@@ -4327,7 +4362,7 @@ function renderGroupMessages(messages) {
 }
 
 
-// Override sendMessage to support groups & channels
+// Override sendMessage to support groups, channels & community chats
 const originalSendMessage = sendMessage;
 sendMessage = async function () {
     const input = document.getElementById("messageInput");
@@ -4375,6 +4410,27 @@ sendMessage = async function () {
         return;
     }
 
+    if (selectedCommunityChatId) {
+        const response = await request(
+            "/api/community-chats/" + selectedCommunityChatId + "/messages",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text })
+            }
+        );
+
+        const data = await safeJson(response);
+        if (!response.ok) {
+            alert(data.detail || "Не удалось отправить");
+            return;
+        }
+
+        input.value = "";
+        await loadCommunityChatMessages(selectedCommunityChatId);
+        return;
+    }
+
     // private chat
     return originalSendMessage();
 };
@@ -4415,6 +4471,281 @@ async function inviteToGroup(groupId) {
     }
 
     alert("Пользователь добавлен в группу!");
+    closeModal();
+}
+
+
+/* =====================================================
+   COMMUNITIES (сообщества)
+===================================================== */
+
+function openCreateCommunity() {
+    openModal(`
+        <h2>🌐 Новое сообщество</h2>
+        <input id="newCommunityName" placeholder="Название">
+        <textarea id="newCommunityDescription" placeholder="Описание"></textarea>
+        <button class="primary" style="margin-top:10px;width:100%" onclick="createCommunity()">
+            Создать
+        </button>
+    `);
+}
+
+
+async function createCommunity() {
+    const name = document.getElementById("newCommunityName")?.value.trim();
+    const description = document.getElementById("newCommunityDescription")?.value.trim() || "";
+
+    if (!name) {
+        alert("Введите название");
+        return;
+    }
+
+    const response = await request("/api/communities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, description })
+    });
+
+    const data = await safeJson(response);
+    if (!response.ok) {
+        alert(data.detail || "Ошибка");
+        return;
+    }
+
+    closeModal();
+    await loadCommunities();
+}
+
+
+async function loadCommunities() {
+    const response = await request("/api/communities");
+    if (!response.ok) return;
+
+    const communities = await safeJson(response);
+    const container = document.getElementById("communities");
+
+    if (container) {
+        container.innerHTML = "";
+
+        communities.forEach(c => {
+            const div = document.createElement("div");
+            div.className = "comment";
+            div.innerHTML =
+                "<b>🌐 " + escapeHtml(c.name) + "</b>" +
+                "<div>" + escapeHtml(c.description || "") + "</div>" +
+                "<div style='margin-top:8px;display:flex;gap:6px;flex-wrap:wrap'>" +
+                "<button class='primary' style='padding:6px 10px;font-size:13px' onclick='openCommunity(" +
+                c.id + ", \"" + escapeHtml(c.name).replace(/"/g, "&quot;") + "\")'>Открыть</button>" +
+                "<button class='secondary' style='padding:6px 10px;font-size:13px' onclick='openInviteToCommunity(" +
+                c.id + ", \"" + escapeHtml(c.name).replace(/"/g, "&quot;") + "\")'>➕ Пригласить</button>" +
+                "</div>";
+            container.appendChild(div);
+        });
+    }
+
+    loadCommunitiesInSidebar(communities);
+}
+
+
+function loadCommunitiesInSidebar(communities) {
+    document.querySelectorAll(".community-item").forEach(el => el.remove());
+
+    const container = document.getElementById("users");
+    if (!container || !communities || !communities.length) return;
+
+    const header = document.createElement("div");
+    header.className = "community-item";
+    header.style.cssText = "padding:8px 10px;color:#8d929e;font-size:12px;font-weight:600;margin-top:10px";
+    header.textContent = "🌐 СООБЩЕСТВА";
+    container.appendChild(header);
+
+    communities.forEach(c => {
+        const div = document.createElement("div");
+        div.className = "user-item community-item";
+        div.innerHTML = `
+            <div class="user-avatar" style="display:flex;align-items:center;justify-content:center;font-size:18px;background:#30333b">🌐</div>
+            <div class="user-info">
+                <strong>${escapeHtml(c.name)}</strong>
+                <small>сообщество</small>
+            </div>
+        `;
+        div.onclick = () => openCommunity(c.id, c.name);
+        container.appendChild(div);
+    });
+}
+
+
+async function openCommunity(communityId, communityName) {
+    selectedCommunityId = Number(communityId);
+    selectedCommunityChatId = null;
+    selectedUserId = null;
+    selectedGroupId = null;
+    selectedChannelId = null;
+    selectedChannelIsOwner = false;
+    setComposerEnabled(false, "Выберите чат сообщества");
+
+    showOnly("chatView");
+
+    document.getElementById("pageTitle").textContent = "🌐 " + communityName;
+    document.getElementById("chatHeader").textContent = "🌐 " + communityName;
+
+    const response = await request("/api/communities/" + communityId + "/chats");
+    const box = document.getElementById("messages");
+
+    if (!response.ok) {
+        box.innerHTML = "<div style='color:#9095a3;padding:20px;text-align:center'>Не удалось загрузить чаты</div>";
+        return;
+    }
+
+    const chats = await safeJson(response);
+
+    box.innerHTML = "";
+
+    const head = document.createElement("div");
+    head.style.cssText = "padding:8px 0 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap";
+    head.innerHTML =
+        "<div style='font-weight:600'>Чаты сообщества</div>" +
+        "<button class='primary' style='padding:7px 12px;font-size:13px' onclick='openCreateCommunityChat(" +
+        communityId + ")'>➕ Новый чат</button>";
+    box.appendChild(head);
+
+    if (!chats.length) {
+        const empty = document.createElement("div");
+        empty.style.cssText = "color:#9095a3;padding:12px 0;text-align:center";
+        empty.textContent = "Пока нет чатов — создайте первый";
+        box.appendChild(empty);
+        return;
+    }
+
+    chats.forEach(chat => {
+        const div = document.createElement("div");
+        div.className = "post";
+        div.style.cursor = "pointer";
+        div.style.marginBottom = "10px";
+        div.innerHTML =
+            "<strong>💬 " + escapeHtml(chat.name) + "</strong>" +
+            (chat.description
+                ? "<div style='color:#9095a3;font-size:13px;margin-top:4px'>" +
+                  escapeHtml(chat.description) + "</div>"
+                : "");
+        div.onclick = () => openCommunityChat(
+            chat.id,
+            chat.name,
+            communityName
+        );
+        box.appendChild(div);
+    });
+}
+
+
+function openCreateCommunityChat(communityId) {
+    openModal(`
+        <h2>💬 Новый чат в сообществе</h2>
+        <input id="newCommunityChatName" placeholder="Название чата">
+        <textarea id="newCommunityChatDescription" placeholder="Описание (необязательно)"></textarea>
+        <button class="primary" style="margin-top:10px;width:100%" onclick="createCommunityChat(${communityId})">
+            Создать
+        </button>
+    `);
+}
+
+
+async function createCommunityChat(communityId) {
+    const name = document.getElementById("newCommunityChatName")?.value.trim();
+    const description = document.getElementById("newCommunityChatDescription")?.value.trim() || "";
+
+    if (!name) {
+        alert("Введите название чата");
+        return;
+    }
+
+    const response = await request("/api/communities/" + communityId + "/chats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, description })
+    });
+
+    const data = await safeJson(response);
+    if (!response.ok) {
+        alert(data.detail || "Ошибка");
+        return;
+    }
+
+    closeModal();
+
+    const title = document.getElementById("pageTitle").textContent.replace(/^🌐\s*/, "");
+    await openCommunity(communityId, title);
+}
+
+
+async function openCommunityChat(chatId, chatName, communityName) {
+    selectedCommunityChatId = Number(chatId);
+    selectedUserId = null;
+    selectedGroupId = null;
+    selectedChannelId = null;
+    setComposerEnabled(true, "Сообщение в чат...");
+
+    showOnly("chatView");
+
+    const full = communityName
+        ? "🌐 " + communityName + " · " + chatName
+        : "💬 " + chatName;
+
+    document.getElementById("pageTitle").textContent = full;
+    document.getElementById("chatHeader").textContent = full;
+
+    await loadCommunityChatMessages(chatId);
+}
+
+
+async function loadCommunityChatMessages(chatId) {
+    const response = await request("/api/community-chats/" + chatId + "/messages");
+    if (!response.ok) {
+        document.getElementById("messages").innerHTML =
+            "<div style='color:#9095a3;padding:20px;text-align:center'>Нет сообщений</div>";
+        return;
+    }
+
+    const messages = await safeJson(response);
+    renderGroupMessages(messages);
+}
+
+
+function openInviteToCommunity(communityId, communityName) {
+    openModal(`
+        <h2>➕ Пригласить в сообщество</h2>
+        <p style="color:#9095a3;margin-top:0">Сообщество: <b>${escapeHtml(communityName)}</b></p>
+        <input id="inviteCommunityUsername" placeholder="Username пользователя" style="width:100%;margin:10px 0">
+        <button class="primary" style="width:100%" onclick="inviteToCommunity(${communityId})">
+            Пригласить
+        </button>
+        <button class="secondary" style="width:100%;margin-top:8px" onclick="closeModal()">
+            Отмена
+        </button>
+    `);
+}
+
+
+async function inviteToCommunity(communityId) {
+    const username = document.getElementById("inviteCommunityUsername")?.value.trim();
+    if (!username) {
+        alert("Введите username");
+        return;
+    }
+
+    const response = await request("/api/communities/" + communityId + "/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username })
+    });
+
+    const data = await safeJson(response);
+    if (!response.ok) {
+        alert(data.detail || "Не удалось пригласить");
+        return;
+    }
+
+    alert("Пользователь добавлен в сообщество!");
     closeModal();
 }
 
