@@ -225,6 +225,38 @@ def init_db():
             created_at TEXT NOT NULL,
             deleted INTEGER DEFAULT 0
         );
+
+        CREATE TABLE IF NOT EXISTS communities (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            owner_id INTEGER NOT NULL,
+            created_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS community_members (
+            community_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            joined_at TEXT NOT NULL,
+            UNIQUE(community_id, user_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS community_chats (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            community_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            created_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS community_chat_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            chat_id INTEGER NOT NULL,
+            sender_id INTEGER NOT NULL,
+            text TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            deleted INTEGER DEFAULT 0
+        );
         """
     )
 
@@ -332,13 +364,14 @@ def valid_username(username):
 def set_auth_cookie(
     response: Response,
     token: str,
+    secure: bool = False,
 ):
     response.set_cookie(
         key=SESSION_COOKIE,
         value=token,
         max_age=SESSION_DAYS * 24 * 60 * 60,
         httponly=True,
-        secure=True,
+        secure=secure,
         samesite="lax",
         path="/",
     )
@@ -347,16 +380,27 @@ def set_auth_cookie(
 def set_browser_cookie(
     response: Response,
     browser_id: str,
+    secure: bool = False,
 ):
     response.set_cookie(
         key=BROWSER_COOKIE,
         value=browser_id,
         max_age=365 * 24 * 60 * 60,
         httponly=True,
-        secure=True,
+        secure=secure,
         samesite="lax",
         path="/",
     )
+
+
+def is_https(request: Request) -> bool:
+    # Respect reverse-proxy headers
+    proto = (
+        request.headers.get("x-forwarded-proto")
+        or request.url.scheme
+        or ""
+    ).lower()
+    return proto == "https"
 
 
 def get_or_create_browser(
@@ -615,6 +659,16 @@ class GroupRequest(BaseModel):
 class ChannelRequest(BaseModel):
     name: str
     username: str
+    description: str = ""
+
+
+class CommunityRequest(BaseModel):
+    name: str
+    description: str = ""
+
+
+class CommunityChatRequest(BaseModel):
+    name: str
     description: str = ""
 
 
@@ -3267,6 +3321,367 @@ def get_channels(
         result.append(item)
 
     return result
+
+
+# =========================================================
+# COMMUNITIES (сообщества: все пишут, внутри чаты)
+# =========================================================
+
+@app.post("/api/communities")
+def create_community(
+    data: CommunityRequest,
+    request: Request,
+):
+    user_id = get_auth_user(request)
+    name = data.name.strip()
+
+    if not name:
+        raise HTTPException(400, "Название сообщества обязательно")
+
+    connection = db()
+
+    cursor = connection.execute(
+        """
+        INSERT INTO communities
+        (name, description, owner_id, created_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (name, data.description.strip(), user_id, now()),
+    )
+    community_id = cursor.lastrowid
+
+    connection.execute(
+        """
+        INSERT INTO community_members
+        (community_id, user_id, joined_at)
+        VALUES (?, ?, ?)
+        """,
+        (community_id, user_id, now()),
+    )
+
+    # Default general chat
+    connection.execute(
+        """
+        INSERT INTO community_chats
+        (community_id, name, description, created_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (community_id, "Общий", "Основной чат сообщества", now()),
+    )
+
+    connection.commit()
+    connection.close()
+
+    return {"ok": True, "id": community_id}
+
+
+@app.get("/api/communities")
+def get_communities(request: Request):
+    user_id = get_auth_user(request)
+
+    connection = db()
+    rows = connection.execute(
+        """
+        SELECT
+            c.id,
+            c.name,
+            c.description,
+            c.owner_id,
+            c.created_at
+        FROM communities c
+        JOIN community_members m
+            ON m.community_id = c.id
+        WHERE m.user_id = ?
+        ORDER BY c.id DESC
+        """,
+        (user_id,),
+    ).fetchall()
+    connection.close()
+
+    result = []
+    for row in rows:
+        item = dict(row)
+        item["is_owner"] = item["owner_id"] == user_id
+        result.append(item)
+    return result
+
+
+@app.post("/api/communities/{community_id}/invite")
+def invite_to_community(
+    community_id: int,
+    data: InviteRequest,
+    request: Request,
+):
+    user_id = get_auth_user(request)
+    username = data.username.strip().lower()
+
+    if not username:
+        raise HTTPException(400, "Укажите username")
+
+    connection = db()
+
+    member = connection.execute(
+        """
+        SELECT 1 FROM community_members
+        WHERE community_id = ? AND user_id = ?
+        """,
+        (community_id, user_id),
+    ).fetchone()
+
+    if not member:
+        connection.close()
+        raise HTTPException(403, "Вы не состоите в этом сообществе")
+
+    target = connection.execute(
+        "SELECT id FROM users WHERE username = ?",
+        (username,),
+    ).fetchone()
+
+    if not target:
+        connection.close()
+        raise HTTPException(404, "Пользователь не найден")
+
+    existing = connection.execute(
+        """
+        SELECT 1 FROM community_members
+        WHERE community_id = ? AND user_id = ?
+        """,
+        (community_id, target["id"]),
+    ).fetchone()
+
+    if existing:
+        connection.close()
+        raise HTTPException(400, "Пользователь уже в сообществе")
+
+    connection.execute(
+        """
+        INSERT INTO community_members
+        (community_id, user_id, joined_at)
+        VALUES (?, ?, ?)
+        """,
+        (community_id, target["id"], now()),
+    )
+    connection.commit()
+    connection.close()
+
+    return {"ok": True}
+
+
+@app.get("/api/communities/{community_id}/chats")
+def get_community_chats(
+    community_id: int,
+    request: Request,
+):
+    user_id = get_auth_user(request)
+
+    connection = db()
+
+    member = connection.execute(
+        """
+        SELECT 1 FROM community_members
+        WHERE community_id = ? AND user_id = ?
+        """,
+        (community_id, user_id),
+    ).fetchone()
+
+    if not member:
+        connection.close()
+        raise HTTPException(403, "Вы не состоите в этом сообществе")
+
+    chats = connection.execute(
+        """
+        SELECT id, community_id, name, description, created_at
+        FROM community_chats
+        WHERE community_id = ?
+        ORDER BY id ASC
+        """,
+        (community_id,),
+    ).fetchall()
+
+    connection.close()
+    return [dict(c) for c in chats]
+
+
+@app.post("/api/communities/{community_id}/chats")
+def create_community_chat(
+    community_id: int,
+    data: CommunityChatRequest,
+    request: Request,
+):
+    user_id = get_auth_user(request)
+    name = data.name.strip()
+
+    if not name:
+        raise HTTPException(400, "Название чата обязательно")
+
+    connection = db()
+
+    member = connection.execute(
+        """
+        SELECT 1 FROM community_members
+        WHERE community_id = ? AND user_id = ?
+        """,
+        (community_id, user_id),
+    ).fetchone()
+
+    if not member:
+        connection.close()
+        raise HTTPException(403, "Вы не состоите в этом сообществе")
+
+    cursor = connection.execute(
+        """
+        INSERT INTO community_chats
+        (community_id, name, description, created_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (community_id, name, data.description.strip(), now()),
+    )
+    chat_id = cursor.lastrowid
+    connection.commit()
+    connection.close()
+
+    return {"ok": True, "id": chat_id}
+
+
+@app.get("/api/community-chats/{chat_id}/messages")
+def get_community_chat_messages(
+    chat_id: int,
+    request: Request,
+):
+    user_id = get_auth_user(request)
+
+    connection = db()
+
+    chat = connection.execute(
+        """
+        SELECT cc.id, cc.community_id
+        FROM community_chats cc
+        WHERE cc.id = ?
+        """,
+        (chat_id,),
+    ).fetchone()
+
+    if not chat:
+        connection.close()
+        raise HTTPException(404, "Чат не найден")
+
+    member = connection.execute(
+        """
+        SELECT 1 FROM community_members
+        WHERE community_id = ? AND user_id = ?
+        """,
+        (chat["community_id"], user_id),
+    ).fetchone()
+
+    if not member:
+        connection.close()
+        raise HTTPException(403, "Нет доступа")
+
+    messages = connection.execute(
+        """
+        SELECT
+            m.id,
+            m.chat_id,
+            m.sender_id,
+            CASE WHEN m.deleted = 1 THEN '' ELSE m.text END AS text,
+            m.created_at,
+            m.deleted,
+            u.username,
+            u.display_name AS sender_name
+        FROM community_chat_messages m
+        JOIN users u ON u.id = m.sender_id
+        WHERE m.chat_id = ?
+        ORDER BY m.id ASC
+        """,
+        (chat_id,),
+    ).fetchall()
+
+    connection.close()
+    return [dict(m) for m in messages]
+
+
+@app.post("/api/community-chats/{chat_id}/messages")
+async def send_community_chat_message(
+    chat_id: int,
+    data: GroupMessageRequest,
+    request: Request,
+):
+    user_id = get_auth_user(request)
+    text = data.text.strip()
+
+    if not text:
+        raise HTTPException(400, "Пустое сообщение")
+
+    if len(text) > 5000:
+        raise HTTPException(400, "Сообщение слишком длинное")
+
+    connection = db()
+
+    chat = connection.execute(
+        """
+        SELECT cc.id, cc.community_id
+        FROM community_chats cc
+        WHERE cc.id = ?
+        """,
+        (chat_id,),
+    ).fetchone()
+
+    if not chat:
+        connection.close()
+        raise HTTPException(404, "Чат не найден")
+
+    member = connection.execute(
+        """
+        SELECT 1 FROM community_members
+        WHERE community_id = ? AND user_id = ?
+        """,
+        (chat["community_id"], user_id),
+    ).fetchone()
+
+    if not member:
+        connection.close()
+        raise HTTPException(403, "Нет доступа")
+
+    created = now()
+    cursor = connection.execute(
+        """
+        INSERT INTO community_chat_messages
+        (chat_id, sender_id, text, created_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (chat_id, user_id, text, created),
+    )
+    message_id = cursor.lastrowid
+
+    members = connection.execute(
+        """
+        SELECT user_id FROM community_members
+        WHERE community_id = ?
+        """,
+        (chat["community_id"],),
+    ).fetchall()
+
+    connection.commit()
+    connection.close()
+
+    message = {
+        "id": message_id,
+        "chat_id": chat_id,
+        "sender_id": user_id,
+        "text": text,
+        "created_at": created,
+        "deleted": 0,
+    }
+
+    payload = {
+        "type": "community_message",
+        "message": message,
+    }
+
+    for row in members:
+        await send_ws(row["user_id"], payload)
+
+    return {"ok": True, "message": message}
 
 
 # =========================================================
