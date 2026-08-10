@@ -3,11 +3,10 @@ import sqlite3
 import hashlib
 import secrets
 import shutil
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from collections import defaultdict
-
-import jwt
 
 from fastapi import (
     FastAPI,
@@ -15,6 +14,7 @@ from fastapi import (
     WebSocketDisconnect,
     HTTPException,
     Request,
+    Response,
     UploadFile,
     File,
 )
@@ -38,12 +38,12 @@ DB_PATH = BASE_DIR / "messenger.db"
 STATIC_DIR.mkdir(exist_ok=True)
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-SECRET_KEY = os.environ.get(
-    "SECRET_KEY",
-    "CHANGE_THIS_SECRET_KEY_TO_SOMETHING_RANDOM",
-)
+SESSION_COOKIE = "mm_session"
+BROWSER_COOKIE = "mm_browser"
 
-ALGORITHM = "HS256"
+SESSION_DAYS = 30
+
+connections = defaultdict(set)
 
 
 # =========================================================
@@ -57,13 +57,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-# =========================================================
-# WEBSOCKET CONNECTIONS
-# =========================================================
-
-connections = defaultdict(set)
 
 
 # =========================================================
@@ -120,6 +113,16 @@ def init_db():
             display_name TEXT,
             bio TEXT DEFAULT '',
             avatar_url TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            token_hash TEXT UNIQUE NOT NULL,
+            browser_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            last_seen TEXT NOT NULL,
+            expires_at TEXT NOT NULL
         );
 
         CREATE TABLE IF NOT EXISTS messages (
@@ -279,77 +282,259 @@ def hash_password(password):
     ).hexdigest()
 
 
-def create_token(user_id):
-    payload = {
-        "user_id": int(user_id),
-        "exp": datetime.utcnow()
-        + timedelta(days=30),
-    }
-
-    return jwt.encode(
-        payload,
-        SECRET_KEY,
-        algorithm=ALGORITHM,
-    )
+def hash_token(token):
+    return hashlib.sha256(
+        token.encode("utf-8")
+    ).hexdigest()
 
 
-def get_user_from_token(token):
-    if not token:
-        return None
+def browser_hash(value):
+    return hashlib.sha256(
+        value.encode("utf-8")
+    ).hexdigest()
 
-    try:
-        payload = jwt.decode(
-            token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM],
+
+def new_token():
+    return secrets.token_urlsafe(48)
+
+
+def valid_username(username):
+    return (
+        len(username) >= 3
+        and len(username) <= 30
+        and bool(
+            re.fullmatch(
+                r"[a-zA-Z0-9_]+",
+                username,
+            )
         )
-
-        return int(payload["user_id"])
-
-    except Exception:
-        return None
-
-
-def get_auth_user(request: Request):
-    auth = request.headers.get(
-        "Authorization",
-        "",
     )
 
-    if not auth.startswith("Bearer "):
+
+def set_auth_cookie(
+    response: Response,
+    token: str,
+):
+    response.set_cookie(
+        key=SESSION_COOKIE,
+        value=token,
+        max_age=SESSION_DAYS * 24 * 60 * 60,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        path="/",
+    )
+
+
+def set_browser_cookie(
+    response: Response,
+    browser_id: str,
+):
+    response.set_cookie(
+        key=BROWSER_COOKIE,
+        value=browser_id,
+        max_age=365 * 24 * 60 * 60,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        path="/",
+    )
+
+
+def get_or_create_browser(
+    request: Request,
+    response: Response,
+):
+    value = request.cookies.get(
+        BROWSER_COOKIE
+    )
+
+    if value:
+        return value
+
+    value = secrets.token_urlsafe(32)
+    set_browser_cookie(
+        response,
+        value,
+    )
+
+    return value
+
+
+def create_session(
+    user_id,
+    browser_id,
+):
+    token = new_token()
+    created = datetime.utcnow()
+    expires = created + timedelta(
+        days=SESSION_DAYS
+    )
+
+    connection = db()
+
+    connection.execute(
+        """
+        INSERT INTO sessions
+        (
+            user_id,
+            token_hash,
+            browser_hash,
+            created_at,
+            last_seen,
+            expires_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            user_id,
+            hash_token(token),
+            browser_hash(browser_id),
+            created.isoformat(),
+            created.isoformat(),
+            expires.isoformat(),
+        ),
+    )
+
+    connection.commit()
+    connection.close()
+
+    return token
+
+
+def get_auth_user(
+    request: Request,
+):
+    token = request.cookies.get(
+        SESSION_COOKIE
+    )
+
+    if not token:
         raise HTTPException(
             401,
             "Не авторизован",
         )
 
-    user_id = get_user_from_token(
-        auth[7:]
-    )
+    connection = db()
 
-    if not user_id:
+    session = connection.execute(
+        """
+        SELECT
+            s.id AS session_id,
+            s.user_id,
+            s.expires_at,
+            u.username
+        FROM sessions s
+        JOIN users u
+            ON u.id = s.user_id
+        WHERE s.token_hash = ?
+        """,
+        (
+            hash_token(token),
+        ),
+    ).fetchone()
+
+    if not session:
+        connection.close()
+
         raise HTTPException(
             401,
-            "Недействительный токен",
+            "Сессия недействительна",
         )
 
-    return user_id
+    try:
+        expires = datetime.fromisoformat(
+            session["expires_at"]
+        )
+    except Exception:
+        expires = datetime.utcnow()
 
+    if expires < datetime.utcnow():
+        connection.execute(
+            """
+            DELETE FROM sessions
+            WHERE id = ?
+            """,
+            (
+                session["session_id"],
+            ),
+        )
 
-async def send_ws(user_id, payload):
-    sockets = list(
-        connections.get(user_id, set())
+        connection.commit()
+        connection.close()
+
+        raise HTTPException(
+            401,
+            "Сессия истекла",
+        )
+
+    connection.execute(
+        """
+        UPDATE sessions
+        SET last_seen = ?
+        WHERE id = ?
+        """,
+        (
+            now(),
+            session["session_id"],
+        ),
     )
 
+    connection.execute(
+        """
+        UPDATE users
+        SET last_seen = ?
+        WHERE id = ?
+        """,
+        (
+            now(),
+            session["user_id"],
+        ),
+    )
+
+    connection.commit()
+    connection.close()
+
+    return session["user_id"]
+
+
+def get_browser_id(request):
+    value = request.cookies.get(
+        BROWSER_COOKIE
+    )
+
+    if not value:
+        raise HTTPException(
+            400,
+            "Браузер не определён",
+        )
+
+    return value
+
+
+async def send_ws(
+    user_id,
+    payload,
+):
     dead = []
 
-    for socket in sockets:
+    for socket in list(
+        connections.get(
+            user_id,
+            set(),
+        )
+    ):
         try:
-            await socket.send_json(payload)
+            await socket.send_json(
+                payload
+            )
         except Exception:
             dead.append(socket)
 
     for socket in dead:
-        connections[user_id].discard(socket)
+        connections[user_id].discard(
+            socket
+        )
 
 
 # =========================================================
@@ -409,30 +594,26 @@ class ChannelRequest(BaseModel):
     description: str = ""
 
 
+class DeleteAccountRequest(BaseModel):
+    password: str
+
+
 # =========================================================
 # AUTH
 # =========================================================
 
 @app.post("/api/register")
-def register(data: RegisterRequest):
+def register(
+    data: RegisterRequest,
+    request: Request,
+    response: Response,
+):
     username = data.username.strip().lower()
 
-    if len(username) < 3:
+    if not valid_username(username):
         raise HTTPException(
             400,
-            "Username должен содержать минимум 3 символа",
-        )
-
-    if len(username) > 30:
-        raise HTTPException(
-            400,
-            "Username слишком длинный",
-        )
-
-    if not username.replace("_", "").isalnum():
-        raise HTTPException(
-            400,
-            "Username может содержать буквы, цифры и _",
+            "Username: 3-30 символов, только буквы, цифры и _",
         )
 
     if len(data.password) < 6:
@@ -454,6 +635,7 @@ def register(data: RegisterRequest):
 
     if exists:
         connection.close()
+
         raise HTTPException(
             400,
             "Такой username уже занят",
@@ -475,7 +657,9 @@ def register(data: RegisterRequest):
         """,
         (
             username,
-            hash_password(data.password),
+            hash_password(
+                data.password
+            ),
             created,
             created,
             username,
@@ -496,19 +680,32 @@ def register(data: RegisterRequest):
     connection.commit()
     connection.close()
 
+    browser_id = get_or_create_browser(
+        request,
+        response,
+    )
+
+    token = create_session(
+        user_id,
+        browser_id,
+    )
+
+    set_auth_cookie(
+        response,
+        token,
+    )
+
     return {
         "ok": True,
-        "token": create_token(user_id),
-        "user": {
-            "id": user_id,
-            "username": username,
-            "display_name": username,
-        },
     }
 
 
 @app.post("/api/login")
-def login(data: LoginRequest):
+def login(
+    data: LoginRequest,
+    request: Request,
+    response: Response,
+):
     username = data.username.strip().lower()
 
     connection = db()
@@ -524,6 +721,7 @@ def login(data: LoginRequest):
 
     if not user:
         connection.close()
+
         raise HTTPException(
             401,
             "Неверный логин или пароль",
@@ -533,22 +731,11 @@ def login(data: LoginRequest):
         data.password
     ):
         connection.close()
+
         raise HTTPException(
             401,
             "Неверный логин или пароль",
         )
-
-    connection.execute(
-        """
-        UPDATE users
-        SET last_seen = ?
-        WHERE id = ?
-        """,
-        (
-            now(),
-            user["id"],
-        ),
-    )
 
     connection.execute(
         """
@@ -562,9 +749,61 @@ def login(data: LoginRequest):
     connection.commit()
     connection.close()
 
+    browser_id = get_or_create_browser(
+        request,
+        response,
+    )
+
+    token = create_session(
+        user["id"],
+        browser_id,
+    )
+
+    set_auth_cookie(
+        response,
+        token,
+    )
+
     return {
         "ok": True,
-        "token": create_token(user["id"]),
+    }
+
+
+@app.post("/api/logout")
+def logout(
+    request: Request,
+    response: Response,
+):
+    token = request.cookies.get(
+        SESSION_COOKIE
+    )
+
+    if token:
+        connection = db()
+
+        connection.execute(
+            """
+            DELETE FROM sessions
+            WHERE token_hash = ?
+            """,
+            (
+                hash_token(token),
+            ),
+        )
+
+        connection.commit()
+        connection.close()
+
+    response.delete_cookie(
+        SESSION_COOKIE,
+        path="/",
+        secure=True,
+        httponly=True,
+        samesite="lax",
+    )
+
+    return {
+        "ok": True,
     }
 
 
@@ -602,6 +841,407 @@ def me(request: Request):
 
 
 # =========================================================
+# ACCOUNT / SESSIONS
+# =========================================================
+
+@app.get("/api/accounts")
+def accounts(request: Request):
+    user_id = get_auth_user(request)
+    browser_id = get_browser_id(request)
+
+    connection = db()
+
+    rows = connection.execute(
+        """
+        SELECT
+            s.id AS session_id,
+            s.user_id,
+            s.last_seen,
+            u.username,
+            u.display_name,
+            u.avatar_url
+        FROM sessions s
+        JOIN users u
+            ON u.id = s.user_id
+        WHERE s.browser_hash = ?
+        ORDER BY s.last_seen DESC
+        """,
+        (
+            browser_hash(browser_id),
+        ),
+    ).fetchall()
+
+    current_token = request.cookies.get(
+        SESSION_COOKIE
+    )
+
+    current_hash = (
+        hash_token(current_token)
+        if current_token
+        else ""
+    )
+
+    current = connection.execute(
+        """
+        SELECT id
+        FROM sessions
+        WHERE token_hash = ?
+        """,
+        (current_hash,),
+    ).fetchone()
+
+    connection.close()
+
+    current_session_id = (
+        current["id"]
+        if current
+        else None
+    )
+
+    return [
+        {
+            **dict(row),
+            "current": (
+                row["session_id"]
+                == current_session_id
+            ),
+        }
+        for row in rows
+    ]
+
+
+@app.post("/api/accounts/switch/{session_id}")
+def switch_account(
+    session_id: int,
+    request: Request,
+    response: Response,
+):
+    current_user = get_auth_user(request)
+    browser_id = get_browser_id(request)
+
+    connection = db()
+
+    target = connection.execute(
+        """
+        SELECT
+            id,
+            user_id,
+            token_hash
+        FROM sessions
+        WHERE id = ?
+          AND browser_hash = ?
+        """,
+        (
+            session_id,
+            browser_hash(browser_id),
+        ),
+    ).fetchone()
+
+    if not target:
+        connection.close()
+
+        raise HTTPException(
+            404,
+            "Аккаунт не найден на этом устройстве",
+        )
+
+    token = connection.execute(
+        """
+        SELECT token_hash
+        FROM sessions
+        WHERE id = ?
+        """,
+        (
+            target["id"],
+        ),
+    ).fetchone()
+
+    connection.close()
+
+    if not token:
+        raise HTTPException(
+            404,
+            "Сессия не найдена",
+        )
+
+    connection = db()
+
+    # Сам токен не хранится в открытом виде,
+    # поэтому при переключении создаём новую
+    # сессию для этого же аккаунта.
+    new_session_token = new_token()
+
+    created = now()
+    expires = (
+        datetime.utcnow()
+        + timedelta(days=SESSION_DAYS)
+    ).isoformat()
+
+    connection.execute(
+        """
+        INSERT INTO sessions
+        (
+            user_id,
+            token_hash,
+            browser_hash,
+            created_at,
+            last_seen,
+            expires_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            target["user_id"],
+            hash_token(
+                new_session_token
+            ),
+            browser_hash(browser_id),
+            created,
+            created,
+            expires,
+        ),
+    )
+
+    connection.commit()
+    connection.close()
+
+    set_auth_cookie(
+        response,
+        new_session_token,
+    )
+
+    return {
+        "ok": True,
+        "user_id": target["user_id"],
+        "old_user_id": current_user,
+    }
+
+
+# =========================================================
+# DELETE ACCOUNT
+# =========================================================
+
+@app.delete("/api/account")
+def delete_account(
+    data: DeleteAccountRequest,
+    request: Request,
+    response: Response,
+):
+    user_id = get_auth_user(request)
+
+    connection = db()
+
+    user = connection.execute(
+        """
+        SELECT *
+        FROM users
+        WHERE id = ?
+        """,
+        (user_id,),
+    ).fetchone()
+
+    if not user:
+        connection.close()
+
+        raise HTTPException(
+            404,
+            "Аккаунт не найден",
+        )
+
+    if user["password_hash"] != hash_password(
+        data.password
+    ):
+        connection.close()
+
+        raise HTTPException(
+            403,
+            "Неверный пароль",
+        )
+
+    # Удаляем всё, что принадлежит аккаунту.
+    message_ids = connection.execute(
+        """
+        SELECT id
+        FROM messages
+        WHERE sender_id = ?
+           OR receiver_id = ?
+        """,
+        (
+            user_id,
+            user_id,
+        ),
+    ).fetchall()
+
+    ids = [
+        row["id"]
+        for row in message_ids
+    ]
+
+    if ids:
+        placeholders = ",".join(
+            "?" * len(ids)
+        )
+
+        connection.execute(
+            f"""
+            DELETE FROM favorites
+            WHERE message_id IN ({placeholders})
+            """,
+            ids,
+        )
+
+    connection.execute(
+        """
+        DELETE FROM favorites
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM messages
+        WHERE sender_id = ?
+           OR receiver_id = ?
+        """,
+        (
+            user_id,
+            user_id,
+        ),
+    )
+
+    posts = connection.execute(
+        """
+        SELECT id, media_url
+        FROM posts
+        WHERE author_id = ?
+        """,
+        (user_id,),
+    ).fetchall()
+
+    post_ids = [
+        row["id"]
+        for row in posts
+    ]
+
+    if post_ids:
+        placeholders = ",".join(
+            "?" * len(post_ids)
+        )
+
+        connection.execute(
+            f"""
+            DELETE FROM comments
+            WHERE post_id IN ({placeholders})
+            """,
+            post_ids,
+        )
+
+        connection.execute(
+            f"""
+            DELETE FROM post_likes
+            WHERE post_id IN ({placeholders})
+            """,
+            post_ids,
+        )
+
+    connection.execute(
+        """
+        DELETE FROM comments
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM post_likes
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM posts
+        WHERE author_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM group_members
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM channel_subscribers
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM sessions
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM settings
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM groups
+        WHERE owner_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM channels
+        WHERE owner_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM users
+        WHERE id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.commit()
+    connection.close()
+
+    response.delete_cookie(
+        SESSION_COOKIE,
+        path="/",
+        secure=True,
+        httponly=True,
+        samesite="lax",
+    )
+
+    return {
+        "ok": True,
+    }
+
+
+# =========================================================
 # PROFILE
 # =========================================================
 
@@ -616,16 +1256,10 @@ def update_profile(
     display_name = data.display_name.strip()
     bio = data.bio.strip()
 
-    if len(username) < 3:
+    if not valid_username(username):
         raise HTTPException(
             400,
-            "Username слишком короткий",
-        )
-
-    if not username.replace("_", "").isalnum():
-        raise HTTPException(
-            400,
-            "Username может содержать буквы, цифры и _",
+            "Некорректный username",
         )
 
     if not display_name:
@@ -648,6 +1282,7 @@ def update_profile(
 
     if exists:
         connection.close()
+
         raise HTTPException(
             400,
             "Этот username уже занят",
@@ -673,7 +1308,9 @@ def update_profile(
     connection.commit()
     connection.close()
 
-    return {"ok": True}
+    return {
+        "ok": True,
+    }
 
 
 @app.post("/api/avatar")
@@ -869,6 +1506,8 @@ def get_messages(
         ),
     ).fetchall()
 
+    # При открытии чата сообщения собеседника
+    # становятся прочитанными.
     connection.execute(
         """
         UPDATE messages
@@ -876,6 +1515,7 @@ def get_messages(
         WHERE
             sender_id = ?
             AND receiver_id = ?
+            AND is_read = 0
         """,
         (
             other_user_id,
@@ -932,6 +1572,7 @@ async def send_message(
 
     if not receiver:
         connection.close()
+
         raise HTTPException(
             404,
             "Пользователь не найден",
@@ -979,22 +1620,61 @@ async def send_message(
         "message": message,
     }
 
-    # Получатель получает сообщение.
-    await send_ws(
-        data.receiver_id,
-        payload,
-    )
-
-    # Отправителю тоже отправляем,
+    # Отправителю тоже отправляем WS,
     # но фронтенд проверяет ID и не создаёт дубль.
     await send_ws(
         sender_id,
         payload,
     )
 
+    await send_ws(
+        data.receiver_id,
+        payload,
+    )
+
     return {
         "ok": True,
         "message": message,
+    }
+
+
+@app.post("/api/messages/read/{other_user_id}")
+async def mark_messages_read(
+    other_user_id: int,
+    request: Request,
+):
+    user_id = get_auth_user(request)
+
+    connection = db()
+
+    connection.execute(
+        """
+        UPDATE messages
+        SET is_read = 1
+        WHERE
+            sender_id = ?
+            AND receiver_id = ?
+            AND is_read = 0
+        """,
+        (
+            other_user_id,
+            user_id,
+        ),
+    )
+
+    connection.commit()
+    connection.close()
+
+    await send_ws(
+        other_user_id,
+        {
+            "type": "messages_read",
+            "reader_id": user_id,
+        },
+    )
+
+    return {
+        "ok": True,
     }
 
 
@@ -1027,6 +1707,7 @@ async def edit_message(
 
     if not message:
         connection.close()
+
         raise HTTPException(
             404,
             "Сообщение не найдено",
@@ -1034,6 +1715,7 @@ async def edit_message(
 
     if message["sender_id"] != user_id:
         connection.close()
+
         raise HTTPException(
             403,
             "Можно изменять только свои сообщения",
@@ -1041,9 +1723,10 @@ async def edit_message(
 
     if message["deleted"]:
         connection.close()
+
         raise HTTPException(
             400,
-            "Сообщение уже удалено",
+            "Сообщение удалено",
         )
 
     edited = now()
@@ -1117,6 +1800,7 @@ async def delete_message(
 
     if not message:
         connection.close()
+
         raise HTTPException(
             404,
             "Сообщение не найдено",
@@ -1124,6 +1808,7 @@ async def delete_message(
 
     if message["sender_id"] != user_id:
         connection.close()
+
         raise HTTPException(
             403,
             "Можно удалять только свои сообщения",
@@ -1143,17 +1828,15 @@ async def delete_message(
     connection.commit()
     connection.close()
 
-    deleted_message = {
-        "id": message_id,
-        "sender_id": message["sender_id"],
-        "receiver_id": message["receiver_id"],
-        "deleted": 1,
-        "text": "",
-    }
-
     payload = {
         "type": "message_deleted",
-        "message": deleted_message,
+        "message": {
+            "id": message_id,
+            "sender_id": message["sender_id"],
+            "receiver_id": message["receiver_id"],
+            "deleted": 1,
+            "text": "",
+        },
     }
 
     await send_ws(
@@ -1166,7 +1849,9 @@ async def delete_message(
         payload,
     )
 
-    return {"ok": True}
+    return {
+        "ok": True,
+    }
 
 
 # =========================================================
@@ -1201,6 +1886,7 @@ def favorite_message(
 
     if not message:
         connection.close()
+
         raise HTTPException(
             404,
             "Сообщение не найдено",
@@ -1231,7 +1917,9 @@ def favorite_message(
                 message_id,
             ),
         )
+
         favorite = False
+
     else:
         connection.execute(
             """
@@ -1247,6 +1935,7 @@ def favorite_message(
                 message_id,
             ),
         )
+
         favorite = True
 
     connection.commit()
@@ -1338,6 +2027,56 @@ def feed(request: Request):
         dict(post)
         for post in posts
     ]
+
+
+@app.get("/api/posts/{post_id}")
+def get_post(
+    post_id: int,
+    request: Request,
+):
+    get_auth_user(request)
+
+    connection = db()
+
+    post = connection.execute(
+        """
+        SELECT
+            p.id,
+            p.author_id,
+            p.text,
+            p.media_url,
+            p.media_type,
+            p.created_at,
+            u.username,
+            u.display_name,
+            u.avatar_url,
+            (
+                SELECT COUNT(*)
+                FROM post_likes
+                WHERE post_id = p.id
+            ) AS likes,
+            (
+                SELECT COUNT(*)
+                FROM comments
+                WHERE post_id = p.id
+            ) AS comments
+        FROM posts p
+        JOIN users u
+            ON u.id = p.author_id
+        WHERE p.id = ?
+        """,
+        (post_id,),
+    ).fetchone()
+
+    connection.close()
+
+    if not post:
+        raise HTTPException(
+            404,
+            "Пост не найден",
+        )
+
+    return dict(post)
 
 
 @app.post("/api/posts")
@@ -1505,7 +2244,9 @@ def like_post(
                 user_id,
             ),
         )
+
         liked = False
+
     else:
         connection.execute(
             """
@@ -1521,6 +2262,7 @@ def like_post(
                 user_id,
             ),
         )
+
         liked = True
 
     count = connection.execute(
@@ -1617,6 +2359,7 @@ def create_comment(
 
     if not post:
         connection.close()
+
         raise HTTPException(
             404,
             "Пост не найден",
@@ -1638,6 +2381,7 @@ def create_comment(
 
         if not parent:
             connection.close()
+
             raise HTTPException(
                 400,
                 "Комментарий для ответа не найден",
@@ -1695,6 +2439,7 @@ def delete_comment(
 
     if not comment:
         connection.close()
+
         raise HTTPException(
             404,
             "Комментарий не найден",
@@ -1702,6 +2447,7 @@ def delete_comment(
 
     if comment["user_id"] != user_id:
         connection.close()
+
         raise HTTPException(
             403,
             "Можно удалять только свои комментарии",
@@ -1722,7 +2468,9 @@ def delete_comment(
     connection.commit()
     connection.close()
 
-    return {"ok": True}
+    return {
+        "ok": True,
+    }
 
 
 # =========================================================
@@ -1749,6 +2497,7 @@ def delete_post(
 
     if not post:
         connection.close()
+
         raise HTTPException(
             404,
             "Пост не найден",
@@ -1756,23 +2505,33 @@ def delete_post(
 
     if post["author_id"] != user_id:
         connection.close()
+
         raise HTTPException(
             403,
             "Это не твой пост",
         )
 
     connection.execute(
-        "DELETE FROM comments WHERE post_id = ?",
+        """
+        DELETE FROM comments
+        WHERE post_id = ?
+        """,
         (post_id,),
     )
 
     connection.execute(
-        "DELETE FROM post_likes WHERE post_id = ?",
+        """
+        DELETE FROM post_likes
+        WHERE post_id = ?
+        """,
         (post_id,),
     )
 
     connection.execute(
-        "DELETE FROM posts WHERE id = ?",
+        """
+        DELETE FROM posts
+        WHERE id = ?
+        """,
         (post_id,),
     )
 
@@ -1792,7 +2551,9 @@ def delete_post(
             except Exception:
                 pass
 
-    return {"ok": True}
+    return {
+        "ok": True,
+    }
 
 
 # =========================================================
@@ -1893,7 +2654,9 @@ def update_settings(
     connection.commit()
     connection.close()
 
-    return {"ok": True}
+    return {
+        "ok": True,
+    }
 
 
 # =========================================================
@@ -1965,7 +2728,9 @@ def create_group(
 
 
 @app.get("/api/groups")
-def get_groups(request: Request):
+def get_groups(
+    request: Request,
+):
     user_id = get_auth_user(request)
 
     connection = db()
@@ -2015,16 +2780,10 @@ def create_channel(
             "Название канала обязательно",
         )
 
-    if not username:
+    if not valid_username(username):
         raise HTTPException(
             400,
-            "Username канала обязателен",
-        )
-
-    if not username.replace("_", "").isalnum():
-        raise HTTPException(
-            400,
-            "Username канала может содержать буквы, цифры и _",
+            "Некорректный username канала",
         )
 
     connection = db()
@@ -2090,7 +2849,9 @@ def create_channel(
 
 
 @app.get("/api/channels")
-def get_channels(request: Request):
+def get_channels(
+    request: Request,
+):
     user_id = get_auth_user(request)
 
     connection = db()
@@ -2125,24 +2886,58 @@ def get_channels(request: Request):
 # WEBSOCKET
 # =========================================================
 
-@app.websocket("/ws/{user_id}")
+@app.websocket("/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
-    user_id: int,
 ):
     token = websocket.query_params.get(
         "token"
     )
 
-    authenticated_id = get_user_from_token(
-        token
-    )
-
-    if authenticated_id != user_id:
+    if not token:
         await websocket.close(
             code=1008
         )
         return
+
+    connection = db()
+
+    session = connection.execute(
+        """
+        SELECT
+            id,
+            user_id,
+            expires_at
+        FROM sessions
+        WHERE token_hash = ?
+        """,
+        (
+            hash_token(token),
+        ),
+    ).fetchone()
+
+    connection.close()
+
+    if not session:
+        await websocket.close(
+            code=1008
+        )
+        return
+
+    try:
+        expires = datetime.fromisoformat(
+            session["expires_at"]
+        )
+    except Exception:
+        expires = datetime.utcnow()
+
+    if expires < datetime.utcnow():
+        await websocket.close(
+            code=1008
+        )
+        return
+
+    user_id = session["user_id"]
 
     await websocket.accept()
 
@@ -2150,33 +2945,14 @@ async def websocket_endpoint(
         websocket
     )
 
-    connection = db()
-
-    connection.execute(
-        """
-        UPDATE users
-        SET last_seen = ?
-        WHERE id = ?
-        """,
-        (
-            now(),
-            user_id,
-        ),
-    )
-
-    connection.commit()
-    connection.close()
-
     try:
         while True:
             data = await websocket.receive_json()
 
             if data.get("type") == "ping":
-                await websocket.send_json(
-                    {
-                        "type": "pong"
-                    }
-                )
+                await websocket.send_json({
+                    "type": "pong"
+                })
 
     except WebSocketDisconnect:
         pass
@@ -2194,23 +2970,6 @@ async def websocket_endpoint(
                 user_id,
                 None,
             )
-
-            connection = db()
-
-            connection.execute(
-                """
-                UPDATE users
-                SET last_seen = ?
-                WHERE id = ?
-                """,
-                (
-                    now(),
-                    user_id,
-                ),
-            )
-
-            connection.commit()
-            connection.close()
 
 
 # =========================================================
