@@ -1456,7 +1456,74 @@ async function startApp() {
 
     await loadSettings();
 
-    connectWebSocket();
+    function startChatPolling() {
+    stopChatPolling();
+
+    if (!selectedUser) return;
+
+    loadMessages();
+
+    chatTimer = setInterval(() => {
+        loadMessages(true);
+    }, 1500);
+}
+
+
+function stopChatPolling() {
+    if (chatTimer) {
+        clearInterval(chatTimer);
+        chatTimer = null;
+    }
+}
+
+
+async function loadMessages(silent = false) {
+    if (!selectedUser || loadingMessages) return;
+
+    loadingMessages = true;
+
+    try {
+        const response = await request(
+            "/api/messages/" + selectedUser.id
+        );
+
+        if (!response.ok) return;
+
+        const history = await response.json();
+
+        const container =
+            document.getElementById("messages");
+
+        const wasAtBottom =
+            container.scrollHeight -
+            container.scrollTop -
+            container.clientHeight < 100;
+
+        container.innerHTML = "";
+
+        for (const message of history) {
+            addMessage(message);
+        }
+
+        if (wasAtBottom || !silent) {
+            container.scrollTop =
+                container.scrollHeight;
+        }
+
+        if (history.length) {
+            lastMessageId =
+                history[history.length - 1].id;
+        }
+
+    } catch (error) {
+        console.error(
+            "Ошибка загрузки сообщений:",
+            error
+        );
+    } finally {
+        loadingMessages = false;
+    }
+}
 
     await searchUsers();
 
