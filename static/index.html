@@ -258,6 +258,21 @@ select:focus {
     opacity: 1;
 }
 
+.ui-icon {
+    width: 18px;
+    height: 18px;
+    vertical-align: -3px;
+    display: inline-block;
+    filter: brightness(0) invert(1);
+    opacity: 0.9;
+}
+
+.ui-icon.ui-icon-lg {
+    width: 22px;
+    height: 22px;
+    vertical-align: -4px;
+}
+
 .content {
     flex: 1;
     min-height: 0;
@@ -694,7 +709,7 @@ select:focus {
         <input
             id="search"
             class="search"
-            placeholder="Поиск..."
+            placeholder="Поиск людей, каналов..."
             oninput="searchUsers()"
         >
 
@@ -1127,7 +1142,7 @@ select:focus {
                     <div class="card">
 
                         <h2>
-                            ⭐ Избранные сообщения
+                            <img class="ui-icon ui-icon-lg" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAABWElEQVR4nO2Wu0oDURRFl4pNwPRi4wPB2BoUjJ02dtqohUbQD9BOW/0Df8HSLqUIprHwA0yXD1CQgIpgFeXCuTDFfXNnRHDDhhk4Z6+Z+5qBP6glcaVaBL7E6roSjQIPwLf4ERirAnxagGqflA2dBj4M4E9grizoCHBrgGrfS012HTug2kc5F1ITOAcGAeCB1DalN0qTQBu4AV4DYDa/A3ey8GZdQPWk/YjgVaAVUd8Hzkzgl8g30orpeTaBt4BhieAhsGMb7ssSwReueVYrseOYU59sc94JWeV1oGdoVqE+rRn6epIZpJmAraTl29fzoVCtzQxglRGtegbwRAp4yhPassxp0SojWo3Iw8HkhRTwSgbwcgp4IwN4PQW87Ql9ErtqVEa0Dg1Bb8C1jIaW+sW9sux79XmN1kHhcO/Kfc1RX5OabuFjs58CHgf2En/iVM+uZPzrd/UDjrQ/+7ZZv/QAAAAASUVORK5CYII=" alt=""> Избранные сообщения
                         </h2>
 
                         <div id="favorites"></div>
@@ -1466,6 +1481,16 @@ async function refreshSidebarLists() {
 }
 
 
+function sidebarSectionHeader(text, extraClass) {
+    const header = document.createElement("div");
+    header.className = extraClass || "";
+    header.style.cssText =
+        "padding:8px 10px;color:#8d929e;font-size:12px;font-weight:600;margin-top:8px";
+    header.textContent = text;
+    return header;
+}
+
+
 async function loadUsers(query = "") {
     const container = document.getElementById("users");
     if (!container) return;
@@ -1473,10 +1498,9 @@ async function loadUsers(query = "") {
     query = (query || "").trim();
     const requestId = ++searchRequestId;
 
-    // Полная очистка сайдбара перед отрисовкой
     container.innerHTML = "";
 
-    // Пустой поиск — только группы и каналы, без «Ничего не найдено»
+    // Пустой поиск — только свои группы / каналы / сообщества
     if (!query) {
         if (requestId !== searchRequestId) return;
         await refreshSidebarLists();
@@ -1484,7 +1508,7 @@ async function loadUsers(query = "") {
     }
 
     const response = await request(
-        "/api/users?q=" + encodeURIComponent(query)
+        "/api/search?q=" + encodeURIComponent(query)
     );
 
     if (requestId !== searchRequestId) return;
@@ -1494,30 +1518,38 @@ async function loadUsers(query = "") {
         return;
     }
 
-    const users = await safeJson(response);
+    const data = await safeJson(response);
     if (requestId !== searchRequestId) return;
 
-    // Снова очищаем (на случай гонок) и рисуем один раз
     container.innerHTML = "";
 
-    const seen = new Set();
-    const found = [];
-    for (const user of users) {
-        const id = Number(user.id);
-        if (id === Number(currentUser.id) || seen.has(id)) continue;
-        seen.add(id);
-        found.push(user);
-    }
+    const users = (data.users || []).filter(
+        u => Number(u.id) !== Number(currentUser.id)
+    );
+    const channels = data.channels || [];
+    const groups = data.groups || [];
+    const communities = data.communities || [];
 
-    if (!found.length) {
+    const total =
+        users.length +
+        channels.length +
+        groups.length +
+        communities.length;
+
+    if (!total) {
         const empty = document.createElement("div");
         empty.className = "search-empty";
         empty.style.cssText =
             "padding:12px 10px;color:#8d929e;font-size:13px;text-align:center;line-height:1.3";
         empty.textContent = "Ничего не найдено";
         container.appendChild(empty);
-    } else {
-        found.forEach(user => {
+        return;
+    }
+
+    // --- Users ---
+    if (users.length) {
+        container.appendChild(sidebarSectionHeader("Люди"));
+        users.forEach(user => {
             const div = document.createElement("div");
             div.className = "user-item";
 
@@ -1527,7 +1559,6 @@ async function loadUsers(query = "") {
             if (user.avatar_url) {
                 avatar.src = mediaUrl(user.avatar_url);
             }
-            // Клик по аватару — профиль, по строке — чат
             avatar.onclick = (e) => {
                 e.stopPropagation();
                 openUserProfile(user.id);
@@ -1550,10 +1581,77 @@ async function loadUsers(query = "") {
         });
     }
 
-    if (requestId !== searchRequestId) return;
+    // --- Channels (поиск + подписка) ---
+    if (channels.length) {
+        container.appendChild(sidebarSectionHeader("Каналы"));
+        channels.forEach(channel => {
+            const div = document.createElement("div");
+            div.className = "user-item";
+            div.innerHTML = `
+                <div class="user-avatar" style="display:flex;align-items:center;justify-content:center;font-size:18px;background:#30333b">📢</div>
+                <div class="user-info">
+                    <strong>${escapeHtml(channel.name)}</strong>
+                    <small>@${escapeHtml(channel.username)}${channel.joined ? " · вы подписаны" : ""}</small>
+                </div>
+            `;
+            div.onclick = async () => {
+                if (!channel.joined) {
+                    const res = await request(
+                        "/api/channels/" + channel.id + "/join",
+                        { method: "POST" }
+                    );
+                    if (!res.ok) {
+                        const err = await safeJson(res);
+                        alert(err.detail || "Не удалось подписаться");
+                        return;
+                    }
+                    channel.joined = true;
+                }
+                openChannelChat(
+                    channel.id,
+                    channel.name,
+                    !!channel.is_owner
+                );
+            };
+            container.appendChild(div);
+        });
+    }
 
-    // Группы и каналы под результатами поиска
-    await refreshSidebarLists();
+    // --- Groups ---
+    if (groups.length) {
+        container.appendChild(sidebarSectionHeader("Группы"));
+        groups.forEach(group => {
+            const div = document.createElement("div");
+            div.className = "user-item";
+            div.innerHTML = `
+                <div class="user-avatar" style="display:flex;align-items:center;justify-content:center;font-size:18px;background:#30333b">👥</div>
+                <div class="user-info">
+                    <strong>${escapeHtml(group.name)}</strong>
+                    <small>группа</small>
+                </div>
+            `;
+            div.onclick = () => openGroupChat(group.id, group.name);
+            container.appendChild(div);
+        });
+    }
+
+    // --- Communities ---
+    if (communities.length) {
+        container.appendChild(sidebarSectionHeader("Сообщества"));
+        communities.forEach(c => {
+            const div = document.createElement("div");
+            div.className = "user-item";
+            div.innerHTML = `
+                <div class="user-avatar" style="display:flex;align-items:center;justify-content:center;font-size:18px;background:#30333b">🌐</div>
+                <div class="user-info">
+                    <strong>${escapeHtml(c.name)}</strong>
+                    <small>сообщество</small>
+                </div>
+            `;
+            div.onclick = () => openCommunity(c.id, c.name);
+            container.appendChild(div);
+        });
+    }
 }
 
 
@@ -3651,7 +3749,7 @@ async function showFavorites() {
     document.getElementById(
         "pageTitle"
     ).textContent =
-        "⭐ Избранное";
+        "Избранное";
 
     const response =
         await request(
