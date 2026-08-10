@@ -32,11 +32,9 @@ from pydantic import BaseModel
 app = FastAPI(title="MyMessenger")
 
 BASE_DIR = Path(__file__).resolve().parent
-UPLOAD_DIR = BASE_DIR / "uploads"
-STATIC_DIR = BASE_DIR / "static"
 
+UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
-STATIC_DIR.mkdir(exist_ok=True)
 
 DB = str(BASE_DIR / "messenger.db")
 
@@ -73,17 +71,24 @@ connections = defaultdict(list)
 # =========================================================
 
 def db():
+
     connection = sqlite3.connect(DB)
+
     connection.row_factory = sqlite3.Row
+
     return connection
 
 
 def column_exists(connection, table, column):
+
     result = connection.execute(
         f"PRAGMA table_info({table})"
     ).fetchall()
 
-    return any(row["name"] == column for row in result)
+    return any(
+        row["name"] == column
+        for row in result
+    )
 
 
 def init_db():
@@ -91,100 +96,199 @@ def init_db():
     connection = db()
 
     connection.executescript("""
+
     CREATE TABLE IF NOT EXISTS users (
+
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+
         username TEXT UNIQUE NOT NULL,
+
         password_hash TEXT NOT NULL,
+
         created_at TEXT NOT NULL,
+
         last_seen TEXT
+
     );
+
 
     CREATE TABLE IF NOT EXISTS messages (
+
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+
         sender_id INTEGER NOT NULL,
+
         receiver_id INTEGER NOT NULL,
-        text TEXT NOT NULL,
+
+        text TEXT DEFAULT '',
+
+        media_url TEXT,
+
         created_at TEXT NOT NULL,
+
+        edited INTEGER DEFAULT 0,
+
         is_read INTEGER DEFAULT 0
+
     );
+
 
     CREATE TABLE IF NOT EXISTS posts (
+
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+
         author_id INTEGER NOT NULL,
+
         text TEXT DEFAULT '',
+
         media_url TEXT,
+
         media_type TEXT,
+
         created_at TEXT NOT NULL
+
     );
+
 
     CREATE TABLE IF NOT EXISTS post_likes (
+
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+
         post_id INTEGER NOT NULL,
+
         user_id INTEGER NOT NULL,
+
         UNIQUE(post_id, user_id)
+
     );
+
 
     CREATE TABLE IF NOT EXISTS comments (
+
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+
         post_id INTEGER NOT NULL,
+
         user_id INTEGER NOT NULL,
-        parent_id INTEGER,
+
         text TEXT NOT NULL,
-        created_at TEXT NOT NULL
+
+        created_at TEXT NOT NULL,
+
+        reply_to_id INTEGER
+
     );
+
     """)
 
-    # -----------------------------------------------------
-    # USERS MIGRATION
-    # -----------------------------------------------------
+
+    # =====================================================
+    # USERS MIGRATIONS
+    # =====================================================
 
     if not column_exists(
         connection,
         "users",
         "display_name"
     ):
+
         connection.execute(
-            "ALTER TABLE users ADD COLUMN display_name TEXT"
+            """
+            ALTER TABLE users
+            ADD COLUMN display_name TEXT
+            """
         )
+
 
     if not column_exists(
         connection,
         "users",
         "bio"
     ):
+
         connection.execute(
-            "ALTER TABLE users ADD COLUMN bio TEXT DEFAULT ''"
+            """
+            ALTER TABLE users
+            ADD COLUMN bio TEXT DEFAULT ''
+            """
         )
+
 
     if not column_exists(
         connection,
         "users",
         "avatar_url"
     ):
+
         connection.execute(
-            "ALTER TABLE users ADD COLUMN avatar_url TEXT"
+            """
+            ALTER TABLE users
+            ADD COLUMN avatar_url TEXT
+            """
         )
 
-    # -----------------------------------------------------
-    # COMMENTS MIGRATION
-    # -----------------------------------------------------
+
+    # =====================================================
+    # MESSAGE MIGRATIONS
+    # =====================================================
+
+    if not column_exists(
+        connection,
+        "messages",
+        "media_url"
+    ):
+
+        connection.execute(
+            """
+            ALTER TABLE messages
+            ADD COLUMN media_url TEXT
+            """
+        )
+
+
+    if not column_exists(
+        connection,
+        "messages",
+        "edited"
+    ):
+
+        connection.execute(
+            """
+            ALTER TABLE messages
+            ADD COLUMN edited INTEGER DEFAULT 0
+            """
+        )
+
+
+    # =====================================================
+    # COMMENT MIGRATIONS
+    # =====================================================
 
     if not column_exists(
         connection,
         "comments",
-        "parent_id"
+        "reply_to_id"
     ):
+
         connection.execute(
-            "ALTER TABLE comments ADD COLUMN parent_id INTEGER"
+            """
+            ALTER TABLE comments
+            ADD COLUMN reply_to_id INTEGER
+            """
         )
 
-    connection.execute("""
+
+    connection.execute(
+        """
         UPDATE users
         SET display_name = username
         WHERE display_name IS NULL
-    """)
+        """
+    )
+
 
     connection.commit()
+
     connection.close()
 
 
@@ -209,8 +313,13 @@ def hash_password(password):
 def create_token(user_id):
 
     payload = {
+
         "user_id": user_id,
-        "exp": datetime.utcnow() + timedelta(days=30)
+
+        "exp":
+            datetime.utcnow()
+            + timedelta(days=30)
+
     }
 
     return jwt.encode(
@@ -230,7 +339,9 @@ def get_user_from_token(token):
             algorithms=[ALGORITHM]
         )
 
-        return int(payload["user_id"])
+        return int(
+            payload["user_id"]
+        )
 
     except Exception:
 
@@ -239,10 +350,11 @@ def get_user_from_token(token):
 
 def get_auth_user(request: Request):
 
-    auth = request.headers.get(
-        "Authorization",
-        ""
-    )
+    auth =
+        request.headers.get(
+            "Authorization",
+            ""
+        )
 
     if not auth.startswith("Bearer "):
 
@@ -251,9 +363,10 @@ def get_auth_user(request: Request):
             "Не авторизован"
         )
 
-    user_id = get_user_from_token(
-        auth[7:]
-    )
+    user_id =
+        get_user_from_token(
+            auth[7:]
+        )
 
     if not user_id:
 
@@ -270,33 +383,44 @@ def get_auth_user(request: Request):
 # =========================================================
 
 class RegisterRequest(BaseModel):
+
     username: str
     password: str
 
 
 class LoginRequest(BaseModel):
+
     username: str
     password: str
 
 
 class MessageRequest(BaseModel):
+
     receiver_id: int
     text: str
 
 
+class MessageEditRequest(BaseModel):
+
+    text: str
+
+
 class ProfileRequest(BaseModel):
+
     username: str
     display_name: str
     bio: str = ""
 
 
 class PostRequest(BaseModel):
+
     text: str = ""
 
 
 class CommentRequest(BaseModel):
+
     text: str
-    parent_id: int | None = None
+    reply_to_id: int | None = None
 
 
 # =========================================================
@@ -306,42 +430,53 @@ class CommentRequest(BaseModel):
 @app.post("/api/register")
 def register(data: RegisterRequest):
 
-    username = data.username.strip().lower()
+    username =
+        data.username.strip().lower()
 
     if len(username) < 3:
+
         raise HTTPException(
             400,
             "Username должен содержать минимум 3 символа"
         )
 
     if len(username) > 30:
+
         raise HTTPException(
             400,
             "Username слишком длинный"
         )
 
-    if not username.replace("_", "").isalnum():
+    if not username.replace(
+        "_",
+        ""
+    ).isalnum():
+
         raise HTTPException(
             400,
             "Username может содержать буквы, цифры и _"
         )
 
     if len(data.password) < 6:
+
         raise HTTPException(
             400,
             "Пароль должен содержать минимум 6 символов"
         )
 
+
     connection = db()
 
-    existing = connection.execute(
-        """
-        SELECT id
-        FROM users
-        WHERE username = ?
-        """,
-        (username,)
-    ).fetchone()
+    existing =
+        connection.execute(
+            """
+            SELECT id
+            FROM users
+            WHERE username = ?
+            """,
+            (username,)
+        ).fetchone()
+
 
     if existing:
 
@@ -352,44 +487,64 @@ def register(data: RegisterRequest):
             "Такой username уже занят"
         )
 
-    now = datetime.utcnow().isoformat()
 
-    cursor = connection.execute(
-        """
-        INSERT INTO users
-        (
-            username,
-            password_hash,
-            created_at,
-            last_seen,
-            display_name,
-            bio
-        )
-        VALUES (?, ?, ?, ?, ?, ?)
-        """,
-        (
-            username,
-            hash_password(data.password),
-            now,
-            now,
-            username,
-            ""
-        )
-    )
+    now =
+        datetime.utcnow().isoformat()
 
-    user_id = cursor.lastrowid
+
+    cursor =
+        connection.execute(
+            """
+            INSERT INTO users
+            (
+                username,
+                password_hash,
+                created_at,
+                last_seen,
+                display_name,
+                bio
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                username,
+                hash_password(
+                    data.password
+                ),
+                now,
+                now,
+                username,
+                ""
+            )
+        )
+
+
+    user_id =
+        cursor.lastrowid
+
 
     connection.commit()
+
     connection.close()
 
+
     return {
+
         "ok": True,
-        "token": create_token(user_id),
+
+        "token":
+            create_token(user_id),
+
         "user": {
+
             "id": user_id,
+
             "username": username,
+
             "display_name": username
+
         }
+
     }
 
 
@@ -402,14 +557,20 @@ def login(data: LoginRequest):
 
     connection = db()
 
-    user = connection.execute(
-        """
-        SELECT *
-        FROM users
-        WHERE username = ?
-        """,
-        (data.username.strip().lower(),)
-    ).fetchone()
+    user =
+        connection.execute(
+            """
+            SELECT *
+            FROM users
+            WHERE username = ?
+            """,
+            (
+                data.username
+                .strip()
+                .lower(),
+            )
+        ).fetchone()
+
 
     if not user:
 
@@ -420,9 +581,9 @@ def login(data: LoginRequest):
             "Неверный логин или пароль"
         )
 
-    if user["password_hash"] != hash_password(
-        data.password
-    ):
+
+    if user["password_hash"] != \
+        hash_password(data.password):
 
         connection.close()
 
@@ -431,7 +592,10 @@ def login(data: LoginRequest):
             "Неверный логин или пароль"
         )
 
-    now = datetime.utcnow().isoformat()
+
+    now =
+        datetime.utcnow().isoformat()
+
 
     connection.execute(
         """
@@ -445,17 +609,33 @@ def login(data: LoginRequest):
         )
     )
 
+
     connection.commit()
+
     connection.close()
 
+
     return {
+
         "ok": True,
-        "token": create_token(user["id"]),
+
+        "token":
+            create_token(
+                user["id"]
+            ),
+
         "user": {
+
             "id": user["id"],
-            "username": user["username"],
-            "display_name": user["display_name"]
+
+            "username":
+                user["username"],
+
+            "display_name":
+                user["display_name"]
+
         }
+
     }
 
 
@@ -466,39 +646,45 @@ def login(data: LoginRequest):
 @app.get("/api/me")
 def me(request: Request):
 
-    user_id = get_auth_user(request)
+    user_id =
+        get_auth_user(request)
 
     connection = db()
 
-    user = connection.execute(
-        """
-        SELECT
-            id,
-            username,
-            display_name,
-            bio,
-            avatar_url,
-            created_at,
-            last_seen
-        FROM users
-        WHERE id = ?
-        """,
-        (user_id,)
-    ).fetchone()
+    user =
+        connection.execute(
+            """
+            SELECT
+                id,
+                username,
+                display_name,
+                bio,
+                avatar_url,
+                created_at,
+                last_seen
+            FROM users
+            WHERE id = ?
+            """,
+            (user_id,)
+        ).fetchone()
+
 
     connection.close()
 
+
     if not user:
+
         raise HTTPException(
             404,
             "Пользователь не найден"
         )
 
+
     return dict(user)
 
 
 # =========================================================
-# UPDATE PROFILE
+# PROFILE
 # =========================================================
 
 @app.put("/api/profile")
@@ -507,47 +693,60 @@ def update_profile(
     request: Request
 ):
 
-    user_id = get_auth_user(request)
+    user_id =
+        get_auth_user(request)
 
-    username = data.username.strip().lower()
-    display_name = data.display_name.strip()
-    bio = data.bio.strip()
+    username =
+        data.username.strip().lower()
+
+    display_name =
+        data.display_name.strip()
+
+    bio =
+        data.bio.strip()
+
 
     if len(username) < 3:
+
         raise HTTPException(
             400,
             "Username слишком короткий"
         )
 
-    if len(username) > 30:
-        raise HTTPException(
-            400,
-            "Username слишком длинный"
-        )
 
-    if not username.replace("_", "").isalnum():
+    if not username.replace(
+        "_",
+        ""
+    ).isalnum():
+
         raise HTTPException(
             400,
             "Username может содержать буквы, цифры и _"
         )
 
+
     if not display_name:
+
         display_name = username
+
 
     connection = db()
 
-    existing = connection.execute(
-        """
-        SELECT id
-        FROM users
-        WHERE username = ?
-        AND id != ?
-        """,
-        (
-            username,
-            user_id
-        )
-    ).fetchone()
+
+    existing =
+        connection.execute(
+            """
+            SELECT id
+            FROM users
+            WHERE username = ?
+            AND id != ?
+            """,
+            (
+                username,
+                user_id
+            )
+        ).fetchone()
+
 
     if existing:
 
@@ -558,25 +757,31 @@ def update_profile(
             "Этот username уже занят"
         )
 
+
     connection.execute(
         """
         UPDATE users
         SET
             username = ?,
             display_name = ?,
-            bio = ?
+            bio = ?,
+            last_seen = ?
         WHERE id = ?
         """,
         (
             username,
             display_name,
             bio,
+            datetime.utcnow().isoformat(),
             user_id
         )
     )
 
+
     connection.commit()
+
     connection.close()
+
 
     return {
         "ok": True
@@ -593,44 +798,63 @@ async def upload_avatar(
     file: UploadFile = File(...)
 ):
 
-    user_id = get_auth_user(request)
+    user_id =
+        get_auth_user(request)
+
 
     allowed = {
+
         "image/jpeg": ".jpg",
+
         "image/png": ".png",
+
         "image/webp": ".webp"
+
     }
 
+
     if file.content_type not in allowed:
+
         raise HTTPException(
             400,
             "Разрешены JPG, PNG и WEBP"
         )
 
-    extension = allowed[
-        file.content_type
-    ]
 
-    filename = (
-        "avatar_"
-        + str(user_id)
-        + "_"
-        + secrets.token_hex(8)
-        + extension
-    )
+    extension =
+        allowed[file.content_type]
 
-    path = UPLOAD_DIR / filename
 
-    with open(path, "wb") as output:
+    filename =
+        "avatar_" +
+        str(user_id) +
+        "_" +
+        secrets.token_hex(8) +
+        extension
+
+
+    path =
+        UPLOAD_DIR / filename
+
+
+    with open(
+        path,
+        "wb"
+    ) as output:
 
         shutil.copyfileobj(
             file.file,
             output
         )
 
-    url = "/uploads/" + filename
+
+    url =
+        "/uploads/" +
+        filename
+
 
     connection = db()
+
 
     connection.execute(
         """
@@ -644,12 +868,18 @@ async def upload_avatar(
         )
     )
 
+
     connection.commit()
+
     connection.close()
 
+
     return {
+
         "ok": True,
+
         "avatar_url": url
+
     }
 
 
@@ -663,38 +893,46 @@ def search_users(
     q: str = ""
 ):
 
-    user_id = get_auth_user(request)
+    user_id =
+        get_auth_user(request)
 
-    q = q.strip()
+    q =
+        q.strip()
+
 
     connection = db()
 
-    users = connection.execute(
-        """
-        SELECT
-            id,
-            username,
-            display_name,
-            avatar_url,
-            last_seen
-        FROM users
-        WHERE
+
+    users =
+        connection.execute(
+            """
+            SELECT
+                id,
+                username,
+                display_name,
+                bio,
+                avatar_url,
+                last_seen
+            FROM users
+            WHERE
+                (
+                    username LIKE ?
+                    OR display_name LIKE ?
+                )
+                AND id != ?
+            ORDER BY username
+            LIMIT 50
+            """,
             (
-                username LIKE ?
-                OR display_name LIKE ?
+                f"%{q}%",
+                f"%{q}%",
+                user_id
             )
-            AND id != ?
-        ORDER BY username
-        LIMIT 50
-        """,
-        (
-            f"%{q}%",
-            f"%{q}%",
-            user_id
-        )
-    ).fetchall()
+        ).fetchall()
+
 
     connection.close()
+
 
     return [
         dict(user)
@@ -703,7 +941,7 @@ def search_users(
 
 
 # =========================================================
-# MESSAGES
+# GET MESSAGES
 # =========================================================
 
 @app.get("/api/messages/{other_user_id}")
@@ -712,39 +950,46 @@ def get_messages(
     request: Request
 ):
 
-    user_id = get_auth_user(request)
+    user_id =
+        get_auth_user(request)
+
 
     connection = db()
 
-    messages = connection.execute(
-        """
-        SELECT
-            id,
-            sender_id,
-            receiver_id,
-            text,
-            created_at,
-            is_read
-        FROM messages
-        WHERE
+
+    messages =
+        connection.execute(
+            """
+            SELECT
+                id,
+                sender_id,
+                receiver_id,
+                text,
+                media_url,
+                created_at,
+                edited,
+                is_read
+            FROM messages
+            WHERE
+                (
+                    sender_id = ?
+                    AND receiver_id = ?
+                )
+                OR
+                (
+                    sender_id = ?
+                    AND receiver_id = ?
+                )
+            ORDER BY id ASC
+            """,
             (
-                sender_id = ?
-                AND receiver_id = ?
+                user_id,
+                other_user_id,
+                other_user_id,
+                user_id
             )
-            OR
-            (
-                sender_id = ?
-                AND receiver_id = ?
-            )
-        ORDER BY id ASC
-        """,
-        (
-            user_id,
-            other_user_id,
-            other_user_id,
-            user_id
-        )
-    ).fetchall()
+        ).fetchall()
+
 
     connection.execute(
         """
@@ -760,8 +1005,24 @@ def get_messages(
         )
     )
 
+
+    connection.execute(
+        """
+        UPDATE users
+        SET last_seen = ?
+        WHERE id = ?
+        """,
+        (
+            datetime.utcnow().isoformat(),
+            user_id
+        )
+    )
+
+
     connection.commit()
+
     connection.close()
+
 
     return [
         dict(message)
@@ -769,44 +1030,55 @@ def get_messages(
     ]
 
 
+# =========================================================
+# SEND MESSAGE
+# =========================================================
+
 @app.post("/api/messages")
 async def send_message(
     data: MessageRequest,
     request: Request
 ):
 
-    sender_id = get_auth_user(request)
+    sender_id =
+        get_auth_user(request)
 
-    text = data.text.strip()
+
+    text =
+        data.text.strip()
+
 
     if not text:
+
         raise HTTPException(
             400,
             "Пустое сообщение"
         )
 
+
     if len(text) > 5000:
+
         raise HTTPException(
             400,
             "Сообщение слишком длинное"
         )
 
-    if sender_id == data.receiver_id:
-        raise HTTPException(
-            400,
-            "Нельзя отправить сообщение самому себе"
-        )
 
     connection = db()
 
-    receiver = connection.execute(
-        """
-        SELECT id
-        FROM users
-        WHERE id = ?
-        """,
-        (data.receiver_id,)
-    ).fetchone()
+
+    receiver =
+        connection.execute(
+            """
+            SELECT id
+            FROM users
+            WHERE id = ?
+            """,
+            (
+                data.receiver_id,
+            )
+        ).fetchone()
+
 
     if not receiver:
 
@@ -817,70 +1089,280 @@ async def send_message(
             "Пользователь не найден"
         )
 
-    now = datetime.utcnow().isoformat()
 
-    cursor = connection.execute(
-        """
-        INSERT INTO messages
-        (
-            sender_id,
-            receiver_id,
-            text,
-            created_at
+    now =
+        datetime.utcnow().isoformat()
+
+
+    cursor =
+        connection.execute(
+            """
+            INSERT INTO messages
+            (
+                sender_id,
+                receiver_id,
+                text,
+                created_at
+            )
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                sender_id,
+                data.receiver_id,
+                text,
+                now
+            )
         )
-        VALUES (?, ?, ?, ?)
+
+
+    message_id =
+        cursor.lastrowid
+
+
+    connection.execute(
+        """
+        UPDATE users
+        SET last_seen = ?
+        WHERE id = ?
         """,
         (
-            sender_id,
-            data.receiver_id,
-            text,
-            now
+            now,
+            sender_id
         )
     )
 
-    message_id = cursor.lastrowid
 
     connection.commit()
+
     connection.close()
 
+
     message = {
+
         "id": message_id,
+
         "sender_id": sender_id,
-        "receiver_id": data.receiver_id,
+
+        "receiver_id":
+            data.receiver_id,
+
         "text": text,
+
+        "media_url": None,
+
         "created_at": now,
+
+        "edited": 0,
+
         "is_read": 0
+
     }
 
-    # Отправляем получателю
-    for socket in list(
-        connections.get(data.receiver_id, [])
+
+    await broadcast_message(
+        data.receiver_id,
+        {
+            "type": "message",
+            "message": message
+        }
+    )
+
+
+    await broadcast_message(
+        sender_id,
+        {
+            "type": "message",
+            "message": message
+        }
+    )
+
+
+    return {
+
+        "ok": True,
+
+        "message": message
+
+    }
+
+
+# =========================================================
+# SEND IMAGE MESSAGE
+# =========================================================
+
+@app.post("/api/messages/media")
+async def send_message_media(
+    request: Request,
+    receiver_id: int = None,
+    file: UploadFile = File(...)
+):
+
+    user_id =
+        get_auth_user(request)
+
+
+    # receiver_id передаётся query-параметром
+    # либо через multipart form в старых браузерах.
+    if receiver_id is None:
+
+        raise HTTPException(
+            400,
+            "Не указан получатель"
+        )
+
+
+    if not file.content_type.startswith(
+        "image/"
     ):
 
-        try:
+        raise HTTPException(
+            400,
+            "Можно отправлять только изображения"
+        )
 
-            await socket.send_json({
-                "type": "message",
-                "message": message
-            })
 
-        except Exception:
-            pass
+    extension = {
 
-    # Отправляем отправителю на другие открытые вкладки
-    for socket in list(
-        connections.get(sender_id, [])
-    ):
+        "image/jpeg": ".jpg",
 
-        try:
+        "image/png": ".png",
 
-            await socket.send_json({
-                "type": "message",
-                "message": message
-            })
+        "image/webp": ".webp",
 
-        except Exception:
-            pass
+        "image/gif": ".gif"
+
+    }.get(
+        file.content_type,
+        ".jpg"
+    )
+
+
+    filename =
+        "message_" +
+        str(user_id) +
+        "_" +
+        secrets.token_hex(10) +
+        extension
+
+
+    path =
+        UPLOAD_DIR / filename
+
+
+    with open(
+        path,
+        "wb"
+    ) as output:
+
+        shutil.copyfileobj(
+            file.file,
+            output
+        )
+
+
+    url =
+        "/uploads/" +
+        filename
+
+
+    connection = db()
+
+
+    receiver =
+        connection.execute(
+            """
+            SELECT id
+            FROM users
+            WHERE id = ?
+            """,
+            (receiver_id,)
+        ).fetchone()
+
+
+    if not receiver:
+
+        connection.close()
+
+        raise HTTPException(
+            404,
+            "Пользователь не найден"
+        )
+
+
+    now =
+        datetime.utcnow().isoformat()
+
+
+    cursor =
+        connection.execute(
+            """
+            INSERT INTO messages
+            (
+                sender_id,
+                receiver_id,
+                text,
+                media_url,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                user_id,
+                receiver_id,
+                "",
+                url,
+                now
+            )
+        )
+
+
+    message_id =
+        cursor.lastrowid
+
+
+    connection.commit()
+
+    connection.close()
+
+
+    message = {
+
+        "id": message_id,
+
+        "sender_id": user_id,
+
+        "receiver_id": receiver_id,
+
+        "text": "",
+
+        "media_url": url,
+
+        "created_at": now,
+
+        "edited": 0,
+
+        "is_read": 0
+
+    }
+
+
+    await broadcast_message(
+        receiver_id,
+        {
+            "type": "message",
+            "message": message
+        }
+    )
+
+
+    await broadcast_message(
+        user_id,
+        {
+            "type": "message",
+            "message": message
+        }
+    )
+
 
     return {
         "ok": True,
@@ -889,7 +1371,273 @@ async def send_message(
 
 
 # =========================================================
-# POSTS
+# EDIT MESSAGE
+# =========================================================
+
+@app.put("/api/messages/{message_id}")
+async def edit_message(
+    message_id: int,
+    data: MessageEditRequest,
+    request: Request
+):
+
+    user_id =
+        get_auth_user(request)
+
+
+    text =
+        data.text.strip()
+
+
+    if not text:
+
+        raise HTTPException(
+            400,
+            "Сообщение не может быть пустым"
+        )
+
+
+    if len(text) > 5000:
+
+        raise HTTPException(
+            400,
+            "Сообщение слишком длинное"
+        )
+
+
+    connection = db()
+
+
+    message =
+        connection.execute(
+            """
+            SELECT *
+            FROM messages
+            WHERE id = ?
+            """,
+            (message_id,)
+        ).fetchone()
+
+
+    if not message:
+
+        connection.close()
+
+        raise HTTPException(
+            404,
+            "Сообщение не найдено"
+        )
+
+
+    if message["sender_id"] != user_id:
+
+        connection.close()
+
+        raise HTTPException(
+            403,
+            "Можно изменять только свои сообщения"
+        )
+
+
+    if message["media_url"]:
+
+        connection.close()
+
+        raise HTTPException(
+            400,
+            "Медиа-сообщения нельзя изменять"
+        )
+
+
+    connection.execute(
+        """
+        UPDATE messages
+        SET
+            text = ?,
+            edited = 1
+        WHERE id = ?
+        """,
+        (
+            text,
+            message_id
+        )
+    )
+
+
+    connection.commit()
+
+    connection.close()
+
+
+    payload = {
+
+        "type": "message_updated",
+
+        "message_id": message_id,
+
+        "sender_id":
+            message["sender_id"],
+
+        "receiver_id":
+            message["receiver_id"]
+
+    }
+
+
+    await broadcast_message(
+        message["sender_id"],
+        payload
+    )
+
+
+    await broadcast_message(
+        message["receiver_id"],
+        payload
+    )
+
+
+    return {
+        "ok": True
+    }
+
+
+# =========================================================
+# DELETE MESSAGE
+# =========================================================
+
+@app.delete("/api/messages/{message_id}")
+async def delete_message(
+    message_id: int,
+    request: Request
+):
+
+    user_id =
+        get_auth_user(request)
+
+
+    connection = db()
+
+
+    message =
+        connection.execute(
+            """
+            SELECT *
+            FROM messages
+            WHERE id = ?
+            """,
+            (message_id,)
+        ).fetchone()
+
+
+    if not message:
+
+        connection.close()
+
+        raise HTTPException(
+            404,
+            "Сообщение не найдено"
+        )
+
+
+    if message["sender_id"] != user_id:
+
+        connection.close()
+
+        raise HTTPException(
+            403,
+            "Можно удалять только свои сообщения"
+        )
+
+
+    connection.execute(
+        """
+        DELETE FROM messages
+        WHERE id = ?
+        """,
+        (message_id,)
+    )
+
+
+    connection.commit()
+
+    connection.close()
+
+
+    if message["media_url"]:
+
+        filename =
+            Path(
+                message["media_url"]
+            ).name
+
+        path =
+            UPLOAD_DIR / filename
+
+        if path.exists():
+
+            try:
+                path.unlink()
+            except Exception:
+                pass
+
+
+    payload = {
+
+        "type": "message_deleted",
+
+        "message_id": message_id
+
+    }
+
+
+    await broadcast_message(
+        message["sender_id"],
+        payload
+    )
+
+
+    await broadcast_message(
+        message["receiver_id"],
+        payload
+    )
+
+
+    return {
+        "ok": True
+    }
+
+
+# =========================================================
+# WEBSOCKET BROADCAST
+# =========================================================
+
+async def broadcast_message(
+    user_id,
+    payload
+):
+
+    for socket in list(
+        connections.get(user_id, [])
+    ):
+
+        try:
+
+            await socket.send_json(
+                payload
+            )
+
+        except Exception:
+
+            try:
+                connections[user_id].remove(
+                    socket
+                )
+            except Exception:
+                pass
+
+
+# =========================================================
+# FEED
 # =========================================================
 
 @app.get("/api/feed")
@@ -897,39 +1645,52 @@ def feed(request: Request):
 
     get_auth_user(request)
 
+
     connection = db()
 
-    posts = connection.execute(
-        """
-        SELECT
-            p.id,
-            p.author_id,
-            p.text,
-            p.media_url,
-            p.media_type,
-            p.created_at,
-            u.username,
-            u.display_name,
-            u.avatar_url,
-            (
-                SELECT COUNT(*)
-                FROM post_likes
-                WHERE post_id = p.id
-            ) AS likes,
-            (
-                SELECT COUNT(*)
-                FROM comments
-                WHERE post_id = p.id
-            ) AS comments
-        FROM posts p
-        JOIN users u
-            ON u.id = p.author_id
-        ORDER BY p.id DESC
-        LIMIT 100
-        """
-    ).fetchall()
+
+    posts =
+        connection.execute(
+            """
+            SELECT
+                p.id,
+                p.author_id,
+                p.text,
+                p.media_url,
+                p.media_type,
+                p.created_at,
+
+                u.username,
+                u.display_name,
+                u.avatar_url,
+                u.bio AS author_bio,
+
+                (
+                    SELECT COUNT(*)
+                    FROM post_likes
+                    WHERE post_id = p.id
+                ) AS likes,
+
+                (
+                    SELECT COUNT(*)
+                    FROM comments
+                    WHERE post_id = p.id
+                ) AS comments
+
+            FROM posts p
+
+            JOIN users u
+                ON u.id = p.author_id
+
+            ORDER BY p.id DESC
+
+            LIMIT 100
+            """
+        ).fetchall()
+
 
     connection.close()
+
 
     return [
         dict(post)
@@ -938,59 +1699,8 @@ def feed(request: Request):
 
 
 # =========================================================
-# SINGLE POST
+# CREATE POST
 # =========================================================
-
-@app.get("/api/posts/{post_id}")
-def get_post(
-    post_id: int,
-    request: Request
-):
-
-    get_auth_user(request)
-
-    connection = db()
-
-    post = connection.execute(
-        """
-        SELECT
-            p.id,
-            p.author_id,
-            p.text,
-            p.media_url,
-            p.media_type,
-            p.created_at,
-            u.username,
-            u.display_name,
-            u.avatar_url,
-            (
-                SELECT COUNT(*)
-                FROM post_likes
-                WHERE post_id = p.id
-            ) AS likes,
-            (
-                SELECT COUNT(*)
-                FROM comments
-                WHERE post_id = p.id
-            ) AS comments
-        FROM posts p
-        JOIN users u
-            ON u.id = p.author_id
-        WHERE p.id = ?
-        """,
-        (post_id,)
-    ).fetchone()
-
-    connection.close()
-
-    if not post:
-        raise HTTPException(
-            404,
-            "Пост не найден"
-        )
-
-    return dict(post)
-
 
 @app.post("/api/posts")
 def create_post(
@@ -998,53 +1708,74 @@ def create_post(
     request: Request
 ):
 
-    user_id = get_auth_user(request)
+    user_id =
+        get_auth_user(request)
 
-    text = data.text.strip()
+
+    text =
+        data.text.strip()
+
 
     if not text:
+
         raise HTTPException(
             400,
             "Напиши текст поста"
         )
 
+
     if len(text) > 5000:
+
         raise HTTPException(
             400,
             "Пост слишком длинный"
         )
 
+
     connection = db()
 
-    now = datetime.utcnow().isoformat()
 
-    cursor = connection.execute(
-        """
-        INSERT INTO posts
-        (
-            author_id,
-            text,
-            created_at
-        )
-        VALUES (?, ?, ?)
-        """,
-        (
-            user_id,
-            text,
-            now
-        )
-    )
+    now =
+        datetime.utcnow().isoformat()
 
-    post_id = cursor.lastrowid
+
+    cursor =
+        connection.execute(
+            """
+            INSERT INTO posts
+            (
+                author_id,
+                text,
+                created_at
+            )
+            VALUES (?, ?, ?)
+            """,
+            (
+                user_id,
+                text,
+                now
+            )
+        )
+
+
+    post_id =
+        cursor.lastrowid
+
 
     connection.commit()
+
     connection.close()
+
 
     return {
         "ok": True,
         "id": post_id
     }
 
+
+# =========================================================
+# MEDIA POST
+# =========================================================
 
 @app.post("/api/posts/media")
 async def create_media_post(
@@ -1053,16 +1784,32 @@ async def create_media_post(
     file: UploadFile = File(...)
 ):
 
-    user_id = get_auth_user(request)
+    user_id =
+        get_auth_user(request)
+
 
     allowed = {
-        "image/jpeg": (".jpg", "image"),
-        "image/png": (".png", "image"),
-        "image/webp": (".webp", "image"),
-        "video/mp4": (".mp4", "video"),
-        "video/webm": (".webm", "video"),
-        "video/quicktime": (".mov", "video")
+
+        "image/jpeg":
+            (".jpg","image"),
+
+        "image/png":
+            (".png","image"),
+
+        "image/webp":
+            (".webp","image"),
+
+        "video/mp4":
+            (".mp4","video"),
+
+        "video/webm":
+            (".webm","video"),
+
+        "video/quicktime":
+            (".mov","video")
+
     }
+
 
     if file.content_type not in allowed:
 
@@ -1071,63 +1818,86 @@ async def create_media_post(
             "Этот формат файла не поддерживается"
         )
 
-    extension, media_type = allowed[
-        file.content_type
-    ]
 
-    filename = (
-        "post_"
-        + str(user_id)
-        + "_"
-        + secrets.token_hex(10)
-        + extension
-    )
+    extension,media_type =
+        allowed[file.content_type]
 
-    path = UPLOAD_DIR / filename
 
-    with open(path, "wb") as output:
+    filename =
+        "post_" +
+        str(user_id) +
+        "_" +
+        secrets.token_hex(10) +
+        extension
+
+
+    path =
+        UPLOAD_DIR / filename
+
+
+    with open(
+        path,
+        "wb"
+    ) as output:
 
         shutil.copyfileobj(
             file.file,
             output
         )
 
-    url = "/uploads/" + filename
+
+    url =
+        "/uploads/" +
+        filename
+
 
     connection = db()
 
-    now = datetime.utcnow().isoformat()
 
-    cursor = connection.execute(
-        """
-        INSERT INTO posts
-        (
-            author_id,
-            text,
-            media_url,
-            media_type,
-            created_at
-        )
-        VALUES (?, ?, ?, ?, ?)
-        """,
-        (
-            user_id,
-            text.strip(),
-            url,
-            media_type,
-            now
-        )
-    )
+    now =
+        datetime.utcnow().isoformat()
 
-    post_id = cursor.lastrowid
+
+    cursor =
+        connection.execute(
+            """
+            INSERT INTO posts
+            (
+                author_id,
+                text,
+                media_url,
+                media_type,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                user_id,
+                text.strip(),
+                url,
+                media_type,
+                now
+            )
+        )
+
+
+    post_id =
+        cursor.lastrowid
+
 
     connection.commit()
+
     connection.close()
 
+
     return {
+
         "ok": True,
+
         "id": post_id,
+
         "media_url": url
+
     }
 
 
@@ -1141,41 +1911,28 @@ def like_post(
     request: Request
 ):
 
-    user_id = get_auth_user(request)
+    user_id =
+        get_auth_user(request)
+
 
     connection = db()
 
-    post = connection.execute(
-        """
-        SELECT id
-        FROM posts
-        WHERE id = ?
-        """,
-        (post_id,)
-    ).fetchone()
 
-    if not post:
+    existing =
+        connection.execute(
+            """
+            SELECT id
+            FROM post_likes
+            WHERE
+                post_id = ?
+                AND user_id = ?
+            """,
+            (
+                post_id,
+                user_id
+            )
+        ).fetchone()
 
-        connection.close()
-
-        raise HTTPException(
-            404,
-            "Пост не найден"
-        )
-
-    existing = connection.execute(
-        """
-        SELECT id
-        FROM post_likes
-        WHERE
-            post_id = ?
-            AND user_id = ?
-        """,
-        (
-            post_id,
-            user_id
-        )
-    ).fetchone()
 
     if existing:
 
@@ -1213,21 +1970,29 @@ def like_post(
 
         liked = True
 
-    count = connection.execute(
-        """
-        SELECT COUNT(*)
-        FROM post_likes
-        WHERE post_id = ?
-        """,
-        (post_id,)
-    ).fetchone()[0]
+
+    count =
+        connection.execute(
+            """
+            SELECT COUNT(*)
+            FROM post_likes
+            WHERE post_id = ?
+            """,
+            (post_id,)
+        ).fetchone()[0]
+
 
     connection.commit()
+
     connection.close()
 
+
     return {
+
         "liked": liked,
+
         "likes": count
+
     }
 
 
@@ -1243,36 +2008,66 @@ def get_comments(
 
     get_auth_user(request)
 
+
     connection = db()
 
-    comments = connection.execute(
-        """
-        SELECT
-            c.id,
-            c.post_id,
-            c.parent_id,
-            c.text,
-            c.created_at,
-            c.user_id,
-            u.username,
-            u.display_name,
-            u.avatar_url
-        FROM comments c
-        JOIN users u
-            ON u.id = c.user_id
-        WHERE c.post_id = ?
-        ORDER BY c.id ASC
-        """,
-        (post_id,)
-    ).fetchall()
+
+    comments =
+        connection.execute(
+            """
+            SELECT
+
+                c.id,
+
+                c.post_id,
+
+                c.user_id,
+
+                c.text,
+
+                c.created_at,
+
+                c.reply_to_id,
+
+                u.username,
+
+                u.display_name,
+
+                u.avatar_url,
+
+                ru.username AS reply_to_username
+
+            FROM comments c
+
+            JOIN users u
+                ON u.id = c.user_id
+
+            LEFT JOIN comments rc
+                ON rc.id = c.reply_to_id
+
+            LEFT JOIN users ru
+                ON ru.id = rc.user_id
+
+            WHERE c.post_id = ?
+
+            ORDER BY c.id ASC
+            """,
+            (post_id,)
+        ).fetchall()
+
 
     connection.close()
+
 
     return [
         dict(comment)
         for comment in comments
     ]
 
+
+# =========================================================
+# CREATE COMMENT
+# =========================================================
 
 @app.post("/api/posts/{post_id}/comments")
 def create_comment(
@@ -1281,9 +2076,13 @@ def create_comment(
     request: Request
 ):
 
-    user_id = get_auth_user(request)
+    user_id =
+        get_auth_user(request)
 
-    text = data.text.strip()
+
+    text =
+        data.text.strip()
+
 
     if not text:
 
@@ -1292,6 +2091,7 @@ def create_comment(
             "Пустой комментарий"
         )
 
+
     if len(text) > 2000:
 
         raise HTTPException(
@@ -1299,18 +2099,22 @@ def create_comment(
             "Комментарий слишком длинный"
         )
 
+
     connection = db()
 
-    exists = connection.execute(
-        """
-        SELECT id
-        FROM posts
-        WHERE id = ?
-        """,
-        (post_id,)
-    ).fetchone()
 
-    if not exists:
+    post =
+        connection.execute(
+            """
+            SELECT id
+            FROM posts
+            WHERE id = ?
+            """,
+            (post_id,)
+        ).fetchone()
+
+
+    if not post:
 
         connection.close()
 
@@ -1319,25 +2123,26 @@ def create_comment(
             "Пост не найден"
         )
 
-    parent_id = data.parent_id
 
-    if parent_id is not None:
+    if data.reply_to_id:
 
-        parent = connection.execute(
-            """
-            SELECT id
-            FROM comments
-            WHERE
-                id = ?
-                AND post_id = ?
-            """,
-            (
-                parent_id,
-                post_id
-            )
-        ).fetchone()
+        reply =
+            connection.execute(
+                """
+                SELECT id
+                FROM comments
+                WHERE
+                    id = ?
+                    AND post_id = ?
+                """,
+                (
+                    data.reply_to_id,
+                    post_id
+                )
+            ).fetchone()
 
-        if not parent:
+
+        if not reply:
 
             connection.close()
 
@@ -1346,37 +2151,127 @@ def create_comment(
                 "Комментарий для ответа не найден"
             )
 
-    now = datetime.utcnow().isoformat()
 
-    cursor = connection.execute(
-        """
-        INSERT INTO comments
-        (
-            post_id,
-            user_id,
-            parent_id,
-            text,
-            created_at
-        )
-        VALUES (?, ?, ?, ?, ?)
-        """,
-        (
-            post_id,
-            user_id,
-            parent_id,
-            text,
-            now
-        )
-    )
+    now =
+        datetime.utcnow().isoformat()
 
-    comment_id = cursor.lastrowid
+
+    cursor =
+        connection.execute(
+            """
+            INSERT INTO comments
+            (
+                post_id,
+                user_id,
+                text,
+                created_at,
+                reply_to_id
+            )
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                post_id,
+                user_id,
+                text,
+                now,
+                data.reply_to_id
+            )
+        )
+
+
+    comment_id =
+        cursor.lastrowid
+
 
     connection.commit()
+
     connection.close()
 
+
     return {
+
         "ok": True,
+
         "id": comment_id
+
+    }
+
+
+# =========================================================
+# DELETE COMMENT
+# =========================================================
+
+@app.delete("/api/comments/{comment_id}")
+def delete_comment(
+    comment_id: int,
+    request: Request
+):
+
+    user_id =
+        get_auth_user(request)
+
+
+    connection = db()
+
+
+    comment =
+        connection.execute(
+            """
+            SELECT *
+            FROM comments
+            WHERE id = ?
+            """,
+            (comment_id,)
+        ).fetchone()
+
+
+    if not comment:
+
+        connection.close()
+
+        raise HTTPException(
+            404,
+            "Комментарий не найден"
+        )
+
+
+    if comment["user_id"] != user_id:
+
+        connection.close()
+
+        raise HTTPException(
+            403,
+            "Можно удалить только свой комментарий"
+        )
+
+
+    # Удаляем ответы на этот комментарий,
+    # чтобы не оставлять сломанные ветки.
+    connection.execute(
+        """
+        DELETE FROM comments
+        WHERE reply_to_id = ?
+        """,
+        (comment_id,)
+    )
+
+
+    connection.execute(
+        """
+        DELETE FROM comments
+        WHERE id = ?
+        """,
+        (comment_id,)
+    )
+
+
+    connection.commit()
+
+    connection.close()
+
+
+    return {
+        "ok": True
     }
 
 
@@ -1390,18 +2285,23 @@ def delete_post(
     request: Request
 ):
 
-    user_id = get_auth_user(request)
+    user_id =
+        get_auth_user(request)
+
 
     connection = db()
 
-    post = connection.execute(
-        """
-        SELECT *
-        FROM posts
-        WHERE id = ?
-        """,
-        (post_id,)
-    ).fetchone()
+
+    post =
+        connection.execute(
+            """
+            SELECT *
+            FROM posts
+            WHERE id = ?
+            """,
+            (post_id,)
+        ).fetchone()
+
 
     if not post:
 
@@ -1412,6 +2312,7 @@ def delete_post(
             "Пост не найден"
         )
 
+
     if post["author_id"] != user_id:
 
         connection.close()
@@ -1421,31 +2322,48 @@ def delete_post(
             "Это не твой пост"
         )
 
+
     connection.execute(
-        "DELETE FROM comments WHERE post_id = ?",
+        """
+        DELETE FROM comments
+        WHERE post_id = ?
+        """,
         (post_id,)
     )
 
+
     connection.execute(
-        "DELETE FROM post_likes WHERE post_id = ?",
+        """
+        DELETE FROM post_likes
+        WHERE post_id = ?
+        """,
         (post_id,)
     )
 
+
     connection.execute(
-        "DELETE FROM posts WHERE id = ?",
+        """
+        DELETE FROM posts
+        WHERE id = ?
+        """,
         (post_id,)
     )
+
 
     connection.commit()
+
     connection.close()
+
 
     if post["media_url"]:
 
-        filename = Path(
-            post["media_url"]
-        ).name
+        filename =
+            Path(
+                post["media_url"]
+            ).name
 
-        path = UPLOAD_DIR / filename
+        path =
+            UPLOAD_DIR / filename
 
         if path.exists():
 
@@ -1453,6 +2371,7 @@ def delete_post(
                 path.unlink()
             except Exception:
                 pass
+
 
     return {
         "ok": True
@@ -1471,21 +2390,75 @@ async def websocket_endpoint(
 
     await websocket.accept()
 
+
     connections[user_id].append(
         websocket
     )
+
+
+    # Обновляем last_seen
+    try:
+
+        connection = db()
+
+        connection.execute(
+            """
+            UPDATE users
+            SET last_seen = ?
+            WHERE id = ?
+            """,
+            (
+                datetime.utcnow().isoformat(),
+                user_id
+            )
+        )
+
+        connection.commit()
+
+        connection.close()
+
+    except Exception:
+        pass
+
 
     try:
 
         while True:
 
-            data = await websocket.receive_json()
+            data =
+                await websocket.receive_json()
+
 
             if data.get("type") == "ping":
 
                 await websocket.send_json({
                     "type": "pong"
                 })
+
+
+            elif data.get("type") == "typing":
+
+                receiver_id =
+                    data.get("receiver_id")
+
+                if receiver_id:
+
+                    await broadcast_message(
+                        receiver_id,
+                        {
+                            "type":"typing",
+
+                            "user_id":user_id,
+
+                            "typing":
+                                bool(
+                                    data.get(
+                                        "typing"
+                                    )
+                                )
+                        }
+                    )
+
 
     except WebSocketDisconnect:
 
@@ -1495,20 +2468,6 @@ async def websocket_endpoint(
                 websocket
             )
 
-        if not connections[user_id]:
-
-            connections.pop(
-                user_id,
-                None
-            )
-
-    except Exception:
-
-        if websocket in connections[user_id]:
-
-            connections[user_id].remove(
-                websocket
-            )
 
         if not connections[user_id]:
 
@@ -1516,6 +2475,30 @@ async def websocket_endpoint(
                 user_id,
                 None
             )
+
+
+        try:
+
+            connection = db()
+
+            connection.execute(
+                """
+                UPDATE users
+                SET last_seen = ?
+                WHERE id = ?
+                """,
+                (
+                    datetime.utcnow().isoformat(),
+                    user_id
+                )
+            )
+
+            connection.commit()
+
+            connection.close()
+
+        except Exception:
+            pass
 
 
 # =========================================================
@@ -1531,22 +2514,28 @@ app.mount(
 )
 
 
-# =========================================================
-# STATIC
-# =========================================================
-
 app.mount(
     "/static",
     StaticFiles(
-        directory=str(STATIC_DIR)
+        directory=str(
+            BASE_DIR / "static"
+        )
     ),
     name="static"
 )
 
 
+# =========================================================
+# FRONTEND
+# =========================================================
+
 @app.get("/")
 def index():
 
     return FileResponse(
-        str(STATIC_DIR / "index.html")
+        str(
+            BASE_DIR /
+            "static" /
+            "index.html"
+        )
     )
