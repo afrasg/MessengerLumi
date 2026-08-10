@@ -33,8 +33,10 @@ app = FastAPI(title="MyMessenger")
 
 BASE_DIR = Path(__file__).resolve().parent
 UPLOAD_DIR = BASE_DIR / "uploads"
+STATIC_DIR = BASE_DIR / "static"
 
 UPLOAD_DIR.mkdir(exist_ok=True)
+STATIC_DIR.mkdir(exist_ok=True)
 
 DB = str(BASE_DIR / "messenger.db")
 
@@ -60,7 +62,7 @@ app.add_middleware(
 
 
 # =========================================================
-# CONNECTIONS
+# WEBSOCKET CONNECTIONS
 # =========================================================
 
 connections = defaultdict(list)
@@ -126,25 +128,54 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         post_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
+        parent_id INTEGER,
         text TEXT NOT NULL,
         created_at TEXT NOT NULL
     );
     """)
 
-    # Миграция старой таблицы users.
-    if not column_exists(connection, "users", "display_name"):
+    # -----------------------------------------------------
+    # USERS MIGRATION
+    # -----------------------------------------------------
+
+    if not column_exists(
+        connection,
+        "users",
+        "display_name"
+    ):
         connection.execute(
             "ALTER TABLE users ADD COLUMN display_name TEXT"
         )
 
-    if not column_exists(connection, "users", "bio"):
+    if not column_exists(
+        connection,
+        "users",
+        "bio"
+    ):
         connection.execute(
             "ALTER TABLE users ADD COLUMN bio TEXT DEFAULT ''"
         )
 
-    if not column_exists(connection, "users", "avatar_url"):
+    if not column_exists(
+        connection,
+        "users",
+        "avatar_url"
+    ):
         connection.execute(
             "ALTER TABLE users ADD COLUMN avatar_url TEXT"
+        )
+
+    # -----------------------------------------------------
+    # COMMENTS MIGRATION
+    # -----------------------------------------------------
+
+    if not column_exists(
+        connection,
+        "comments",
+        "parent_id"
+    ):
+        connection.execute(
+            "ALTER TABLE comments ADD COLUMN parent_id INTEGER"
         )
 
     connection.execute("""
@@ -239,38 +270,33 @@ def get_auth_user(request: Request):
 # =========================================================
 
 class RegisterRequest(BaseModel):
-
     username: str
     password: str
 
 
 class LoginRequest(BaseModel):
-
     username: str
     password: str
 
 
 class MessageRequest(BaseModel):
-
     receiver_id: int
     text: str
 
 
 class ProfileRequest(BaseModel):
-
     username: str
     display_name: str
     bio: str = ""
 
 
 class PostRequest(BaseModel):
-
     text: str = ""
 
 
 class CommentRequest(BaseModel):
-
     text: str
+    parent_id: int | None = None
 
 
 # =========================================================
@@ -283,28 +309,24 @@ def register(data: RegisterRequest):
     username = data.username.strip().lower()
 
     if len(username) < 3:
-
         raise HTTPException(
             400,
             "Username должен содержать минимум 3 символа"
         )
 
     if len(username) > 30:
-
         raise HTTPException(
             400,
             "Username слишком длинный"
         )
 
     if not username.replace("_", "").isalnum():
-
         raise HTTPException(
             400,
             "Username может содержать буквы, цифры и _"
         )
 
     if len(data.password) < 6:
-
         raise HTTPException(
             400,
             "Пароль должен содержать минимум 6 символов"
@@ -417,7 +439,10 @@ def login(data: LoginRequest):
         SET last_seen = ?
         WHERE id = ?
         """,
-        (now, user["id"])
+        (
+            now,
+            user["id"]
+        )
     )
 
     connection.commit()
@@ -464,7 +489,6 @@ def me(request: Request):
     connection.close()
 
     if not user:
-
         raise HTTPException(
             404,
             "Пользователь не найден"
@@ -490,21 +514,24 @@ def update_profile(
     bio = data.bio.strip()
 
     if len(username) < 3:
-
         raise HTTPException(
             400,
             "Username слишком короткий"
         )
 
-    if not username.replace("_", "").isalnum():
+    if len(username) > 30:
+        raise HTTPException(
+            400,
+            "Username слишком длинный"
+        )
 
+    if not username.replace("_", "").isalnum():
         raise HTTPException(
             400,
             "Username может содержать буквы, цифры и _"
         )
 
     if not display_name:
-
         display_name = username
 
     connection = db()
@@ -575,13 +602,14 @@ async def upload_avatar(
     }
 
     if file.content_type not in allowed:
-
         raise HTTPException(
             400,
             "Разрешены JPG, PNG и WEBP"
         )
 
-    extension = allowed[file.content_type]
+    extension = allowed[
+        file.content_type
+    ]
 
     filename = (
         "avatar_"
@@ -752,17 +780,21 @@ async def send_message(
     text = data.text.strip()
 
     if not text:
-
         raise HTTPException(
             400,
             "Пустое сообщение"
         )
 
     if len(text) > 5000:
-
         raise HTTPException(
             400,
             "Сообщение слишком длинное"
+        )
+
+    if sender_id == data.receiver_id:
+        raise HTTPException(
+            400,
+            "Нельзя отправить сообщение самому себе"
         )
 
     connection = db()
@@ -820,7 +852,7 @@ async def send_message(
         "is_read": 0
     }
 
-    # Получатель
+    # Отправляем получателю
     for socket in list(
         connections.get(data.receiver_id, [])
     ):
@@ -835,7 +867,7 @@ async def send_message(
         except Exception:
             pass
 
-    # Отправитель
+    # Отправляем отправителю на другие открытые вкладки
     for socket in list(
         connections.get(sender_id, [])
     ):
@@ -861,9 +893,7 @@ async def send_message(
 # =========================================================
 
 @app.get("/api/feed")
-def feed(
-    request: Request
-):
+def feed(request: Request):
 
     get_auth_user(request)
 
@@ -907,6 +937,61 @@ def feed(
     ]
 
 
+# =========================================================
+# SINGLE POST
+# =========================================================
+
+@app.get("/api/posts/{post_id}")
+def get_post(
+    post_id: int,
+    request: Request
+):
+
+    get_auth_user(request)
+
+    connection = db()
+
+    post = connection.execute(
+        """
+        SELECT
+            p.id,
+            p.author_id,
+            p.text,
+            p.media_url,
+            p.media_type,
+            p.created_at,
+            u.username,
+            u.display_name,
+            u.avatar_url,
+            (
+                SELECT COUNT(*)
+                FROM post_likes
+                WHERE post_id = p.id
+            ) AS likes,
+            (
+                SELECT COUNT(*)
+                FROM comments
+                WHERE post_id = p.id
+            ) AS comments
+        FROM posts p
+        JOIN users u
+            ON u.id = p.author_id
+        WHERE p.id = ?
+        """,
+        (post_id,)
+    ).fetchone()
+
+    connection.close()
+
+    if not post:
+        raise HTTPException(
+            404,
+            "Пост не найден"
+        )
+
+    return dict(post)
+
+
 @app.post("/api/posts")
 def create_post(
     data: PostRequest,
@@ -918,14 +1003,12 @@ def create_post(
     text = data.text.strip()
 
     if not text:
-
         raise HTTPException(
             400,
             "Напиши текст поста"
         )
 
     if len(text) > 5000:
-
         raise HTTPException(
             400,
             "Пост слишком длинный"
@@ -1062,6 +1145,24 @@ def like_post(
 
     connection = db()
 
+    post = connection.execute(
+        """
+        SELECT id
+        FROM posts
+        WHERE id = ?
+        """,
+        (post_id,)
+    ).fetchone()
+
+    if not post:
+
+        connection.close()
+
+        raise HTTPException(
+            404,
+            "Пост не найден"
+        )
+
     existing = connection.execute(
         """
         SELECT id
@@ -1148,8 +1249,11 @@ def get_comments(
         """
         SELECT
             c.id,
+            c.post_id,
+            c.parent_id,
             c.text,
             c.created_at,
+            c.user_id,
             u.username,
             u.display_name,
             u.avatar_url
@@ -1188,6 +1292,13 @@ def create_comment(
             "Пустой комментарий"
         )
 
+    if len(text) > 2000:
+
+        raise HTTPException(
+            400,
+            "Комментарий слишком длинный"
+        )
+
     connection = db()
 
     exists = connection.execute(
@@ -1208,6 +1319,33 @@ def create_comment(
             "Пост не найден"
         )
 
+    parent_id = data.parent_id
+
+    if parent_id is not None:
+
+        parent = connection.execute(
+            """
+            SELECT id
+            FROM comments
+            WHERE
+                id = ?
+                AND post_id = ?
+            """,
+            (
+                parent_id,
+                post_id
+            )
+        ).fetchone()
+
+        if not parent:
+
+            connection.close()
+
+            raise HTTPException(
+                400,
+                "Комментарий для ответа не найден"
+            )
+
     now = datetime.utcnow().isoformat()
 
     cursor = connection.execute(
@@ -1216,14 +1354,16 @@ def create_comment(
         (
             post_id,
             user_id,
+            parent_id,
             text,
             created_at
         )
-        VALUES (?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?)
         """,
         (
             post_id,
             user_id,
+            parent_id,
             text,
             now
         )
@@ -1299,7 +1439,6 @@ def delete_post(
     connection.commit()
     connection.close()
 
-    # Удаляем файл
     if post["media_url"]:
 
         filename = Path(
@@ -1363,6 +1502,21 @@ async def websocket_endpoint(
                 None
             )
 
+    except Exception:
+
+        if websocket in connections[user_id]:
+
+            connections[user_id].remove(
+                websocket
+            )
+
+        if not connections[user_id]:
+
+            connections.pop(
+                user_id,
+                None
+            )
+
 
 # =========================================================
 # FILES
@@ -1370,19 +1524,21 @@ async def websocket_endpoint(
 
 app.mount(
     "/uploads",
-    StaticFiles(directory=str(UPLOAD_DIR)),
+    StaticFiles(
+        directory=str(UPLOAD_DIR)
+    ),
     name="uploads"
 )
 
 
 # =========================================================
-# FRONTEND
+# STATIC
 # =========================================================
 
 app.mount(
     "/static",
     StaticFiles(
-        directory=str(BASE_DIR / "static")
+        directory=str(STATIC_DIR)
     ),
     name="static"
 )
@@ -1392,5 +1548,5 @@ app.mount(
 def index():
 
     return FileResponse(
-        str(BASE_DIR / "static" / "index.html")
+        str(STATIC_DIR / "index.html")
     )
