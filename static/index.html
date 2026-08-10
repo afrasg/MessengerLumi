@@ -232,14 +232,30 @@ select:focus {
     background: transparent !important;
     border: 0 !important;
     color: #b9bec9;
-    padding: 7px;
+    padding: 6px;
     border-radius: 8px;
     font-size: 19px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
 }
 
 .icon-button:hover {
     background: #23262d !important;
     color: #fff;
+}
+
+.icon-button img {
+    width: 22px;
+    height: 22px;
+    display: block;
+    opacity: 0.85;
+    filter: brightness(0) invert(1);
+}
+
+.icon-button:hover img {
+    opacity: 1;
 }
 
 .content {
@@ -702,7 +718,7 @@ select:focus {
                     onclick="showFeed()"
                     title="Лента"
                 >
-                    📰
+                    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAzUlEQVR4nO3UzQqCQBSG4Re6i9rWNbjIhZsWXWlBXVG7omU/tOlHx4wgYQjFmXNGpPDAtxA5PsonA/30A3NgDxTC7ICZBN4q0DIbCWwCwNeu4FtX8P2n4Mx6wNRjL7L2Hlo48diLrb1UC0uT+hwYg891GgDOfA6MKljasfH5i6tgace5FpYm7wp+SmBT03HU0L19v9DCSU2HVd3HIeFCkcYx1ld8v3Wr8CkgVubiAq9agNcu8Bg4BESPwATHGQIL4KwA37tLYOSK9vNf8wLXNGJYzhg1tAAAAABJRU5ErkJggg==" alt="Лента">
                 </button>
 
                 <button
@@ -710,7 +726,7 @@ select:focus {
                     onclick="showFavorites()"
                     title="Избранное"
                 >
-                    ⭐
+                    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAABWElEQVR4nO2Wu0oDURRFl4pNwPRi4wPB2BoUjJ02dtqohUbQD9BOW/0Df8HSLqUIprHwA0yXD1CQgIpgFeXCuTDFfXNnRHDDhhk4Z6+Z+5qBP6glcaVaBL7E6roSjQIPwLf4ERirAnxagGqflA2dBj4M4E9grizoCHBrgGrfS012HTug2kc5F1ITOAcGAeCB1DalN0qTQBu4AV4DYDa/A3ey8GZdQPWk/YjgVaAVUd8Hzkzgl8g30orpeTaBt4BhieAhsGMb7ssSwReueVYrseOYU59sc94JWeV1oGdoVqE+rRn6epIZpJmAraTl29fzoVCtzQxglRGtegbwRAp4yhPassxp0SojWo3Iw8HkhRTwSgbwcgp4IwN4PQW87Ql9ErtqVEa0Dg1Bb8C1jIaW+sW9sux79XmN1kHhcO/Kfc1RX5OabuFjs58CHgf2En/iVM+uZPzrd/UDjrQ/+7ZZv/QAAAAASUVORK5CYII=" alt="Избранное">
                 </button>
 
                 <button
@@ -718,7 +734,7 @@ select:focus {
                     onclick="showSettings()"
                     title="Настройки"
                 >
-                    ⚙️
+                    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAAB8UlEQVR4nO1W3UpCQRD+8MoCyQt7AdMuCuopIgLtymfoKi3synqGnqK/B7B7QfEV+nmD0EBToTKzWPoWhmGPZ0+aQfTBwtnZmfl2Z8/sDPCPYCyoeRNAI0RnapQAjADkOM8C+OAw3wa71NmfJfExSfoA6gB6grhH2YDzyjRESZ4yBSAO4FoQhY0qbZYBHNCXN0p00gXQikBqR4u25rvoT/t10o7D4Q03tSFkG5TdOvQ79OWNuDrpM3ceEzp2zSLG0L6okxtfoSjxR5J3+gpgy6GriS22aSPv/IS+nVhkOuhwPQAoRCAu0Eb7eZuU53mmjFWWG6kB2ASwAuBKyM13mmu1ANu+eAMCURcGZQB74r5HKodlLluiFm3KYr0eRrqqHK9RbnLxlOEy8ncAZxxjEcpTkbframPZINKm4yQJpfNIuSG0OKfMrEkkHP4aLuKGB3F7AnHbg7gedOpMSKiHlI9JeCFCPQwJdQZz+rmOovxceY90Sqt0uvRIpwHL5q88ICNyOFFkPa2qJ3M7AvGO48ms+DYIukiYh//Qo0iUFWkrajuUCiiLd6xAuiyaTd079LtsCObaCHS+0wgkeScphuo7rU+KPpaiEGtUJjR7T5T1Z9HsaRSZDibPbTGxxPZFyv1EewtHDjYcL9LMG3r8GXwCWVtNc8Ye75UAAAAASUVORK5CYII=" alt="Настройки">
                 </button>
 
                 <button
@@ -726,7 +742,7 @@ select:focus {
                     onclick="showProfile()"
                     title="Профиль"
                 >
-                    👤
+                    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAAA7ElEQVR4nO2UPQrCQBBGHwhJIXgBGz1BSnsPIXgH41VEvZM/ldprJ1aiiBaKRWRhAiJods3ESMiDD5Zkdh+T7C6U/Ck+0AdmwEVixqG8y4Q6sASiN1lIjSp+gvRZrtp530Iap6cpnjuIp5ris4PY1KoROSaXjk+F+MdhXrvalzNqc449lKknyDO5uWI8+ZRT2XAmE3mm3mnJT6kAbSD4UBNIjalNTQMYAHvZuVdgBLSAqsSMx8BNavYyx8x1piaC+xf3dBwzdyhrWdEENimEr1nLmomsFKVxljbiXQbirY24CxwVpQegYyMuKRYP4K3qdvJRSZ4AAAAASUVORK5CYII=" alt="Профиль">
                 </button>
 
             </div>
@@ -1392,13 +1408,10 @@ async function startApp() {
         .getElementById("app")
         .classList.remove("hidden");
 
-    await loadUsers();
-
     await loadFeed();
 
-    await loadGroups();
-
-    await loadChannels();
+    // Sidebar: only groups & channels by default (no users until search)
+    await refreshSidebarLists();
 
     connectWebSocket();
 }
@@ -1408,142 +1421,114 @@ async function startApp() {
    USERS
 ===================================================== */
 
-async function searchUsers() {
+let searchRequestId = 0;
+let searchDebounceTimer = null;
 
-    await loadUsers(
-        document
-            .getElementById("search")
-            .value
-            .trim()
-    );
+function searchUsers() {
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+        loadUsers(
+            document.getElementById("search").value.trim()
+        );
+    }, 200);
 }
 
 
-async function loadUsers(
-    query = ""
-) {
-
-    const container =
-        document.getElementById(
-            "users"
-        );
-
-    // Always clear user items, keep groups/channels via loadGroups/loadChannels later
-    container.innerHTML = "";
-
-    query = (query || "").trim();
-
-    // Без поискового запроса пользователей не показываем
-    if (!query) {
-        await loadGroups();
-        await loadChannels();
-        return;
-    }
-
-    const response =
-        await request(
-            "/api/users?q=" +
-            encodeURIComponent(query)
-        );
-
-    if (!response.ok) {
-        await loadGroups();
-        await loadChannels();
-        return;
-    }
-
-    const users =
-        await safeJson(response);
-
-    if (!users.length) {
-        const empty =
-            document.createElement(
-                "div"
-            );
-        empty.style.cssText =
-            "padding:14px 10px;color:#8d929e;font-size:13px;text-align:center";
-        empty.textContent =
-            "Ничего не найдено";
-        container.appendChild(empty);
-    } else {
-        users.forEach(
-            user => {
-
-                if (
-                    Number(user.id) ===
-                    Number(currentUser.id)
-                ) {
-                    return;
-                }
-
-                const div =
-                    document.createElement(
-                        "div"
-                    );
-
-                div.className =
-                    "user-item";
-
-                const avatar =
-                    document.createElement(
-                        "img"
-                    );
-
-                avatar.className =
-                    "user-avatar";
-
-                if (user.avatar_url) {
-                    avatar.src =
-                        mediaUrl(
-                            user.avatar_url
-                        );
-                }
-
-                const info =
-                    document.createElement(
-                        "div"
-                    );
-
-                info.className =
-                    "user-info";
-
-                info.innerHTML =
-                    "<strong>" +
-                    escapeHtml(
-                        user.display_name ||
-                        user.username
-                    ) +
-                    "</strong>" +
-
-                    "<small>@" +
-                    escapeHtml(
-                        user.username
-                    ) +
-                    "</small>";
-
-                div.appendChild(
-                    avatar
-                );
-
-                div.appendChild(
-                    info
-                );
-
-                div.onclick =
-                    () => openChat(
-                        user
-                    );
-
-                container.appendChild(
-                    div
-                );
-            }
-        );
-    }
-
-    // Groups & channels always below search results
+async function refreshSidebarLists() {
+    // Перерисовать только группы и каналы (настройки + сайдбар)
     await loadGroups();
     await loadChannels();
+}
+
+
+async function loadUsers(query = "") {
+    const container = document.getElementById("users");
+    if (!container) return;
+
+    query = (query || "").trim();
+    const requestId = ++searchRequestId;
+
+    // Полная очистка сайдбара перед отрисовкой
+    container.innerHTML = "";
+
+    // Пустой поиск — только группы и каналы, без «Ничего не найдено»
+    if (!query) {
+        if (requestId !== searchRequestId) return;
+        await refreshSidebarLists();
+        return;
+    }
+
+    const response = await request(
+        "/api/users?q=" + encodeURIComponent(query)
+    );
+
+    if (requestId !== searchRequestId) return;
+
+    if (!response.ok) {
+        await refreshSidebarLists();
+        return;
+    }
+
+    const users = await safeJson(response);
+    if (requestId !== searchRequestId) return;
+
+    // Снова очищаем (на случай гонок) и рисуем один раз
+    container.innerHTML = "";
+
+    const seen = new Set();
+    const found = [];
+    for (const user of users) {
+        const id = Number(user.id);
+        if (id === Number(currentUser.id) || seen.has(id)) continue;
+        seen.add(id);
+        found.push(user);
+    }
+
+    if (!found.length) {
+        const empty = document.createElement("div");
+        empty.className = "search-empty";
+        empty.style.cssText =
+            "padding:12px 10px;color:#8d929e;font-size:13px;text-align:center;line-height:1.3";
+        empty.textContent = "Ничего не найдено";
+        container.appendChild(empty);
+    } else {
+        found.forEach(user => {
+            const div = document.createElement("div");
+            div.className = "user-item";
+
+            const avatar = document.createElement("img");
+            avatar.className = "user-avatar";
+            avatar.style.cursor = "pointer";
+            if (user.avatar_url) {
+                avatar.src = mediaUrl(user.avatar_url);
+            }
+            // Клик по аватару — профиль, по строке — чат
+            avatar.onclick = (e) => {
+                e.stopPropagation();
+                openUserProfile(user.id);
+            };
+
+            const info = document.createElement("div");
+            info.className = "user-info";
+            info.innerHTML =
+                "<strong>" +
+                escapeHtml(user.display_name || user.username) +
+                "</strong>" +
+                "<small>@" +
+                escapeHtml(user.username) +
+                "</small>";
+
+            div.appendChild(avatar);
+            div.appendChild(info);
+            div.onclick = () => openChat(user);
+            container.appendChild(div);
+        });
+    }
+
+    if (requestId !== searchRequestId) return;
+
+    // Группы и каналы под результатами поиска
+    await refreshSidebarLists();
 }
 
 
@@ -4099,28 +4084,47 @@ async function openUserProfile(userId) {
     const isMe = Number(user.id) === Number(currentUser.id);
 
     const avatarSrc = user.avatar_url ? mediaUrl(user.avatar_url) : "";
+    const displayName = escapeHtml(user.display_name || user.username);
+    const username = escapeHtml(user.username);
+    const bio = (user.bio || "").trim();
 
     openModal(`
-        <div style="text-align:center">
+        <div style="text-align:center;padding:4px 0 8px">
             ${avatarSrc
-                ? `<img src="${avatarSrc}" style="width:90px;height:90px;border-radius:50%;object-fit:cover;margin-bottom:12px">`
-                : `<div style="width:90px;height:90px;border-radius:50%;background:#2a2b30;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:36px">👤</div>`
+                ? `<img src="${avatarSrc}" style="width:110px;height:110px;border-radius:50%;object-fit:cover;margin:0 auto 14px;display:block;border:3px solid #2a2d35">`
+                : `<div style="width:110px;height:110px;border-radius:50%;background:#2a2b30;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:42px;border:3px solid #2a2d35">👤</div>`
             }
-            <h2>${escapeHtml(user.display_name || user.username)}</h2>
-            <div style="color:#9095a3;margin-bottom:8px">@${escapeHtml(user.username)}</div>
-            ${user.bio ? `<div style="white-space:pre-wrap;margin:10px 0">${escapeHtml(user.bio)}</div>` : ""}
-            <div style="font-size:12px;color:#9095a3">
-                Last seen: ${formatTime(user.last_seen) || "—"}
+            <div style="font-size:20px;font-weight:700;margin-bottom:2px">${displayName}</div>
+            <div style="color:#6c8cff;font-size:14px;margin-bottom:14px">@${username}</div>
+
+            <div style="text-align:left;background:#121316;border-radius:12px;padding:12px 14px;margin-bottom:12px">
+                <div style="font-size:11px;color:#8d929e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">О себе</div>
+                <div style="white-space:pre-wrap;line-height:1.45;color:${bio ? '#e8eaed' : '#6a6f7a'};font-size:14px">
+                    ${bio ? escapeHtml(bio) : "Нет описания"}
+                </div>
             </div>
-            <div style="font-size:12px;color:#9095a3;margin-bottom:14px">
-                Создан: ${formatTime(user.created_at) || "—"}
+
+            <div style="text-align:left;background:#121316;border-radius:12px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:#9095a3">
+                <div style="display:flex;justify-content:space-between;padding:4px 0">
+                    <span>Был(а) в сети</span>
+                    <span style="color:#cfd3dc">${formatTime(user.last_seen) || "—"}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid #1e2026;margin-top:4px;padding-top:8px">
+                    <span>Аккаунт создан</span>
+                    <span style="color:#cfd3dc">${formatTime(user.created_at) || "—"}</span>
+                </div>
             </div>
+
             ${!isMe ? `
                 <button class="primary" style="width:100%"
-                    onclick="closeModal(); openChat({id:${user.id}, username:'${escapeHtml(user.username)}', display_name:'${escapeHtml(user.display_name || user.username)}'})">
-                    💬 Написать
+                    onclick="closeModal(); openChat({id:${user.id}, username:'${username}', display_name:'${displayName}'})">
+                    💬 Написать сообщение
                 </button>
-            ` : ""}
+            ` : `
+                <button class="secondary" style="width:100%" onclick="closeModal(); showProfile()">
+                    ✏️ Редактировать профиль
+                </button>
+            `}
             <button class="secondary" style="width:100%;margin-top:8px" onclick="closeModal()">
                 Закрыть
             </button>
