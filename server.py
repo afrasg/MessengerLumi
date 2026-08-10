@@ -40,7 +40,7 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 
 SECRET_KEY = os.environ.get(
     "SECRET_KEY",
-    "CHANGE_THIS_SECRET_KEY_TO_SOMETHING_RANDOM"
+    "CHANGE_THIS_SECRET_KEY_TO_SOMETHING_RANDOM",
 )
 
 ALGORITHM = "HS256"
@@ -107,7 +107,6 @@ def add_column_if_missing(
 
 
 def init_db():
-
     connection = db()
 
     connection.executescript(
@@ -117,7 +116,10 @@ def init_db():
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             created_at TEXT NOT NULL,
-            last_seen TEXT
+            last_seen TEXT,
+            display_name TEXT,
+            bio TEXT DEFAULT '',
+            avatar_url TEXT
         );
 
         CREATE TABLE IF NOT EXISTS messages (
@@ -205,8 +207,6 @@ def init_db():
         """
     )
 
-    # Старые базы автоматически получают новые поля.
-
     add_column_if_missing(
         connection,
         "users",
@@ -280,9 +280,8 @@ def hash_password(password):
 
 
 def create_token(user_id):
-
     payload = {
-        "user_id": user_id,
+        "user_id": int(user_id),
         "exp": datetime.utcnow()
         + timedelta(days=30),
     }
@@ -295,6 +294,8 @@ def create_token(user_id):
 
 
 def get_user_from_token(token):
+    if not token:
+        return None
 
     try:
         payload = jwt.decode(
@@ -303,16 +304,13 @@ def get_user_from_token(token):
             algorithms=[ALGORITHM],
         )
 
-        return int(
-            payload["user_id"]
-        )
+        return int(payload["user_id"])
 
     except Exception:
         return None
 
 
 def get_auth_user(request: Request):
-
     auth = request.headers.get(
         "Authorization",
         "",
@@ -337,21 +335,14 @@ def get_auth_user(request: Request):
     return user_id
 
 
-def user_dict(row):
-
-    if not row:
-        return None
-
-    return dict(row)
-
-
 async def send_ws(user_id, payload):
+    sockets = list(
+        connections.get(user_id, set())
+    )
 
     dead = []
 
-    for socket in list(
-        connections.get(user_id, set())
-    ):
+    for socket in sockets:
         try:
             await socket.send_json(payload)
         except Exception:
@@ -424,7 +415,6 @@ class ChannelRequest(BaseModel):
 
 @app.post("/api/register")
 def register(data: RegisterRequest):
-
     username = data.username.strip().lower()
 
     if len(username) < 3:
@@ -497,9 +487,7 @@ def register(data: RegisterRequest):
     connection.execute(
         """
         INSERT OR IGNORE INTO settings
-        (
-            user_id
-        )
+        (user_id)
         VALUES (?)
         """,
         (user_id,),
@@ -521,7 +509,6 @@ def register(data: RegisterRequest):
 
 @app.post("/api/login")
 def login(data: LoginRequest):
-
     username = data.username.strip().lower()
 
     connection = db()
@@ -583,7 +570,6 @@ def login(data: LoginRequest):
 
 @app.get("/api/me")
 def me(request: Request):
-
     user_id = get_auth_user(request)
 
     connection = db()
@@ -624,7 +610,6 @@ def update_profile(
     data: ProfileRequest,
     request: Request,
 ):
-
     user_id = get_auth_user(request)
 
     username = data.username.strip().lower()
@@ -688,9 +673,7 @@ def update_profile(
     connection.commit()
     connection.close()
 
-    return {
-        "ok": True,
-    }
+    return {"ok": True}
 
 
 @app.post("/api/avatar")
@@ -698,7 +681,6 @@ async def upload_avatar(
     request: Request,
     file: UploadFile = File(...),
 ):
-
     user_id = get_auth_user(request)
 
     allowed = {
@@ -763,7 +745,6 @@ def search_users(
     request: Request,
     q: str = "",
 ):
-
     user_id = get_auth_user(request)
 
     q = q.strip()
@@ -808,7 +789,6 @@ def get_user_profile(
     user_id: int,
     request: Request,
 ):
-
     get_auth_user(request)
 
     connection = db()
@@ -849,7 +829,6 @@ def get_messages(
     other_user_id: int,
     request: Request,
 ):
-
     user_id = get_auth_user(request)
 
     connection = db()
@@ -918,7 +897,6 @@ async def send_message(
     data: MessageRequest,
     request: Request,
 ):
-
     sender_id = get_auth_user(request)
 
     text = data.text.strip()
@@ -961,12 +939,6 @@ async def send_message(
 
     created = now()
 
-    # ВАЖНО:
-    # Здесь ровно 4 колонки и ровно 4 значения.
-    # Именно это исправляет:
-    # sqlite3.OperationalError:
-    # 5 values for 4 columns
-
     cursor = connection.execute(
         """
         INSERT INTO messages
@@ -1007,11 +979,14 @@ async def send_message(
         "message": message,
     }
 
+    # Получатель получает сообщение.
     await send_ws(
         data.receiver_id,
         payload,
     )
 
+    # Отправителю тоже отправляем,
+    # но фронтенд проверяет ID и не создаёт дубль.
     await send_ws(
         sender_id,
         payload,
@@ -1029,7 +1004,6 @@ async def edit_message(
     data: EditMessageRequest,
     request: Request,
 ):
-
     user_id = get_auth_user(request)
 
     text = data.text.strip()
@@ -1128,7 +1102,6 @@ async def delete_message(
     message_id: int,
     request: Request,
 ):
-
     user_id = get_auth_user(request)
 
     connection = db()
@@ -1193,9 +1166,7 @@ async def delete_message(
         payload,
     )
 
-    return {
-        "ok": True,
-    }
+    return {"ok": True}
 
 
 # =========================================================
@@ -1207,7 +1178,6 @@ def favorite_message(
     message_id: int,
     request: Request,
 ):
-
     user_id = get_auth_user(request)
 
     connection = db()
@@ -1250,7 +1220,6 @@ def favorite_message(
     ).fetchone()
 
     if existing:
-
         connection.execute(
             """
             DELETE FROM favorites
@@ -1262,11 +1231,8 @@ def favorite_message(
                 message_id,
             ),
         )
-
         favorite = False
-
     else:
-
         connection.execute(
             """
             INSERT INTO favorites
@@ -1281,7 +1247,6 @@ def favorite_message(
                 message_id,
             ),
         )
-
         favorite = True
 
     connection.commit()
@@ -1296,7 +1261,6 @@ def favorite_message(
 def get_favorites(
     request: Request,
 ):
-
     user_id = get_auth_user(request)
 
     connection = db()
@@ -1334,7 +1298,6 @@ def get_favorites(
 
 @app.get("/api/feed")
 def feed(request: Request):
-
     get_auth_user(request)
 
     connection = db()
@@ -1382,7 +1345,6 @@ def create_post(
     data: PostRequest,
     request: Request,
 ):
-
     user_id = get_auth_user(request)
 
     text = data.text.strip()
@@ -1435,7 +1397,6 @@ async def create_media_post(
     text: str = "",
     file: UploadFile = File(...),
 ):
-
     user_id = get_auth_user(request)
 
     allowed = {
@@ -1515,7 +1476,6 @@ def like_post(
     post_id: int,
     request: Request,
 ):
-
     user_id = get_auth_user(request)
 
     connection = db()
@@ -1534,7 +1494,6 @@ def like_post(
     ).fetchone()
 
     if existing:
-
         connection.execute(
             """
             DELETE FROM post_likes
@@ -1546,11 +1505,8 @@ def like_post(
                 user_id,
             ),
         )
-
         liked = False
-
     else:
-
         connection.execute(
             """
             INSERT INTO post_likes
@@ -1565,7 +1521,6 @@ def like_post(
                 user_id,
             ),
         )
-
         liked = True
 
     count = connection.execute(
@@ -1587,7 +1542,7 @@ def like_post(
 
 
 # =========================================================
-# COMMENTS + REPLIES
+# COMMENTS
 # =========================================================
 
 @app.get("/api/posts/{post_id}/comments")
@@ -1595,7 +1550,6 @@ def get_comments(
     post_id: int,
     request: Request,
 ):
-
     get_auth_user(request)
 
     connection = db()
@@ -1640,7 +1594,6 @@ def create_comment(
     data: CommentRequest,
     request: Request,
 ):
-
     user_id = get_auth_user(request)
 
     text = data.text.strip()
@@ -1670,7 +1623,6 @@ def create_comment(
         )
 
     if data.parent_id:
-
         parent = connection.execute(
             """
             SELECT id
@@ -1728,7 +1680,6 @@ def delete_comment(
     comment_id: int,
     request: Request,
 ):
-
     user_id = get_auth_user(request)
 
     connection = db()
@@ -1771,9 +1722,7 @@ def delete_comment(
     connection.commit()
     connection.close()
 
-    return {
-        "ok": True,
-    }
+    return {"ok": True}
 
 
 # =========================================================
@@ -1785,7 +1734,6 @@ def delete_post(
     post_id: int,
     request: Request,
 ):
-
     user_id = get_auth_user(request)
 
     connection = db()
@@ -1832,7 +1780,6 @@ def delete_post(
     connection.close()
 
     if post["media_url"]:
-
         filename = Path(
             post["media_url"]
         ).name
@@ -1845,9 +1792,7 @@ def delete_post(
             except Exception:
                 pass
 
-    return {
-        "ok": True,
-    }
+    return {"ok": True}
 
 
 # =========================================================
@@ -1858,7 +1803,6 @@ def delete_post(
 def get_settings(
     request: Request,
 ):
-
     user_id = get_auth_user(request)
 
     connection = db()
@@ -1898,29 +1842,24 @@ def update_settings(
     data: SettingsRequest,
     request: Request,
 ):
-
     user_id = get_auth_user(request)
 
-    allowed_languages = {
+    if data.language not in {
         "ru",
         "en",
         "be",
         "kk",
-    }
-
-    allowed_themes = {
-        "dark",
-        "light",
-        "blue",
-    }
-
-    if data.language not in allowed_languages:
+    }:
         raise HTTPException(
             400,
             "Язык не поддерживается",
         )
 
-    if data.theme not in allowed_themes:
+    if data.theme not in {
+        "dark",
+        "light",
+        "blue",
+    }:
         raise HTTPException(
             400,
             "Тема не поддерживается",
@@ -1954,9 +1893,7 @@ def update_settings(
     connection.commit()
     connection.close()
 
-    return {
-        "ok": True,
-    }
+    return {"ok": True}
 
 
 # =========================================================
@@ -1968,7 +1905,6 @@ def create_group(
     data: GroupRequest,
     request: Request,
 ):
-
     user_id = get_auth_user(request)
 
     name = data.name.strip()
@@ -2030,7 +1966,6 @@ def create_group(
 
 @app.get("/api/groups")
 def get_groups(request: Request):
-
     user_id = get_auth_user(request)
 
     connection = db()
@@ -2069,7 +2004,6 @@ def create_channel(
     data: ChannelRequest,
     request: Request,
 ):
-
     user_id = get_auth_user(request)
 
     name = data.name.strip()
@@ -2096,7 +2030,6 @@ def create_channel(
     connection = db()
 
     try:
-
         cursor = connection.execute(
             """
             INSERT INTO channels
@@ -2140,7 +2073,6 @@ def create_channel(
         connection.commit()
 
     except sqlite3.IntegrityError:
-
         connection.rollback()
         connection.close()
 
@@ -2159,7 +2091,6 @@ def create_channel(
 
 @app.get("/api/channels")
 def get_channels(request: Request):
-
     user_id = get_auth_user(request)
 
     connection = db()
@@ -2199,15 +2130,12 @@ async def websocket_endpoint(
     websocket: WebSocket,
     user_id: int,
 ):
-
     token = websocket.query_params.get(
         "token"
     )
 
-    authenticated_id = (
-        get_user_from_token(token)
-        if token
-        else None
+    authenticated_id = get_user_from_token(
+        token
     )
 
     if authenticated_id != user_id:
@@ -2240,16 +2168,15 @@ async def websocket_endpoint(
     connection.close()
 
     try:
-
         while True:
-
             data = await websocket.receive_json()
 
             if data.get("type") == "ping":
-
-                await websocket.send_json({
-                    "type": "pong",
-                })
+                await websocket.send_json(
+                    {
+                        "type": "pong"
+                    }
+                )
 
     except WebSocketDisconnect:
         pass
@@ -2258,7 +2185,6 @@ async def websocket_endpoint(
         pass
 
     finally:
-
         connections[user_id].discard(
             websocket
         )
@@ -2266,7 +2192,7 @@ async def websocket_endpoint(
         if not connections[user_id]:
             connections.pop(
                 user_id,
-                None
+                None,
             )
 
             connection = db()
@@ -2288,7 +2214,7 @@ async def websocket_endpoint(
 
 
 # =========================================================
-# STATIC FILES
+# STATIC
 # =========================================================
 
 app.mount(
@@ -2302,7 +2228,6 @@ app.mount(
 
 @app.get("/")
 def index():
-
     return FileResponse(
         str(
             STATIC_DIR / "index.html"
