@@ -4197,3 +4197,1110 @@ if (token) {
 
 </body>
 </html>
+// =========================================================
+// FIXED CHAT WEBSOCKET + INSTANT MESSAGES
+// =========================================================
+
+let messengerSocket = null;
+let currentChatUserId = null;
+let renderedMessageIds = new Set();
+
+function getToken() {
+    return localStorage.getItem("token") || "";
+}
+
+
+// ---------------------------------------------------------
+// WEBSOCKET
+// ---------------------------------------------------------
+
+function connectMessengerWebSocket() {
+    const token = getToken();
+
+    if (!token) {
+        return;
+    }
+
+    if (!window.currentUser) {
+        return;
+    }
+
+    const userId = window.currentUser.id;
+
+    if (messengerSocket) {
+        try {
+            messengerSocket.close();
+        } catch (e) {}
+    }
+
+    const protocol =
+        location.protocol === "https:"
+            ? "wss:"
+            : "ws:";
+
+    const url =
+        protocol +
+        "//" +
+        location.host +
+        "/ws/" +
+        userId +
+        "?token=" +
+        encodeURIComponent(token);
+
+    messengerSocket =
+        new WebSocket(url);
+
+    messengerSocket.onopen = function () {
+        console.log(
+            "MyMessenger WebSocket connected"
+        );
+    };
+
+    messengerSocket.onmessage = function (event) {
+        try {
+            const data =
+                JSON.parse(event.data);
+
+            if (
+                data.type === "message" &&
+                data.message
+            ) {
+                handleIncomingMessage(
+                    data.message
+                );
+            }
+
+            if (
+                data.type === "message_updated" &&
+                data.message
+            ) {
+                handleUpdatedMessage(
+                    data.message
+                );
+            }
+
+            if (
+                data.type === "message_deleted" &&
+                data.message
+            ) {
+                handleDeletedMessage(
+                    data.message
+                );
+            }
+
+        } catch (error) {
+            console.error(
+                "WebSocket message error:",
+                error
+            );
+        }
+    };
+
+    messengerSocket.onclose = function () {
+        console.log(
+            "MyMessenger WebSocket disconnected"
+        );
+
+        setTimeout(
+            function () {
+                if (
+                    getToken() &&
+                    window.currentUser
+                ) {
+                    connectMessengerWebSocket();
+                }
+            },
+            2000
+        );
+    };
+
+    messengerSocket.onerror = function (error) {
+        console.error(
+            "WebSocket error:",
+            error
+        );
+    };
+}
+
+
+// ---------------------------------------------------------
+// MESSAGE DEDUPLICATION
+// ---------------------------------------------------------
+
+function messageAlreadyRendered(messageId) {
+    if (!messageId) {
+        return false;
+    }
+
+    return renderedMessageIds.has(
+        String(messageId)
+    );
+}
+
+function rememberMessage(messageId) {
+    if (!messageId) {
+        return;
+    }
+
+    renderedMessageIds.add(
+        String(messageId)
+    );
+}
+
+
+// ---------------------------------------------------------
+// INCOMING MESSAGE
+// ---------------------------------------------------------
+
+function handleIncomingMessage(message) {
+    if (!message || !message.id) {
+        return;
+    }
+
+    /*
+     * Если сообщение уже добавили сразу после POST,
+     * WebSocket не должен добавить его второй раз.
+     */
+    if (
+        messageAlreadyRendered(
+            message.id
+        )
+    ) {
+        return;
+    }
+
+    /*
+     * Показываем только если это текущий чат.
+     */
+    if (
+        currentChatUserId ===
+        message.sender_id
+    ) {
+        rememberMessage(
+            message.id
+        );
+
+        appendMessageToChat(
+            message
+        );
+
+        scrollMessagesToBottom();
+    }
+}
+
+
+// ---------------------------------------------------------
+// UPDATED MESSAGE
+// ---------------------------------------------------------
+
+function handleUpdatedMessage(message) {
+    if (!message || !message.id) {
+        return;
+    }
+
+    const element =
+        document.querySelector(
+            '[data-message-id="' +
+            message.id +
+            '"]'
+        );
+
+    if (!element) {
+        return;
+    }
+
+    const text =
+        element.querySelector(
+            ".message-text"
+        );
+
+    if (text) {
+        text.textContent =
+            message.text;
+    }
+
+    const edited =
+        element.querySelector(
+            ".message-edited"
+        );
+
+    if (edited) {
+        edited.textContent =
+            "изменено";
+    }
+}
+
+
+// ---------------------------------------------------------
+// DELETED MESSAGE
+// ---------------------------------------------------------
+
+function handleDeletedMessage(message) {
+    if (!message || !message.id) {
+        return;
+    }
+
+    const element =
+        document.querySelector(
+            '[data-message-id="' +
+            message.id +
+            '"]'
+        );
+
+    if (!element) {
+        return;
+    }
+
+    const text =
+        element.querySelector(
+            ".message-text"
+        );
+
+    if (text) {
+        text.textContent =
+            "Сообщение удалено";
+    }
+
+    element.classList.add(
+        "message-deleted"
+    );
+}
+
+
+// ---------------------------------------------------------
+// ADD MESSAGE IMMEDIATELY
+// ---------------------------------------------------------
+
+function appendMessageToChat(message) {
+    const container =
+        document.getElementById(
+            "messages"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    if (
+        messageAlreadyRendered(
+            message.id
+        )
+    ) {
+        return;
+    }
+
+    rememberMessage(
+        message.id
+    );
+
+    const own =
+        window.currentUser &&
+        Number(message.sender_id) ===
+            Number(window.currentUser.id);
+
+    const row =
+        document.createElement(
+            "div"
+        );
+
+    row.className =
+        "message-row" +
+        (own ? " own" : "");
+
+    row.dataset.messageId =
+        message.id;
+
+    const bubble =
+        document.createElement(
+            "div"
+        );
+
+    bubble.className =
+        "message-bubble";
+
+    const text =
+        document.createElement(
+            "div"
+        );
+
+    text.className =
+        "message-text";
+
+    text.textContent =
+        message.deleted
+            ? "Сообщение удалено"
+            : message.text;
+
+    const footer =
+        document.createElement(
+            "div"
+        );
+
+    footer.className =
+        "message-footer";
+
+    footer.textContent =
+        formatTime(
+            message.created_at
+        );
+
+    bubble.appendChild(
+        text
+    );
+
+    bubble.appendChild(
+        footer
+    );
+
+    row.appendChild(
+        bubble
+    );
+
+    container.appendChild(
+        row
+    );
+}
+
+
+// ---------------------------------------------------------
+// LOAD CHAT
+// ---------------------------------------------------------
+
+async function loadMessages(userId) {
+    currentChatUserId =
+        Number(userId);
+
+    renderedMessageIds =
+        new Set();
+
+    const container =
+        document.getElementById(
+            "messages"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = "";
+
+    const response =
+        await request(
+            "/api/messages/" +
+            encodeURIComponent(
+                userId
+            )
+        );
+
+    if (!response.ok) {
+        return;
+    }
+
+    const messages =
+        await safeJson(response);
+
+    if (!Array.isArray(messages)) {
+        return;
+    }
+
+    messages.forEach(
+        function (message) {
+            appendMessageToChat(
+                message
+            );
+        }
+    );
+
+    scrollMessagesToBottom();
+}
+
+
+// ---------------------------------------------------------
+// SEND MESSAGE
+// ---------------------------------------------------------
+
+async function sendMessage() {
+    if (!currentChatUserId) {
+        alert(
+            "Сначала выберите пользователя"
+        );
+
+        return;
+    }
+
+    const input =
+        document.getElementById(
+            "messageInput"
+        );
+
+    if (!input) {
+        return;
+    }
+
+    const text =
+        input.value.trim();
+
+    if (!text) {
+        return;
+    }
+
+    const receiverId =
+        Number(
+            currentChatUserId
+        );
+
+    /*
+     * Очищаем поле сразу.
+     */
+    input.value = "";
+
+    const response =
+        await request(
+            "/api/messages",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body:
+                    JSON.stringify({
+                        receiver_id:
+                            receiverId,
+                        text: text
+                    })
+            }
+        );
+
+    const data =
+        await safeJson(response);
+
+    if (!response.ok) {
+        /*
+         * Если отправка реально не удалась,
+         * возвращаем текст в поле.
+         */
+        input.value = text;
+
+        alert(
+            data.detail ||
+            "Не удалось отправить сообщение"
+        );
+
+        return;
+    }
+
+    /*
+     * ГЛАВНОЕ:
+     *
+     * POST уже вернул созданное сообщение.
+     * Поэтому показываем его СРАЗУ.
+     *
+     * WebSocket потом тоже пришлёт его,
+     * но Set выше не даст сделать дубль.
+     */
+    if (
+        data &&
+        data.message
+    ) {
+        appendMessageToChat(
+            data.message
+        );
+
+        scrollMessagesToBottom();
+    }
+}
+
+
+// ---------------------------------------------------------
+// ENTER
+// ---------------------------------------------------------
+
+function messageKey(event) {
+    if (
+        event.key === "Enter" &&
+        !event.shiftKey
+    ) {
+        event.preventDefault();
+
+        sendMessage();
+    }
+}
+
+
+// ---------------------------------------------------------
+// SCROLL
+// ---------------------------------------------------------
+
+function scrollMessagesToBottom() {
+    const container =
+        document.getElementById(
+            "messages"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    requestAnimationFrame(
+        function () {
+            container.scrollTop =
+                container.scrollHeight;
+        }
+    );
+}// =========================================================
+// FIXED CHAT WEBSOCKET + INSTANT MESSAGES
+// =========================================================
+
+let messengerSocket = null;
+let currentChatUserId = null;
+let renderedMessageIds = new Set();
+
+function getToken() {
+    return localStorage.getItem("token") || "";
+}
+
+
+// ---------------------------------------------------------
+// WEBSOCKET
+// ---------------------------------------------------------
+
+function connectMessengerWebSocket() {
+    const token = getToken();
+
+    if (!token) {
+        return;
+    }
+
+    if (!window.currentUser) {
+        return;
+    }
+
+    const userId = window.currentUser.id;
+
+    if (messengerSocket) {
+        try {
+            messengerSocket.close();
+        } catch (e) {}
+    }
+
+    const protocol =
+        location.protocol === "https:"
+            ? "wss:"
+            : "ws:";
+
+    const url =
+        protocol +
+        "//" +
+        location.host +
+        "/ws/" +
+        userId +
+        "?token=" +
+        encodeURIComponent(token);
+
+    messengerSocket =
+        new WebSocket(url);
+
+    messengerSocket.onopen = function () {
+        console.log(
+            "MyMessenger WebSocket connected"
+        );
+    };
+
+    messengerSocket.onmessage = function (event) {
+        try {
+            const data =
+                JSON.parse(event.data);
+
+            if (
+                data.type === "message" &&
+                data.message
+            ) {
+                handleIncomingMessage(
+                    data.message
+                );
+            }
+
+            if (
+                data.type === "message_updated" &&
+                data.message
+            ) {
+                handleUpdatedMessage(
+                    data.message
+                );
+            }
+
+            if (
+                data.type === "message_deleted" &&
+                data.message
+            ) {
+                handleDeletedMessage(
+                    data.message
+                );
+            }
+
+        } catch (error) {
+            console.error(
+                "WebSocket message error:",
+                error
+            );
+        }
+    };
+
+    messengerSocket.onclose = function () {
+        console.log(
+            "MyMessenger WebSocket disconnected"
+        );
+
+        setTimeout(
+            function () {
+                if (
+                    getToken() &&
+                    window.currentUser
+                ) {
+                    connectMessengerWebSocket();
+                }
+            },
+            2000
+        );
+    };
+
+    messengerSocket.onerror = function (error) {
+        console.error(
+            "WebSocket error:",
+            error
+        );
+    };
+}
+
+
+// ---------------------------------------------------------
+// MESSAGE DEDUPLICATION
+// ---------------------------------------------------------
+
+function messageAlreadyRendered(messageId) {
+    if (!messageId) {
+        return false;
+    }
+
+    return renderedMessageIds.has(
+        String(messageId)
+    );
+}
+
+function rememberMessage(messageId) {
+    if (!messageId) {
+        return;
+    }
+
+    renderedMessageIds.add(
+        String(messageId)
+    );
+}
+
+
+// ---------------------------------------------------------
+// INCOMING MESSAGE
+// ---------------------------------------------------------
+
+function handleIncomingMessage(message) {
+    if (!message || !message.id) {
+        return;
+    }
+
+    /*
+     * Если сообщение уже добавили сразу после POST,
+     * WebSocket не должен добавить его второй раз.
+     */
+    if (
+        messageAlreadyRendered(
+            message.id
+        )
+    ) {
+        return;
+    }
+
+    /*
+     * Показываем только если это текущий чат.
+     */
+    if (
+        currentChatUserId ===
+        message.sender_id
+    ) {
+        rememberMessage(
+            message.id
+        );
+
+        appendMessageToChat(
+            message
+        );
+
+        scrollMessagesToBottom();
+    }
+}
+
+
+// ---------------------------------------------------------
+// UPDATED MESSAGE
+// ---------------------------------------------------------
+
+function handleUpdatedMessage(message) {
+    if (!message || !message.id) {
+        return;
+    }
+
+    const element =
+        document.querySelector(
+            '[data-message-id="' +
+            message.id +
+            '"]'
+        );
+
+    if (!element) {
+        return;
+    }
+
+    const text =
+        element.querySelector(
+            ".message-text"
+        );
+
+    if (text) {
+        text.textContent =
+            message.text;
+    }
+
+    const edited =
+        element.querySelector(
+            ".message-edited"
+        );
+
+    if (edited) {
+        edited.textContent =
+            "изменено";
+    }
+}
+
+
+// ---------------------------------------------------------
+// DELETED MESSAGE
+// ---------------------------------------------------------
+
+function handleDeletedMessage(message) {
+    if (!message || !message.id) {
+        return;
+    }
+
+    const element =
+        document.querySelector(
+            '[data-message-id="' +
+            message.id +
+            '"]'
+        );
+
+    if (!element) {
+        return;
+    }
+
+    const text =
+        element.querySelector(
+            ".message-text"
+        );
+
+    if (text) {
+        text.textContent =
+            "Сообщение удалено";
+    }
+
+    element.classList.add(
+        "message-deleted"
+    );
+}
+
+
+// ---------------------------------------------------------
+// ADD MESSAGE IMMEDIATELY
+// ---------------------------------------------------------
+
+function appendMessageToChat(message) {
+    const container =
+        document.getElementById(
+            "messages"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    if (
+        messageAlreadyRendered(
+            message.id
+        )
+    ) {
+        return;
+    }
+
+    rememberMessage(
+        message.id
+    );
+
+    const own =
+        window.currentUser &&
+        Number(message.sender_id) ===
+            Number(window.currentUser.id);
+
+    const row =
+        document.createElement(
+            "div"
+        );
+
+    row.className =
+        "message-row" +
+        (own ? " own" : "");
+
+    row.dataset.messageId =
+        message.id;
+
+    const bubble =
+        document.createElement(
+            "div"
+        );
+
+    bubble.className =
+        "message-bubble";
+
+    const text =
+        document.createElement(
+            "div"
+        );
+
+    text.className =
+        "message-text";
+
+    text.textContent =
+        message.deleted
+            ? "Сообщение удалено"
+            : message.text;
+
+    const footer =
+        document.createElement(
+            "div"
+        );
+
+    footer.className =
+        "message-footer";
+
+    footer.textContent =
+        formatTime(
+            message.created_at
+        );
+
+    bubble.appendChild(
+        text
+    );
+
+    bubble.appendChild(
+        footer
+    );
+
+    row.appendChild(
+        bubble
+    );
+
+    container.appendChild(
+        row
+    );
+}
+
+
+// ---------------------------------------------------------
+// LOAD CHAT
+// ---------------------------------------------------------
+
+async function loadMessages(userId) {
+    currentChatUserId =
+        Number(userId);
+
+    renderedMessageIds =
+        new Set();
+
+    const container =
+        document.getElementById(
+            "messages"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = "";
+
+    const response =
+        await request(
+            "/api/messages/" +
+            encodeURIComponent(
+                userId
+            )
+        );
+
+    if (!response.ok) {
+        return;
+    }
+
+    const messages =
+        await safeJson(response);
+
+    if (!Array.isArray(messages)) {
+        return;
+    }
+
+    messages.forEach(
+        function (message) {
+            appendMessageToChat(
+                message
+            );
+        }
+    );
+
+    scrollMessagesToBottom();
+}
+
+
+// ---------------------------------------------------------
+// SEND MESSAGE
+// ---------------------------------------------------------
+
+async function sendMessage() {
+    if (!currentChatUserId) {
+        alert(
+            "Сначала выберите пользователя"
+        );
+
+        return;
+    }
+
+    const input =
+        document.getElementById(
+            "messageInput"
+        );
+
+    if (!input) {
+        return;
+    }
+
+    const text =
+        input.value.trim();
+
+    if (!text) {
+        return;
+    }
+
+    const receiverId =
+        Number(
+            currentChatUserId
+        );
+
+    /*
+     * Очищаем поле сразу.
+     */
+    input.value = "";
+
+    const response =
+        await request(
+            "/api/messages",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body:
+                    JSON.stringify({
+                        receiver_id:
+                            receiverId,
+                        text: text
+                    })
+            }
+        );
+
+    const data =
+        await safeJson(response);
+
+    if (!response.ok) {
+        /*
+         * Если отправка реально не удалась,
+         * возвращаем текст в поле.
+         */
+        input.value = text;
+
+        alert(
+            data.detail ||
+            "Не удалось отправить сообщение"
+        );
+
+        return;
+    }
+
+    /*
+     * ГЛАВНОЕ:
+     *
+     * POST уже вернул созданное сообщение.
+     * Поэтому показываем его СРАЗУ.
+     *
+     * WebSocket потом тоже пришлёт его,
+     * но Set выше не даст сделать дубль.
+     */
+    if (
+        data &&
+        data.message
+    ) {
+        appendMessageToChat(
+            data.message
+        );
+
+        scrollMessagesToBottom();
+    }
+}
+
+
+// ---------------------------------------------------------
+// ENTER
+// ---------------------------------------------------------
+
+function messageKey(event) {
+    if (
+        event.key === "Enter" &&
+        !event.shiftKey
+    ) {
+        event.preventDefault();
+
+        sendMessage();
+    }
+}
+
+
+// ---------------------------------------------------------
+// SCROLL
+// ---------------------------------------------------------
+
+function scrollMessagesToBottom() {
+    const container =
+        document.getElementById(
+            "messages"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    requestAnimationFrame(
+        function () {
+            container.scrollTop =
+                container.scrollHeight;
+        }
+    );
+}
