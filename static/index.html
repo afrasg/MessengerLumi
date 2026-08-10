@@ -1,67 +1,26 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-
 <meta charset="UTF-8">
-
-<meta
-    name="viewport"
-    content="width=device-width,initial-scale=1"
->
-
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MyMessenger</title>
 
 <style>
-
 * {
     box-sizing: border-box;
 }
 
-:root {
-    --bg: #0e1621;
-    --panel: #17212b;
-    --panel2: #202b36;
-    --input: #242f3a;
-    --border: #2b3a48;
-    --accent: #2aabee;
-    --text: #ffffff;
-    --muted: #8295a5;
-    --danger: #e05252;
-    --mine: #2b5278;
-}
-
-body.light {
-    --bg: #eef2f5;
-    --panel: #ffffff;
-    --panel2: #e5ebf0;
-    --input: #edf1f5;
-    --border: #d5dde5;
-    --text: #18222d;
-    --muted: #657382;
-    --mine: #cce8ff;
-}
-
-body.blue {
-    --bg: #071b2e;
-    --panel: #0b2942;
-    --panel2: #123957;
-    --input: #123653;
-    --border: #1c4b6e;
-    --text: #ffffff;
-    --muted: #8eafc7;
-    --mine: #15547e;
+html,
+body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    font-family: Arial, sans-serif;
 }
 
 body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family:
-        Inter,
-        Arial,
-        sans-serif;
-    height: 100vh;
-    overflow: hidden;
+    background: #101114;
+    color: #fff;
 }
 
 button,
@@ -82,45 +41,56 @@ button {
 
 /* AUTH */
 
-.auth {
-    width: 400px;
-    max-width: calc(100% - 30px);
-    margin: 80px auto;
-    padding: 30px;
-    background: var(--panel);
-    border-radius: 22px;
-    box-shadow:
-        0 20px 60px #0005;
+#auth {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
 }
 
-.auth h1 {
+.auth-card {
+    width: min(390px, 100%);
+    background: #191b21;
+    border: 1px solid #292c35;
+    border-radius: 18px;
+    padding: 28px;
+    box-shadow: 0 20px 60px #0007;
+}
+
+.auth-card h1 {
+    margin: 0 0 22px;
     text-align: center;
-    margin-top: 0;
 }
 
-.auth input {
+.auth-card input {
     width: 100%;
-    padding: 14px;
-    margin: 6px 0;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    background: var(--input);
-    color: var(--text);
+    margin-bottom: 10px;
+    padding: 12px 14px;
+    border: 1px solid #30333d;
+    border-radius: 10px;
+    background: #111319;
+    color: white;
     outline: none;
 }
 
-.auth button {
+.auth-card button {
     width: 100%;
-    padding: 13px;
     margin-top: 8px;
+    padding: 12px;
     border: 0;
-    border-radius: 12px;
-    background: var(--accent);
+    border-radius: 10px;
+    background: #5865f2;
     color: white;
+    font-weight: 600;
+}
+
+.auth-card button.secondary {
+    background: #292c35;
 }
 
 .error {
-    color: #ff7777;
+    color: #ff6b6b;
     min-height: 20px;
 }
 
@@ -128,82 +98,82 @@ button {
 /* APP */
 
 #app {
-    display: none;
+    width: 100%;
     height: 100vh;
+    display: flex;
 }
 
 .sidebar {
-    width: 310px;
+    width: 280px;
     flex-shrink: 0;
-    background: var(--panel);
-    border-right: 1px solid var(--border);
+    background: #17191e;
+    border-right: 1px solid #292c35;
     display: flex;
     flex-direction: column;
 }
 
 .logo {
     padding: 20px;
-    font-size: 21px;
-    font-weight: 800;
+    font-size: 19px;
+    font-weight: bold;
 }
 
 .search {
     margin: 0 12px 12px;
-    padding: 13px;
-    border: 0;
-    border-radius: 13px;
-    background: var(--input);
-    color: var(--text);
+    padding: 10px 12px;
+    border: 1px solid #30333d;
+    border-radius: 10px;
+    background: #101218;
+    color: white;
     outline: none;
 }
 
 .users {
     overflow-y: auto;
-    flex: 1;
+    padding: 0 8px 10px;
 }
 
 .user {
     display: flex;
     align-items: center;
-    gap: 11px;
-    padding: 12px 15px;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 10px;
     cursor: pointer;
 }
 
 .user:hover {
-    background: var(--panel2);
+    background: #242730;
 }
 
 .avatar {
-    width: 46px;
-    height: 46px;
-    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     object-fit: cover;
-    background: linear-gradient(
-        135deg,
-        #2aabee,
-        #6755d9
-    );
+    background: #30333d;
     display: flex;
-    justify-content: center;
     align-items: center;
-}
-
-.user-info {
-    min-width: 0;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
 .user-name {
-    font-weight: 700;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    min-width: 0;
 }
 
-.user-username {
-    color: var(--muted);
+.user-name strong,
+.user-name span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-name span {
+    color: #9095a3;
     font-size: 12px;
-    margin-top: 3px;
+    margin-top: 2px;
 }
 
 
@@ -217,482 +187,381 @@ button {
 }
 
 .topbar {
-    height: 64px;
+    height: 62px;
     flex-shrink: 0;
-    background: var(--panel);
-    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 0 17px;
+    justify-content: space-between;
+    border-bottom: 1px solid #292c35;
+    background: #15171c;
 }
 
 .top-actions {
     display: flex;
-    gap: 7px;
+    gap: 5px;
 }
 
 .icon-button {
+    width: 40px;
+    height: 40px;
     border: 0;
-    background: var(--input);
-    color: var(--text);
-    padding: 9px 12px;
-    border-radius: 10px;
+    border-radius: 9px;
+    background: transparent;
+    color: white;
+}
+
+.icon-button:hover {
+    background: #292c35;
 }
 
 .content {
     flex: 1;
     min-height: 0;
+    overflow: auto;
 }
 
 .view {
-    height: 100%;
-    overflow-y: auto;
+    min-height: 100%;
     padding: 20px;
+}
+
+.feed {
+    max-width: 750px;
+    margin: 0 auto;
+}
+
+.post-box,
+.card {
+    background: #191b21;
+    border: 1px solid #292c35;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 14px;
+}
+
+textarea,
+input,
+select {
+    background: #101218;
+    color: white;
+    border: 1px solid #30333d;
+    border-radius: 9px;
+    padding: 10px;
+    outline: none;
+}
+
+.post-box textarea {
+    width: 100%;
+    min-height: 90px;
+    resize: vertical;
+}
+
+.post-tools {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.primary,
+.send {
+    border: 0;
+    border-radius: 9px;
+    padding: 10px 14px;
+    background: #5865f2;
+    color: white;
+    cursor: pointer;
+}
+
+.post {
+    background: #191b21;
+    border: 1px solid #292c35;
+    border-radius: 14px;
+    padding: 15px;
+    margin-bottom: 12px;
+}
+
+.post-head {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.post-text {
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin-top: 12px;
+}
+
+.post-media {
+    width: 100%;
+    max-height: 500px;
+    object-fit: contain;
+    border-radius: 10px;
+    margin-top: 12px;
+    background: #0b0c0f;
+}
+
+.post-actions {
+    display: flex;
+    gap: 7px;
+    margin-top: 12px;
+}
+
+.post-actions button {
+    background: #292c35;
+    color: white;
+    border: 0;
+    padding: 7px 10px;
+    border-radius: 8px;
 }
 
 
 /* CHAT */
 
 .chat {
-    height: 100%;
+    height: calc(100vh - 62px);
     display: flex;
     flex-direction: column;
 }
 
 .chat-header {
-    padding: 13px 20px;
-    background: var(--panel);
-    border-bottom: 1px solid var(--border);
+    padding: 14px 18px;
+    border-bottom: 1px solid #292c35;
+    font-weight: bold;
+    flex-shrink: 0;
 }
 
 .messages {
     flex: 1;
     overflow-y: auto;
-    padding: 20px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
 }
 
 .message-row {
     display: flex;
-    margin: 6px 0;
+    width: 100%;
 }
 
-.message-row.mine {
+.message-row.own {
     justify-content: flex-end;
 }
 
-.message {
-    position: relative;
-    max-width: min(70%, 600px);
-    padding: 10px 12px;
+.message-bubble {
+    max-width: min(70%, 460px);
+    width: fit-content;
+    padding: 7px 11px;
     border-radius: 14px;
-    background: var(--panel2);
+    background: #292c35;
+    color: white;
+    font-size: 14px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
 }
 
-.message.mine .bubble {
-    background: var(--mine);
+.message-row.own .message-bubble {
+    background: #5865f2;
 }
 
-.bubble {
-    padding: 9px 12px;
-    border-radius: 13px;
+.message-text {
     white-space: pre-wrap;
     word-break: break-word;
 }
 
 .message-meta {
-    color: var(--muted);
     font-size: 10px;
+    opacity: .62;
     text-align: right;
-    margin-top: 4px;
+    margin-top: 3px;
 }
 
-.deleted-message {
-    color: var(--muted);
+.message-deleted {
+    opacity: .6;
     font-style: italic;
 }
 
 .composer {
     display: flex;
     gap: 8px;
-    padding: 12px;
-    background: var(--panel);
-    border-top: 1px solid var(--border);
+    padding: 10px;
+    border-top: 1px solid #292c35;
+    background: #15171c;
 }
 
 .composer input {
     flex: 1;
     min-width: 0;
-    border: 0;
-    padding: 13px;
-    border-radius: 13px;
-    background: var(--input);
-    color: var(--text);
-    outline: none;
 }
 
 .send {
-    width: 52px;
-    border: 0;
-    border-radius: 13px;
-    background: var(--accent);
-    color: white;
+    width: 44px;
+    padding: 0;
 }
 
 
-/* CONTEXT MENU */
-
-.context-menu {
-    position: fixed;
-    z-index: 1000;
-    min-width: 190px;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 13px;
-    box-shadow: 0 15px 40px #0008;
-    padding: 5px;
-}
-
-.context-menu button {
-    width: 100%;
-    text-align: left;
-    border: 0;
-    background: transparent;
-    color: var(--text);
-    padding: 10px;
-    border-radius: 8px;
-}
-
-.context-menu button:hover {
-    background: var(--panel2);
-}
-
-
-/* FEED */
-
-.feed {
-    max-width: 720px;
-    margin: auto;
-}
-
-.post-box,
-.post {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 17px;
-    padding: 15px;
-    margin-bottom: 15px;
-}
-
-.post-box textarea {
-    width: 100%;
-    min-height: 80px;
-    resize: vertical;
-    border: 0;
-    border-radius: 12px;
-    padding: 12px;
-    background: var(--input);
-    color: var(--text);
-    outline: none;
-}
-
-.post-tools {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.primary {
-    background: var(--accent);
-    color: white;
-    border: 0;
-    padding: 10px 14px;
-    border-radius: 10px;
-}
-
-.post-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.post-author {
-    font-weight: 700;
-}
-
-.post-username {
-    color: var(--muted);
-    font-size: 12px;
-}
-
-.post-text {
-    white-space: pre-wrap;
-    margin: 14px 0;
-}
-
-.post-media {
-    width: 100%;
-    max-height: 600px;
-    object-fit: contain;
-    border-radius: 12px;
-    background: #000;
-}
-
-.post-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 7px;
-    margin-top: 10px;
-}
-
-.post-actions button {
-    border: 0;
-    border-radius: 9px;
-    padding: 8px 11px;
-    background: var(--input);
-    color: var(--text);
-}
-
-
-/* COMMENTS */
-
-.comments {
-    margin-top: 12px;
-}
-
-.comment {
-    margin-top: 8px;
-    padding: 9px;
-    background: var(--panel2);
-    border-radius: 10px;
-}
-
-.comment-head {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-}
-
-.comment-user {
-    font-weight: 700;
-}
-
-.reply-label {
-    color: var(--muted);
-    font-size: 12px;
-}
-
-.comment-buttons {
-    display: flex;
-    gap: 5px;
-    margin-top: 6px;
-}
-
-.comment-buttons button {
-    border: 0;
-    background: var(--input);
-    color: var(--text);
-    border-radius: 7px;
-    padding: 5px 8px;
-}
-
-.comment-input {
-    display: flex;
-    gap: 7px;
-    margin-top: 9px;
-}
-
-.comment-input input {
-    flex: 1;
-    min-width: 0;
-    border: 0;
-    border-radius: 9px;
-    padding: 10px;
-    background: var(--input);
-    color: var(--text);
-}
-
-
-/* PROFILE / SETTINGS */
+/* PROFILE */
 
 .profile {
-    max-width: 650px;
+    max-width: 700px;
     margin: auto;
 }
 
-.card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    padding: 22px;
-    margin-bottom: 15px;
+.card input,
+.card textarea,
+.card select {
+    width: 100%;
+    margin-bottom: 9px;
 }
 
 .big-avatar {
-    width: 110px;
-    height: 110px;
-    display: block;
-    margin: 0 auto 15px;
+    width: 100px;
+    height: 100px;
     border-radius: 50%;
     object-fit: cover;
-    background: linear-gradient(
-        135deg,
-        #2aabee,
-        #6755d9
-    );
-}
-
-.profile input,
-.profile textarea,
-.profile select {
-    width: 100%;
-    padding: 12px;
-    margin: 6px 0;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: var(--input);
-    color: var(--text);
-    outline: none;
+    background: #292c35;
+    display: block;
+    margin-bottom: 15px;
 }
 
 .setting {
-    padding: 13px 0;
-    border-bottom: 1px solid var(--border);
-}
-
-.setting:last-child {
-    border-bottom: 0;
+    padding: 12px 0;
+    border-bottom: 1px solid #292c35;
 }
 
 .setting label {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    gap: 10px;
+    justify-content: space-between;
+    gap: 15px;
 }
 
 
 /* MODAL */
 
-.modal-bg {
+#modalBg {
     position: fixed;
     inset: 0;
-    z-index: 900;
     background: #0009;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 15px;
+    padding: 20px;
+    z-index: 100;
 }
 
 .modal {
-    width: 500px;
-    max-width: 100%;
+    width: min(480px, 100%);
     max-height: 90vh;
-    overflow-y: auto;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 22px;
-}
-
-.modal input,
-.modal textarea {
-    width: 100%;
-    margin: 7px 0;
-    padding: 12px;
-    border: 0;
-    border-radius: 10px;
-    background: var(--input);
-    color: var(--text);
+    overflow: auto;
+    background: #191b21;
+    border: 1px solid #30333d;
+    border-radius: 15px;
+    padding: 20px;
 }
 
 
 /* MOBILE */
 
-@media(max-width:750px) {
+@media (max-width: 700px) {
+    .sidebar {
+        width: 220px;
+    }
 
+    .message-bubble {
+        max-width: 82%;
+    }
+}
+
+@media (max-width: 560px) {
     .sidebar {
         width: 75px;
     }
 
     .logo {
-        font-size: 11px;
-        padding: 13px 5px;
+        font-size: 0;
+        text-align: center;
+    }
+
+    .logo:first-letter {
+        font-size: 25px;
     }
 
     .search {
-        margin: 5px;
+        margin: 8px;
+    }
+
+    .user-name {
+        display: none;
     }
 
     .user {
         justify-content: center;
-        padding: 9px 4px;
     }
 
-    .user-info {
-        display: none;
-    }
-
-    .view {
-        padding: 10px;
-    }
-
-    .message {
-        max-width: 85%;
+    .topbar strong {
+        font-size: 14px;
     }
 }
-
 </style>
-
 </head>
 
 <body>
 
-
 <!-- =====================================================
-AUTH
+     AUTH
 ===================================================== -->
 
-<div class="auth" id="auth">
+<section id="auth">
 
-    <h1>💬 MyMessenger</h1>
+    <div class="auth-card">
 
-    <input
-        id="username"
-        placeholder="Username"
-        autocomplete="username"
-    >
+        <h1>💬 MyMessenger</h1>
 
-    <input
-        id="password"
-        type="password"
-        placeholder="Пароль"
-        autocomplete="current-password"
-    >
+        <input
+            id="username"
+            placeholder="Username"
+            autocomplete="username"
+        >
 
-    <button onclick="login()">
-        Войти
-    </button>
+        <input
+            id="password"
+            type="password"
+            placeholder="Пароль"
+            autocomplete="current-password"
+        >
 
-    <button onclick="register()">
-        Создать аккаунт
-    </button>
+        <button onclick="login()">
+            Войти
+        </button>
 
-    <p
-        id="authError"
-        class="error"
-    ></p>
+        <button
+            class="secondary"
+            onclick="register()"
+        >
+            Создать аккаунт
+        </button>
 
-</div>
+        <p
+            id="authError"
+            class="error"
+        ></p>
+
+    </div>
+
+</section>
 
 
 <!-- =====================================================
-APP
+     APP
 ===================================================== -->
 
-<div id="app">
+<section
+    id="app"
+    class="hidden"
+>
 
     <aside class="sidebar">
 
@@ -760,7 +629,6 @@ APP
 
         <div class="content">
 
-
             <!-- FEED -->
 
             <section
@@ -787,16 +655,14 @@ APP
                             </button>
 
                             <label class="primary">
-
                                 📷 Фото / видео
-
                                 <input
                                     id="mediaFile"
                                     type="file"
                                     accept="image/*,video/*"
                                     hidden
+                                    onchange="publishMediaPost()"
                                 >
-
                             </label>
 
                         </div>
@@ -890,9 +756,7 @@ APP
                             placeholder="О себе"
                         ></textarea>
 
-                        <p>
-                            🖼️ Аватар
-                        </p>
+                        <p>🖼️ Аватар</p>
 
                         <input
                             id="avatarFile"
@@ -909,11 +773,10 @@ APP
 
                     </div>
 
+
                     <div class="card">
 
-                        <h3>
-                            👥 Аккаунт
-                        </h3>
+                        <h3>👥 Аккаунт</h3>
 
                         <button
                             class="primary"
@@ -936,7 +799,8 @@ APP
                                 border:0;
                                 padding:11px;
                                 border-radius:10px;
-                                margin-top:8px
+                                margin-top:8px;
+                                width:100%;
                             "
                             onclick="logout()"
                         >
@@ -961,82 +825,41 @@ APP
 
                     <div class="card">
 
-                        <h2>
-                            ⚙️ Настройки
-                        </h2>
+                        <h2>⚙️ Настройки</h2>
 
                         <div class="setting">
-
                             <label>
-
-                                <span>
-                                    🌐 Язык
-                                </span>
+                                <span>🌐 Язык</span>
 
                                 <select
                                     id="language"
                                     onchange="saveSettings()"
                                 >
-
-                                    <option value="ru">
-                                        Русский
-                                    </option>
-
-                                    <option value="en">
-                                        English
-                                    </option>
-
-                                    <option value="be">
-                                        Беларуская
-                                    </option>
-
-                                    <option value="kk">
-                                        Қазақша
-                                    </option>
-
+                                    <option value="ru">Русский</option>
+                                    <option value="en">English</option>
+                                    <option value="be">Беларуская</option>
+                                    <option value="kk">Қазақша</option>
                                 </select>
-
                             </label>
-
                         </div>
 
-
                         <div class="setting">
-
                             <label>
-
-                                <span>
-                                    🎨 Тема
-                                </span>
+                                <span>🎨 Тема</span>
 
                                 <select
                                     id="theme"
                                     onchange="saveSettings()"
                                 >
-
-                                    <option value="dark">
-                                        Тёмная
-                                    </option>
-
-                                    <option value="light">
-                                        Светлая
-                                    </option>
-
-                                    <option value="blue">
-                                        Синяя
-                                    </option>
-
+                                    <option value="dark">Тёмная</option>
+                                    <option value="light">Светлая</option>
+                                    <option value="blue">Синяя</option>
                                 </select>
-
                             </label>
-
                         </div>
 
-
                         <div class="setting">
-
                             <label>
-
                                 🔔 Уведомления
 
                                 <input
@@ -1044,16 +867,11 @@ APP
                                     type="checkbox"
                                     onchange="saveSettings()"
                                 >
-
                             </label>
-
                         </div>
 
-
                         <div class="setting">
-
                             <label>
-
                                 🟢 Показывать онлайн
 
                                 <input
@@ -1061,16 +879,11 @@ APP
                                     type="checkbox"
                                     onchange="saveSettings()"
                                 >
-
                             </label>
-
                         </div>
 
-
                         <div class="setting">
-
                             <label>
-
                                 🕒 Показывать время последнего визита
 
                                 <input
@@ -1078,9 +891,7 @@ APP
                                     type="checkbox"
                                     onchange="saveSettings()"
                                 >
-
                             </label>
-
                         </div>
 
                     </div>
@@ -1088,9 +899,7 @@ APP
 
                     <div class="card">
 
-                        <h3>
-                            👥 Группы
-                        </h3>
+                        <h3>👥 Группы</h3>
 
                         <button
                             class="primary"
@@ -1106,9 +915,7 @@ APP
 
                     <div class="card">
 
-                        <h3>
-                            📢 Каналы
-                        </h3>
+                        <h3>📢 Каналы</h3>
 
                         <button
                             class="primary"
@@ -1153,202 +960,87 @@ APP
 
     </main>
 
-</div>
+</section>
 
 
-<!-- =====================================================
-CONTEXT MENU
-===================================================== -->
-
-<div
-    id="contextMenu"
-    class="context-menu hidden"
->
-
-    <button onclick="copySelectedMessage()">
-        📋 Копировать
-    </button>
-
-    <button onclick="favoriteSelectedMessage()">
-        ⭐ В избранное
-    </button>
-
-    <button
-        id="editMessageButton"
-        onclick="editSelectedMessage()"
-    >
-        ✏️ Изменить
-    </button>
-
-    <button
-        id="deleteMessageButton"
-        onclick="deleteSelectedMessage()"
-    >
-        🗑️ Удалить
-    </button>
-
-</div>
-
-
-<!-- =====================================================
-MODAL
-===================================================== -->
+<!-- MODAL -->
 
 <div
     id="modalBg"
-    class="modal-bg hidden"
+    class="hidden"
     onclick="closeModal(event)"
 >
-
     <div
-        class="modal"
         id="modal"
+        class="modal"
         onclick="event.stopPropagation()"
     ></div>
-
 </div>
 
 
 <script>
+"use strict";
 
 
-// =========================================================
-// CONFIG
-// =========================================================
+/* =========================================================
+   GLOBALS
+========================================================= */
 
-const API = "";
+const API = window.location.origin;
 
 let token =
-    localStorage.getItem(
-        "token"
-    );
+    localStorage.getItem("token") || "";
 
 let currentUser = null;
 
-let selectedUser = null;
+let currentChatUser = null;
 
-let chatTimer = null;
-let lastMessageId = 0;
-let loadingMessages = false;
+let socket = null;
 
-let selectedMessage = null;
+let socketReconnectTimer = null;
 
-let renderedMessageIds =
-    new Set();
+let selectedMessageId = null;
 
 
-// =========================================================
-// API
-// =========================================================
+/* =========================================================
+   REQUEST
+========================================================= */
 
 async function request(
-    path,
+    url,
     options = {}
 ) {
-
-    options.headers =
-        options.headers || {};
+    const headers = {
+        ...(options.headers || {})
+    };
 
     if (token) {
-
-        options.headers.Authorization =
+        headers.Authorization =
             "Bearer " + token;
-
     }
 
-    const response =
-        await fetch(
-            API + path,
-            options
-        );
-
-    return response;
-
+    return fetch(
+        API + url,
+        {
+            ...options,
+            headers
+        }
+    );
 }
 
 
 async function safeJson(response) {
-
-    const text =
-        await response.text();
-
-    if (!text) {
-        return {};
-    }
-
     try {
-        return JSON.parse(text);
+        return await response.json();
     } catch {
         return {};
     }
-
 }
 
 
-// =========================================================
-// AUTH
-// =========================================================
-
-async function register() {
-
-    const username =
-        document.getElementById(
-            "username"
-        ).value.trim();
-
-    const password =
-        document.getElementById(
-            "password"
-        ).value;
-
-    try {
-
-        const response =
-            await fetch(
-                API + "/api/register",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
-                    body:
-                        JSON.stringify({
-                            username,
-                            password
-                        })
-                }
-            );
-
-        const data =
-            await safeJson(response);
-
-        if (!response.ok) {
-            throw new Error(
-                data.detail ||
-                "Ошибка регистрации"
-            );
-        }
-
-        token = data.token;
-
-        localStorage.setItem(
-            "token",
-            token
-        );
-
-        await startApp();
-
-    } catch (error) {
-
-        showAuthError(
-            error.message
-        );
-
-    }
-
-}
-
+/* =========================================================
+   AUTH
+========================================================= */
 
 async function login() {
 
@@ -1361,6 +1053,19 @@ async function login() {
         document.getElementById(
             "password"
         ).value;
+
+    const error =
+        document.getElementById(
+            "authError"
+        );
+
+    error.textContent = "";
+
+    if (!username || !password) {
+        error.textContent =
+            "Заполни логин и пароль";
+        return;
+    }
 
     try {
 
@@ -1385,10 +1090,10 @@ async function login() {
             await safeJson(response);
 
         if (!response.ok) {
-            throw new Error(
+            error.textContent =
                 data.detail ||
-                "Ошибка входа"
-            );
+                "Ошибка входа";
+            return;
         }
 
         token = data.token;
@@ -1402,29 +1107,115 @@ async function login() {
 
     } catch (error) {
 
-        showAuthError(
-            error.message
+        document.getElementById(
+            "authError"
+        ).textContent =
+            "Сервер недоступен";
+
+        console.error(error);
+    }
+}
+
+
+async function register() {
+
+    const username =
+        document.getElementById(
+            "username"
+        ).value.trim();
+
+    const password =
+        document.getElementById(
+            "password"
+        ).value;
+
+    const error =
+        document.getElementById(
+            "authError"
         );
 
+    error.textContent = "";
+
+    try {
+
+        const response =
+            await fetch(
+                API + "/api/register",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+                    body:
+                        JSON.stringify({
+                            username,
+                            password
+                        })
+                }
+            );
+
+        const data =
+            await safeJson(response);
+
+        if (!response.ok) {
+            error.textContent =
+                data.detail ||
+                "Ошибка регистрации";
+            return;
+        }
+
+        token = data.token;
+
+        localStorage.setItem(
+            "token",
+            token
+        );
+
+        await startApp();
+
+    } catch (error) {
+
+        document.getElementById(
+            "authError"
+        ).textContent =
+            "Сервер недоступен";
+
+        console.error(error);
+    }
+}
+
+
+function logout() {
+
+    if (socket) {
+        try {
+            socket.close();
+        } catch {}
     }
 
+    socket = null;
+    token = "";
+    currentUser = null;
+    currentChatUser = null;
+
+    localStorage.removeItem(
+        "token"
+    );
+
+    location.reload();
 }
 
 
-function showAuthError(text) {
-
-    document.getElementById(
-        "authError"
-    ).innerText = text;
-
-}
-
-
-// =========================================================
-// START
-// =========================================================
+/* =========================================================
+   START APP
+========================================================= */
 
 async function startApp() {
+
+    if (!token) {
+        return;
+    }
 
     const response =
         await request(
@@ -1437,10 +1228,21 @@ async function startApp() {
             "token"
         );
 
-        token = null;
+        token = "";
+
+        document.getElementById(
+            "auth"
+        ).classList.remove(
+            "hidden"
+        );
+
+        document.getElementById(
+            "app"
+        ).classList.add(
+            "hidden"
+        );
 
         return;
-
     }
 
     currentUser =
@@ -1448,118 +1250,33 @@ async function startApp() {
 
     document.getElementById(
         "auth"
-    ).style.display = "none";
+    ).classList.add(
+        "hidden"
+    );
 
     document.getElementById(
         "app"
-    ).style.display = "flex";
+    ).classList.remove(
+        "hidden"
+    );
 
-    await loadSettings();
-
-    function startChatPolling() {
-    stopChatPolling();
-
-    if (!selectedUser) return;
-
-    loadMessages();
-
-    chatTimer = setInterval(() => {
-        loadMessages(true);
-    }, 1500);
-}
-
-
-function stopChatPolling() {
-    if (chatTimer) {
-        clearInterval(chatTimer);
-        chatTimer = null;
-    }
-}
-
-
-async function loadMessages(silent = false) {
-    if (!selectedUser || loadingMessages) return;
-
-    loadingMessages = true;
-
-    try {
-        const response = await request(
-            "/api/messages/" + selectedUser.id
-        );
-
-        if (!response.ok) return;
-
-        const history = await response.json();
-
-        const container =
-            document.getElementById("messages");
-
-        const wasAtBottom =
-            container.scrollHeight -
-            container.scrollTop -
-            container.clientHeight < 100;
-
-        container.innerHTML = "";
-
-        for (const message of history) {
-            addMessage(message);
-        }
-
-        if (wasAtBottom || !silent) {
-            container.scrollTop =
-                container.scrollHeight;
-        }
-
-        if (history.length) {
-            lastMessageId =
-                history[history.length - 1].id;
-        }
-
-    } catch (error) {
-        console.error(
-            "Ошибка загрузки сообщений:",
-            error
-        );
-    } finally {
-        loadingMessages = false;
-    }
-}
+    connectWebSocket();
 
     await searchUsers();
 
-    showFeed();
+    await loadFeed();
 
+    await loadSettings();
+
+    await loadGroups();
+
+    await loadChannels();
 }
 
 
-// =========================================================
-// LOGOUT
-// =========================================================
-
-function logout() {
-
-    if (socket) {
-
-        try {
-            socket.close();
-        } catch {}
-
-    }
-
-    localStorage.removeItem(
-        "token"
-    );
-
-    token = null;
-
-    location.reload();
-
-}
-
-
-// =========================================================
-// WEBSOCKET
-// =========================================================
+/* =========================================================
+   WEBSOCKET
+========================================================= */
 
 function connectWebSocket() {
 
@@ -1568,13 +1285,9 @@ function connectWebSocket() {
     }
 
     if (socket) {
-
         try {
             socket.close();
         } catch {}
-
-        socket = null;
-
     }
 
     const protocol =
@@ -1582,158 +1295,180 @@ function connectWebSocket() {
             ? "wss:"
             : "ws:";
 
-    const host =
-        location.host;
+    /*
+     * ВАЖНО:
+     * токен обязательно передаётся в URL.
+     * Именно этого не хватало при 403.
+     */
+
+    const url =
+        protocol +
+        "//" +
+        location.host +
+        "/ws/" +
+        currentUser.id +
+        "?token=" +
+        encodeURIComponent(token);
 
     socket =
-        new WebSocket(
-            protocol +
-            "//" +
-            host +
-            "/ws/" +
-            currentUser.id +
-            "?token=" +
-            encodeURIComponent(token)
-        );
+        new WebSocket(url);
 
     socket.onopen = () => {
 
-        try {
+        console.log(
+            "WebSocket connected"
+        );
 
-            socket.send(
-                JSON.stringify({
-                    type: "ping"
-                })
-            );
-
-        } catch {}
-
+        clearTimeout(
+            socketReconnectTimer
+        );
     };
 
+    socket.onmessage = event => {
 
-    socket.onmessage =
-        event => {
+        try {
 
-            let data;
-
-            try {
-                data =
-                    JSON.parse(
-                        event.data
-                    );
-            } catch {
-                return;
-            }
-
-            if (
-                data.type === "message"
-            ) {
-
-                receiveMessage(
-                    data.message
+            const payload =
+                JSON.parse(
+                    event.data
                 );
 
-            }
+            handleSocketMessage(
+                payload
+            );
 
-
-            if (
-                data.type ===
-                "message_updated"
-            ) {
-
-                updateMessageElement(
-                    data.message
-                );
-
-            }
-
-
-            if (
-                data.type ===
-                "message_deleted"
-            ) {
-
-                deleteMessageElement(
-                    data.message
-                );
-
-            }
-
-        };
-
+        } catch (error) {
+            console.error(
+                "WS message error",
+                error
+            );
+        }
+    };
 
     socket.onclose = () => {
 
-        if (token) {
+        console.log(
+            "WebSocket disconnected"
+        );
 
-            setTimeout(
-                connectWebSocket,
-                3000
+        if (
+            token &&
+            currentUser
+        ) {
+            clearTimeout(
+                socketReconnectTimer
             );
 
+            socketReconnectTimer =
+                setTimeout(
+                    connectWebSocket,
+                    2000
+                );
         }
-
     };
 
+    socket.onerror = error => {
+        console.error(
+            "WebSocket error",
+            error
+        );
+    };
 }
 
 
-function receiveMessage(message) {
+function handleSocketMessage(
+    payload
+) {
 
     if (
-        renderedMessageIds.has(
-            message.id
-        )
+        payload.type ===
+        "message"
     ) {
+
+        const message =
+            payload.message;
+
+        /*
+         * Если открыт именно этот чат,
+         * вставляем сообщение.
+         *
+         * ВАЖНО:
+         * addMessageToChat() проверяет ID.
+         * Поэтому сообщение, которое уже было
+         * добавлено сразу после POST, не дублируется.
+         */
+
+        if (
+            currentChatUser &&
+            (
+                (
+                    message.sender_id ===
+                    currentUser.id &&
+                    message.receiver_id ===
+                    currentChatUser.id
+                )
+                ||
+                (
+                    message.sender_id ===
+                    currentChatUser.id &&
+                    message.receiver_id ===
+                    currentUser.id
+                )
+            )
+        ) {
+
+            addMessageToChat(
+                message,
+                false
+            );
+        }
+
         return;
     }
 
-    const belongsToCurrentChat =
-        selectedUser &&
-        (
-            (
-                message.sender_id ===
-                currentUser.id &&
-                message.receiver_id ===
-                selectedUser.id
-            )
-            ||
-            (
-                message.sender_id ===
-                selectedUser.id &&
-                message.receiver_id ===
-                currentUser.id
-            )
-        );
 
     if (
-        belongsToCurrentChat
+        payload.type ===
+        "message_updated"
     ) {
 
-        addMessage(
-            message
+        updateMessageInDom(
+            payload.message
         );
 
+        return;
     }
 
+
+    if (
+        payload.type ===
+        "message_deleted"
+    ) {
+
+        updateMessageInDom(
+            payload.message
+        );
+
+        return;
+    }
 }
 
 
-// =========================================================
-// USERS
-// =========================================================
+/* =========================================================
+   USERS
+========================================================= */
 
 async function searchUsers() {
 
-    const q =
+    const query =
         document.getElementById(
             "search"
-        ).value;
+        ).value.trim();
 
     const response =
         await request(
             "/api/users?q=" +
-            encodeURIComponent(q)
+            encodeURIComponent(query)
         );
 
     if (!response.ok) {
@@ -1753,77 +1488,105 @@ async function searchUsers() {
     users.forEach(
         user => {
 
-            const element =
+            const div =
                 document.createElement(
                     "div"
                 );
 
-            element.className =
-                "user";
+            div.className = "user";
 
-            element.innerHTML = `
-
-                ${
-                    user.avatar_url
-                    ?
-                    `<img
-                        class="avatar"
-                        src="${mediaUrl(
-                            user.avatar_url
-                        )}"
-                    >`
-                    :
-                    `<div class="avatar">
-                        👤
-                    </div>`
-                }
-
-                <div class="user-info">
-
-                    <div class="user-name">
-                        ${escapeHtml(
-                            user.display_name ||
-                            user.username
-                        )}
-                    </div>
-
-                    <div class="user-username">
-                        @${escapeHtml(
-                            user.username
-                        )}
-                    </div>
-
-                </div>
-            `;
-
-            element.onclick =
+            div.onclick =
                 () => openChat(user);
 
-            container.appendChild(
-                element
+            const avatar =
+                document.createElement(
+                    "div"
+                );
+
+            avatar.className =
+                "avatar";
+
+            if (user.avatar_url) {
+
+                const img =
+                    document.createElement(
+                        "img"
+                    );
+
+                img.src =
+                    mediaUrl(
+                        user.avatar_url
+                    );
+
+                img.className =
+                    "avatar";
+
+                avatar.replaceWith(
+                    img
+                );
+            }
+
+            const name =
+                document.createElement(
+                    "div"
+                );
+
+            name.className =
+                "user-name";
+
+            const strong =
+                document.createElement(
+                    "strong"
+                );
+
+            strong.textContent =
+                user.display_name ||
+                user.username;
+
+            const username =
+                document.createElement(
+                    "span"
+                );
+
+            username.textContent =
+                "@" +
+                user.username;
+
+            name.appendChild(
+                strong
             );
 
+            name.appendChild(
+                username
+            );
+
+            div.appendChild(
+                avatar
+            );
+
+            div.appendChild(
+                name
+            );
+
+            container.appendChild(
+                div
+            );
         }
     );
-
 }
 
 
-// =========================================================
-// CHAT
-// =========================================================
+/* =========================================================
+   CHAT
+========================================================= */
 
 async function openChat(user) {
 
-    selectedUser = user;
-
-    showOnly(
-        "chatView"
-    );
+    currentChatUser = user;
 
     document.getElementById(
         "pageTitle"
-    ).innerText =
+    ).textContent =
         "💬 " +
         (
             user.display_name ||
@@ -1832,24 +1595,25 @@ async function openChat(user) {
 
     document.getElementById(
         "chatHeader"
-    ).innerHTML = `
-        <b>
-            ${escapeHtml(
-                user.display_name ||
-                user.username
-            )}
-        </b>
-        <div style="
-            color:var(--muted);
-            font-size:12px
-        ">
-            @${escapeHtml(
-                user.username
-            )}
-        </div>
-    `;
+    ).textContent =
+        (
+            user.display_name ||
+            user.username
+        ) +
+        "  @" +
+        user.username;
 
-    renderedMessageIds.clear();
+    showOnly(
+        "chatView"
+    );
+
+    const messages =
+        document.getElementById(
+            "messages"
+        );
+
+    messages.innerHTML =
+        "";
 
     const response =
         await request(
@@ -1861,218 +1625,46 @@ async function openChat(user) {
         return;
     }
 
-    const history =
+    const data =
         await safeJson(response);
 
-    const messages =
-        document.getElementById(
-            "messages"
-        );
+    data.forEach(
+        message => {
 
-    messages.innerHTML = "";
+            addMessageToChat(
+                message,
+                false
+            );
 
-    history.forEach(
-        addMessage
-    );
-
-}
-
-
-function addMessage(message) {
-
-    if (
-        renderedMessageIds.has(
-            message.id
-        )
-    ) {
-        return;
-    }
-
-    renderedMessageIds.add(
-        message.id
-    );
-
-    const container =
-        document.getElementById(
-            "messages"
-        );
-
-    const row =
-        document.createElement(
-            "div"
-        );
-
-    const mine =
-        message.sender_id ===
-        currentUser.id;
-
-    row.className =
-        "message-row " +
-        (
-            mine
-                ? "mine"
-                : ""
-        );
-
-    const bubble =
-        document.createElement(
-            "div"
-        );
-
-    bubble.className =
-        "message " +
-        (
-            mine
-                ? "mine"
-                : ""
-        );
-
-    bubble.dataset.id =
-        message.id;
-
-    if (
-        message.deleted
-    ) {
-
-        bubble.innerHTML = `
-            <div class="bubble deleted-message">
-                🚫 Сообщение удалено
-            </div>
-        `;
-
-    } else {
-
-        bubble.innerHTML = `
-            <div class="bubble">
-                ${escapeHtml(
-                    message.text
-                )}
-            </div>
-
-            <div class="message-meta">
-
-                ${formatTime(
-                    message.created_at
-                )}
-
-                ${
-                    message.edited_at
-                    ? " · изменено"
-                    : ""
-                }
-
-                ${
-                    mine
-                    ? " ✓"
-                    : ""
-                }
-
-            </div>
-        `;
-
-        bubble.addEventListener(
-            "contextmenu",
-            event => {
-
-                event.preventDefault();
-
-                showMessageMenu(
-                    event,
-                    message
-                );
-
-            }
-        );
-
-    }
-
-    row.appendChild(
-        bubble
-    );
-
-    container.appendChild(
-        row
-    );
-
-    container.scrollTop =
-        container.scrollHeight;
-
-}
-
-
-function updateMessageElement(
-    message
-) {
-
-    const bubble =
-        document.querySelector(
-            `.message[data-id="${message.id}"]`
-        );
-
-    if (!bubble) {
-
-        if (
-            selectedUser &&
-            (
-                message.sender_id ===
-                selectedUser.id ||
-                message.receiver_id ===
-                selectedUser.id
-            )
-        ) {
-            addMessage(message);
         }
+    );
 
-        return;
+    scrollMessages();
 
-    }
-
-    bubble.innerHTML = `
-        <div class="bubble">
-            ${escapeHtml(
-                message.text
-            )}
-        </div>
-
-        <div class="message-meta">
-            ${formatTime(
-                message.created_at
-            )}
-            · изменено
-        </div>
-    `;
-
+    document.getElementById(
+        "messageInput"
+    ).focus();
 }
 
 
-function deleteMessageElement(
-    message
-) {
+function messageKey(event) {
 
-    const bubble =
-        document.querySelector(
-            `.message[data-id="${message.id}"]`
-        );
+    if (
+        event.key === "Enter" &&
+        !event.shiftKey
+    ) {
 
-    if (!bubble) {
-        return;
+        event.preventDefault();
+
+        sendMessage();
     }
-
-    bubble.innerHTML = `
-        <div class="bubble deleted-message">
-            🚫 Сообщение удалено
-        </div>
-    `;
-
 }
 
 
 async function sendMessage() {
 
-    if (!selectedUser) {
-
+    if (!currentChatUser) {
         return;
-
     }
 
     const input =
@@ -2087,6 +1679,10 @@ async function sendMessage() {
         return;
     }
 
+    /*
+     * Очищаем поле сразу.
+     */
+
     input.value = "";
 
     try {
@@ -2096,16 +1692,14 @@ async function sendMessage() {
                 "/api/messages",
                 {
                     method: "POST",
-
                     headers: {
                         "Content-Type":
                             "application/json"
                     },
-
                     body:
                         JSON.stringify({
                             receiver_id:
-                                selectedUser.id,
+                                currentChatUser.id,
                             text
                         })
                 }
@@ -2118,257 +1712,540 @@ async function sendMessage() {
 
             input.value = text;
 
-            console.error(
-                data
+            alert(
+                data.detail ||
+                "Ошибка отправки"
             );
 
             return;
-
         }
 
-        // НЕ добавляем сообщение здесь.
-        //
-        // Сервер отправляет его через WebSocket.
-        //
-        // Это устраняет двойные сообщения.
+        /*
+         * ГЛАВНОЕ ИСПРАВЛЕНИЕ:
+         *
+         * Не ждём WebSocket.
+         * POST уже вернул созданное сообщение.
+         * Поэтому добавляем его прямо сейчас.
+         */
+
+        if (data.message) {
+
+            addMessageToChat(
+                data.message,
+                true
+            );
+        }
 
     } catch (error) {
 
-        console.error(
-            "sendMessage:",
-            error
-        );
-
         input.value = text;
 
-    }
+        console.error(error);
 
+        alert(
+            "Не удалось отправить сообщение"
+        );
+    }
 }
 
 
-function messageKey(event) {
+function addMessageToChat(
+    message,
+    scroll = true
+) {
+
+    const container =
+        document.getElementById(
+            "messages"
+        );
+
+    /*
+     * Защита от дублей.
+     *
+     * POST добавил сообщение.
+     * Потом тот же message приходит через WS.
+     * Второй раз оно уже не добавляется.
+     */
+
+    const existing =
+        document.querySelector(
+            '[data-message-id="' +
+            message.id +
+            '"]'
+        );
+
+    if (existing) {
+        return;
+    }
+
+    const row =
+        document.createElement(
+            "div"
+        );
+
+    row.className =
+        "message-row";
 
     if (
-        event.key === "Enter" &&
-        !event.shiftKey
+        Number(message.sender_id) ===
+        Number(currentUser.id)
     ) {
-
-        event.preventDefault();
-
-        sendMessage();
-
+        row.classList.add(
+            "own"
+        );
     }
 
+    row.dataset.messageId =
+        message.id;
+
+    const bubble =
+        document.createElement(
+            "div"
+        );
+
+    bubble.className =
+        "message-bubble";
+
+    if (message.deleted) {
+
+        bubble.innerHTML =
+            '<div class="message-deleted">' +
+            "Сообщение удалено" +
+            "</div>";
+
+    } else {
+
+        const text =
+            document.createElement(
+                "div"
+            );
+
+        text.className =
+            "message-text";
+
+        text.textContent =
+            message.text || "";
+
+        const meta =
+            document.createElement(
+                "div"
+            );
+
+        meta.className =
+            "message-meta";
+
+        meta.textContent =
+            formatTime(
+                message.created_at
+            ) +
+            (
+                message.edited_at
+                    ? " · изменено"
+                    : ""
+            );
+
+        bubble.appendChild(
+            text
+        );
+
+        bubble.appendChild(
+            meta
+        );
+
+        /*
+         * Контекстное меню / выбор сообщения.
+         */
+
+        bubble.onclick =
+            () => {
+
+                selectedMessageId =
+                    message.id;
+
+                openMessageMenu(
+                    message
+                );
+            };
+    }
+
+    row.appendChild(
+        bubble
+    );
+
+    container.appendChild(
+        row
+    );
+
+    if (scroll) {
+        scrollMessages();
+    }
 }
 
 
-// =========================================================
-// MESSAGE MENU
-// =========================================================
-
-function showMessageMenu(
-    event,
+function updateMessageInDom(
     message
 ) {
 
-    selectedMessage =
-        message;
-
-    const menu =
-        document.getElementById(
-            "contextMenu"
+    const row =
+        document.querySelector(
+            '[data-message-id="' +
+            message.id +
+            '"]'
         );
 
-    document.getElementById(
-        "editMessageButton"
-    ).style.display =
-        message.sender_id ===
-        currentUser.id
-        ? "block"
-        : "none";
+    if (!row) {
+        return;
+    }
 
-    document.getElementById(
-        "deleteMessageButton"
-    ).style.display =
-        message.sender_id ===
-        currentUser.id
-        ? "block"
-        : "none";
+    const bubble =
+        row.querySelector(
+            ".message-bubble"
+        );
 
-    menu.style.left =
-        Math.min(
-            event.clientX,
-            window.innerWidth - 200
-        ) + "px";
+    if (!bubble) {
+        return;
+    }
 
-    menu.style.top =
-        Math.min(
-            event.clientY,
-            window.innerHeight - 230
-        ) + "px";
+    if (message.deleted) {
 
-    menu.classList.remove(
-        "hidden"
+        bubble.innerHTML =
+            '<div class="message-deleted">' +
+            "Сообщение удалено" +
+            "</div>";
+
+        return;
+    }
+
+    bubble.innerHTML = "";
+
+    const text =
+        document.createElement(
+            "div"
+        );
+
+    text.className =
+        "message-text";
+
+    text.textContent =
+        message.text || "";
+
+    const meta =
+        document.createElement(
+            "div"
+        );
+
+    meta.className =
+        "message-meta";
+
+    meta.textContent =
+        formatTime(
+            message.created_at
+        ) +
+        " · изменено";
+
+    bubble.appendChild(
+        text
     );
 
+    bubble.appendChild(
+        meta
+    );
 }
 
 
-document.addEventListener(
-    "click",
-    () => {
+function scrollMessages() {
 
+    const container =
         document.getElementById(
-            "contextMenu"
-        ).classList.add(
-            "hidden"
+            "messages"
         );
 
+    requestAnimationFrame(
+        () => {
+            container.scrollTop =
+                container.scrollHeight;
+        }
+    );
+}
+
+
+/* =========================================================
+   MESSAGE MENU
+========================================================= */
+
+function openMessageMenu(
+    message
+) {
+
+    const canEdit =
+        Number(message.sender_id) ===
+        Number(currentUser.id) &&
+        !message.deleted;
+
+    openModal(`
+
+        <h3>
+            Сообщение
+        </h3>
+
+        <button
+            class="primary"
+            style="width:100%;margin-bottom:7px"
+            onclick="copySelectedMessage()"
+        >
+            📋 Копировать
+        </button>
+
+        <button
+            class="primary"
+            style="width:100%;margin-bottom:7px"
+            onclick="favoriteSelectedMessage()"
+        >
+            ⭐ В избранное
+        </button>
+
+        ${
+            canEdit
+            ? `
+                <button
+                    class="primary"
+                    style="width:100%;margin-bottom:7px"
+                    onclick="editSelectedMessage()"
+                >
+                    ✏️ Изменить
+                </button>
+            `
+            : ""
+        }
+
+        ${
+            canEdit
+            ? `
+                <button
+                    style="
+                        width:100%;
+                        background:#d84a4a;
+                        color:white;
+                        border:0;
+                        padding:11px;
+                        border-radius:9px
+                    "
+                    onclick="deleteSelectedMessage()"
+                >
+                    🗑️ Удалить
+                </button>
+            `
+            : ""
+        }
+
+    `);
+}
+
+
+async function getSelectedMessage() {
+
+    if (!selectedMessageId) {
+        return null;
     }
-);
+
+    const row =
+        document.querySelector(
+            '[data-message-id="' +
+            selectedMessageId +
+            '"]'
+        );
+
+    if (!row) {
+        return null;
+    }
+
+    return {
+        id: selectedMessageId,
+        text:
+            row.querySelector(
+                ".message-text"
+            )?.textContent || ""
+    };
+}
 
 
 async function copySelectedMessage() {
 
-    if (!selectedMessage) {
+    const message =
+        await getSelectedMessage();
+
+    if (!message) {
+        closeModal();
         return;
     }
 
     try {
-
         await navigator.clipboard.writeText(
-            selectedMessage.text
+            message.text
         );
+    } catch {}
 
-    } catch {
-
-        const textarea =
-            document.createElement(
-                "textarea"
-            );
-
-        textarea.value =
-            selectedMessage.text;
-
-        document.body.appendChild(
-            textarea
-        );
-
-        textarea.select();
-
-        document.execCommand(
-            "copy"
-        );
-
-        textarea.remove();
-
-    }
-
+    closeModal();
 }
 
 
 async function favoriteSelectedMessage() {
 
-    if (!selectedMessage) {
+    if (!selectedMessageId) {
+        closeModal();
         return;
     }
 
-    await request(
-        "/api/messages/" +
-        selectedMessage.id +
-        "/favorite",
-        {
-            method: "POST"
-        }
-    );
+    const response =
+        await request(
+            "/api/messages/" +
+            selectedMessageId +
+            "/favorite",
+            {
+                method: "POST"
+            }
+        );
 
+    if (!response.ok) {
+        const data =
+            await safeJson(response);
+
+        alert(
+            data.detail ||
+            "Ошибка"
+        );
+    }
+
+    closeModal();
 }
 
 
 async function editSelectedMessage() {
 
-    if (!selectedMessage) {
+    const message =
+        await getSelectedMessage();
+
+    if (!message) {
+        closeModal();
         return;
     }
+
+    openModal(`
+
+        <h3>
+            ✏️ Изменить сообщение
+        </h3>
+
+        <textarea
+            id="editText"
+            style="width:100%;min-height:100px"
+        >${escapeHtml(
+            message.text
+        )}</textarea>
+
+        <button
+            class="primary"
+            style="margin-top:10px;width:100%"
+            onclick="saveEditedMessage()"
+        >
+            Сохранить
+        </button>
+
+    `);
+}
+
+
+async function saveEditedMessage() {
 
     const text =
-        prompt(
-            "Изменить сообщение:",
-            selectedMessage.text
-        );
+        document.getElementById(
+            "editText"
+        ).value.trim();
 
-    if (
-        text === null ||
-        !text.trim()
-    ) {
+    if (!text) {
         return;
     }
 
-    await request(
-        "/api/messages/" +
-        selectedMessage.id,
-        {
-            method: "PUT",
+    const response =
+        await request(
+            "/api/messages/" +
+            selectedMessageId,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+                body:
+                    JSON.stringify({
+                        text
+                    })
+            }
+        );
 
-            headers: {
-                "Content-Type":
-                    "application/json"
-            },
+    const data =
+        await safeJson(response);
 
-            body:
-                JSON.stringify({
-                    text
-                })
-        }
+    if (!response.ok) {
+
+        alert(
+            data.detail ||
+            "Ошибка"
+        );
+
+        return;
+    }
+
+    updateMessageInDom(
+        data.message
     );
 
+    closeModal();
 }
 
 
 async function deleteSelectedMessage() {
 
-    if (!selectedMessage) {
+    if (!selectedMessageId) {
+        closeModal();
         return;
     }
 
-    if (
-        !confirm(
-            "Удалить сообщение?"
-        )
-    ) {
+    const response =
+        await request(
+            "/api/messages/" +
+            selectedMessageId,
+            {
+                method: "DELETE"
+            }
+        );
+
+    const data =
+        await safeJson(response);
+
+    if (!response.ok) {
+
+        alert(
+            data.detail ||
+            "Ошибка"
+        );
+
         return;
     }
 
-    await request(
-        "/api/messages/" +
-        selectedMessage.id,
-        {
-            method: "DELETE"
-        }
-    );
+    updateMessageInDom({
+        id: selectedMessageId,
+        deleted: 1,
+        text: ""
+    });
 
+    closeModal();
 }
 
 
-// =========================================================
-// FEED
-// =========================================================
-
-function showFeed() {
-
-    showOnly(
-        "feedView"
-    );
-
-    document.getElementById(
-        "pageTitle"
-    ).innerText =
-        "📰 Лента";
-
-    loadFeed();
-
-}
-
+/* =========================================================
+   FEED
+========================================================= */
 
 async function loadFeed() {
 
@@ -2394,7 +2271,6 @@ async function loadFeed() {
     posts.forEach(
         renderPost
     );
-
 }
 
 
@@ -2413,626 +2289,342 @@ function renderPost(post) {
     article.className =
         "post";
 
+    const head =
+        document.createElement(
+            "div"
+        );
+
+    head.className =
+        "post-head";
+
     const avatar =
-        post.avatar_url
-        ?
-        `<img
-            class="avatar"
-            src="${mediaUrl(
+        document.createElement(
+            "img"
+        );
+
+    avatar.className =
+        "avatar";
+
+    if (post.avatar_url) {
+        avatar.src =
+            mediaUrl(
                 post.avatar_url
-            )}"
-            onclick="openUserProfile(${post.author_id})"
-            style="cursor:pointer"
-        >`
-        :
-        `<div
-            class="avatar"
-            onclick="openUserProfile(${post.author_id})"
-            style="cursor:pointer"
-        >
-            👤
-        </div>`;
-
-    let media = "";
-
-    if (
-        post.media_url &&
-        post.media_type === "image"
-    ) {
-
-        media = `
-            <img
-                class="post-media"
-                src="${mediaUrl(
-                    post.media_url
-                )}"
-            >
-        `;
-
+            );
     }
 
-    if (
-        post.media_url &&
-        post.media_type === "video"
-    ) {
+    const author =
+        document.createElement(
+            "div"
+        );
 
-        media = `
-            <video
-                class="post-media"
-                controls
-                src="${mediaUrl(
-                    post.media_url
-                )}"
-            ></video>
-        `;
+    author.innerHTML =
+        "<strong>" +
+        escapeHtml(
+            post.display_name ||
+            post.username
+        ) +
+        "</strong>" +
+        "<div style='color:#9095a3;font-size:12px'>" +
+        "@" +
+        escapeHtml(
+            post.username
+        ) +
+        "</div>";
 
+    head.appendChild(
+        avatar
+    );
+
+    head.appendChild(
+        author
+    );
+
+    article.appendChild(
+        head
+    );
+
+    if (post.text) {
+
+        const text =
+            document.createElement(
+                "div"
+            );
+
+        text.className =
+            "post-text";
+
+        text.textContent =
+            post.text;
+
+        article.appendChild(
+            text
+        );
     }
 
-    article.innerHTML = `
+    if (post.media_url) {
 
-        <div class="post-header">
+        if (
+            post.media_type ===
+            "video"
+        ) {
 
-            ${avatar}
+            const video =
+                document.createElement(
+                    "video"
+                );
 
-            <div>
+            video.className =
+                "post-media";
 
-                <div class="post-author">
-                    ${escapeHtml(
-                        post.display_name ||
-                        post.username
-                    )}
-                </div>
+            video.controls = true;
 
-                <div class="post-username">
-                    @${escapeHtml(
-                        post.username
-                    )}
-                </div>
+            video.src =
+                mediaUrl(
+                    post.media_url
+                );
 
-            </div>
+            article.appendChild(
+                video
+            );
 
-        </div>
+        } else {
 
-        ${
-            post.text
-            ?
-            `<div class="post-text">
-                ${escapeHtml(
-                    post.text
-                )}
-            </div>`
-            :
-            ""
+            const img =
+                document.createElement(
+                    "img"
+                );
+
+            img.className =
+                "post-media";
+
+            img.src =
+                mediaUrl(
+                    post.media_url
+                );
+
+            article.appendChild(
+                img
+            );
         }
+    }
 
-        ${media}
+    const actions =
+        document.createElement(
+            "div"
+        );
 
-        <div class="post-actions">
+    actions.className =
+        "post-actions";
 
-            <button
-                onclick="likePost(${post.id})"
-            >
-                ❤️ ${post.likes}
-            </button>
+    const like =
+        document.createElement(
+            "button"
+        );
 
-            <button
-                onclick="showComments(${post.id})"
-            >
-                💬 ${post.comments}
-            </button>
+    like.textContent =
+        "❤️ " +
+        (post.likes || 0);
 
-            <button
-                onclick="sharePost(${post.id})"
-            >
-                🔗 Поделиться
-            </button>
+    like.onclick =
+        async () => {
 
-            ${
-                post.author_id ===
-                currentUser.id
-                ?
-                `<button
-                    onclick="deletePost(${post.id})"
-                >
-                    🗑️
-                </button>`
-                :
-                ""
+            const response =
+                await request(
+                    "/api/posts/" +
+                    post.id +
+                    "/like",
+                    {
+                        method: "POST"
+                    }
+                );
+
+            const data =
+                await safeJson(
+                    response
+                );
+
+            if (response.ok) {
+                like.textContent =
+                    "❤️ " +
+                    data.likes;
             }
+        };
 
-        </div>
+    actions.appendChild(
+        like
+    );
 
-        <div
-            id="comments-${post.id}"
-            class="comments"
-        ></div>
+    if (
+        Number(post.author_id) ===
+        Number(currentUser.id)
+    ) {
 
-    `;
+        const del =
+            document.createElement(
+                "button"
+            );
+
+        del.textContent =
+            "🗑️";
+
+        del.onclick =
+            async () => {
+
+                if (
+                    !confirm(
+                        "Удалить пост?"
+                    )
+                ) {
+                    return;
+                }
+
+                const response =
+                    await request(
+                        "/api/posts/" +
+                        post.id,
+                        {
+                            method: "DELETE"
+                        }
+                    );
+
+                if (response.ok) {
+                    article.remove();
+                }
+            };
+
+        actions.appendChild(
+            del
+        );
+    }
+
+    article.appendChild(
+        actions
+    );
 
     container.appendChild(
         article
     );
-
 }
 
 
 async function publishPost() {
+
+    const textarea =
+        document.getElementById(
+            "postText"
+        );
+
+    const text =
+        textarea.value.trim();
+
+    if (!text) {
+        return;
+    }
+
+    const response =
+        await request(
+            "/api/posts",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+                body:
+                    JSON.stringify({
+                        text
+                    })
+            }
+        );
+
+    const data =
+        await safeJson(response);
+
+    if (!response.ok) {
+
+        alert(
+            data.detail ||
+            "Ошибка"
+        );
+
+        return;
+    }
+
+    textarea.value = "";
+
+    await loadFeed();
+}
+
+
+async function publishMediaPost() {
+
+    const fileInput =
+        document.getElementById(
+            "mediaFile"
+        );
+
+    const file =
+        fileInput.files[0];
+
+    if (!file) {
+        return;
+    }
 
     const text =
         document.getElementById(
             "postText"
         ).value.trim();
 
-    const file =
-        document.getElementById(
-            "mediaFile"
-        ).files[0];
+    const form =
+        new FormData();
 
-    if (!text && !file) {
-        return;
-    }
-
-    try {
-
-        if (file) {
-
-            const form =
-                new FormData();
-
-            form.append(
-                "file",
-                file
-            );
-
-            form.append(
-                "text",
-                text
-            );
-
-            const response =
-                await request(
-                    "/api/posts/media",
-                    {
-                        method: "POST",
-                        body: form
-                    }
-                );
-
-            if (!response.ok) {
-                const data =
-                    await safeJson(response);
-
-                throw new Error(
-                    data.detail ||
-                    "Ошибка загрузки"
-                );
-            }
-
-        } else {
-
-            const response =
-                await request(
-                    "/api/posts",
-                    {
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body:
-                            JSON.stringify({
-                                text
-                            })
-                    }
-                );
-
-            if (!response.ok) {
-                const data =
-                    await safeJson(response);
-
-                throw new Error(
-                    data.detail ||
-                    "Ошибка публикации"
-                );
-            }
-
-        }
-
-        document.getElementById(
-            "postText"
-        ).value = "";
-
-        document.getElementById(
-            "mediaFile"
-        ).value = "";
-
-        await loadFeed();
-
-    } catch (error) {
-
-        alert(
-            error.message
-        );
-
-    }
-
-}
-
-
-async function likePost(
-    postId
-) {
-
-    await request(
-        "/api/posts/" +
-        postId +
-        "/like",
-        {
-            method: "POST"
-        }
+    form.append(
+        "text",
+        text
     );
 
-    loadFeed();
-
-}
-
-
-async function sharePost(
-    postId
-) {
-
-    const url =
-        location.origin +
-        "/?post=" +
-        postId;
-
-    try {
-
-        await navigator.clipboard.writeText(
-            url
-        );
-
-        alert(
-            "Ссылка скопирована"
-        );
-
-    } catch {
-
-        prompt(
-            "Скопируй ссылку:",
-            url
-        );
-
-    }
-
-}
-
-
-// =========================================================
-// COMMENTS
-// =========================================================
-
-async function showComments(
-    postId
-) {
-
-    const container =
-        document.getElementById(
-            "comments-" +
-            postId
-        );
+    form.append(
+        "file",
+        file
+    );
 
     const response =
         await request(
-            "/api/posts/" +
-            postId +
-            "/comments"
+            "/api/posts/media",
+            {
+                method: "POST",
+                body: form
+            }
         );
 
-    if (!response.ok) {
-        return;
-    }
-
-    const comments =
+    const data =
         await safeJson(response);
 
-    container.innerHTML = "";
+    if (!response.ok) {
 
-    comments.forEach(
-        comment => {
-
-            const div =
-                document.createElement(
-                    "div"
-                );
-
-            div.className =
-                "comment";
-
-            const replyText =
-                comment.reply_to_username
-                ?
-                `<div class="reply-label">
-                    @${escapeHtml(
-                        comment.reply_to_username
-                    )}
-                </div>`
-                :
-                "";
-
-            div.innerHTML = `
-
-                <div class="comment-head">
-
-                    <div>
-
-                        <div class="comment-user">
-                            @${escapeHtml(
-                                comment.username
-                            )}
-                        </div>
-
-                        ${replyText}
-
-                    </div>
-
-                </div>
-
-                <div style="margin-top:5px">
-                    ${escapeHtml(
-                        comment.text
-                    )}
-                </div>
-
-                <div class="comment-buttons">
-
-                    <button
-                        onclick="replyComment(
-                            ${postId},
-                            ${comment.id},
-                            '${escapeJs(
-                                comment.username
-                            )}'
-                        )"
-                    >
-                        ↩️ Ответить
-                    </button>
-
-                    <button
-                        onclick="copyComment(
-                            '${escapeJs(
-                                comment.text
-                            )}'
-                        )"
-                    >
-                        📋 Копировать
-                    </button>
-
-                    ${
-                        comment.user_id ===
-                        currentUser.id
-                        ?
-                        `<button
-                            onclick="deleteComment(
-                                ${comment.id},
-                                ${postId}
-                            )"
-                        >
-                            🗑️
-                        </button>`
-                        :
-                        ""
-                    }
-
-                </div>
-
-            `;
-
-            container.appendChild(
-                div
-            );
-
-        }
-    );
-
-    const input =
-        document.createElement(
-            "div"
+        alert(
+            data.detail ||
+            "Ошибка загрузки"
         );
 
-    input.className =
-        "comment-input";
-
-    input.innerHTML = `
-
-        <input
-            id="comment-input-${postId}"
-            placeholder="Комментарий..."
-        >
-
-        <button
-            class="primary"
-            onclick="sendComment(${postId})"
-        >
-            ➤
-        </button>
-
-    `;
-
-    container.appendChild(
-        input
-    );
-
-}
-
-
-let replyTarget = {};
-
-
-function replyComment(
-    postId,
-    commentId,
-    username
-) {
-
-    replyTarget[postId] =
-        commentId;
-
-    const input =
-        document.getElementById(
-            "comment-input-" +
-            postId
-        );
-
-    if (input) {
-
-        input.placeholder =
-            "Ответ @" +
-            username +
-            "...";
-
-        input.focus();
-
-    }
-
-}
-
-
-async function sendComment(
-    postId
-) {
-
-    const input =
-        document.getElementById(
-            "comment-input-" +
-            postId
-        );
-
-    const text =
-        input.value.trim();
-
-    if (!text) {
         return;
     }
 
-    await request(
-        "/api/posts/" +
-        postId +
-        "/comments",
-        {
-            method: "POST",
+    document.getElementById(
+        "postText"
+    ).value = "";
 
-            headers: {
-                "Content-Type":
-                    "application/json"
-            },
+    fileInput.value = "";
 
-            body:
-                JSON.stringify({
-                    text,
-                    parent_id:
-                        replyTarget[postId]
-                        || null
-                })
-        }
-    );
-
-    input.value = "";
-
-    delete replyTarget[
-        postId
-    ];
-
-    showComments(
-        postId
-    );
-
-    loadFeed();
-
+    await loadFeed();
 }
 
 
-async function deleteComment(
-    commentId,
-    postId
-) {
+/* =========================================================
+   PROFILE
+========================================================= */
 
-    if (
-        !confirm(
-            "Удалить комментарий?"
-        )
-    ) {
-        return;
-    }
-
-    await request(
-        "/api/comments/" +
-        commentId,
-        {
-            method: "DELETE"
-        }
-    );
-
-    showComments(
-        postId
-    );
-
-    loadFeed();
-
-}
-
-
-async function copyComment(
-    text
-) {
-
-    try {
-
-        await navigator.clipboard.writeText(
-            text
-        );
-
-    } catch {}
-
-}
-
-
-// =========================================================
-// POST DELETE
-// =========================================================
-
-async function deletePost(
-    postId
-) {
-
-    if (
-        !confirm(
-            "Удалить пост?"
-        )
-    ) {
-        return;
-    }
-
-    await request(
-        "/api/posts/" +
-        postId,
-        {
-            method: "DELETE"
-        }
-    );
-
-    loadFeed();
-
-}
-
-
-// =========================================================
-// PROFILE
-// =========================================================
-
-function showProfile() {
+async function showProfile() {
 
     showOnly(
         "profileView"
@@ -3040,137 +2632,51 @@ function showProfile() {
 
     document.getElementById(
         "pageTitle"
-    ).innerText =
+    ).textContent =
         "👤 Профиль";
+
+    const response =
+        await request(
+            "/api/me"
+        );
+
+    if (!response.ok) {
+        return;
+    }
+
+    const user =
+        await safeJson(response);
 
     document.getElementById(
         "profileUsername"
     ).value =
-        currentUser.username;
+        user.username || "";
 
     document.getElementById(
         "profileName"
     ).value =
-        currentUser.display_name ||
-        currentUser.username;
+        user.display_name || "";
 
     document.getElementById(
         "profileBio"
     ).value =
-        currentUser.bio || "";
+        user.bio || "";
 
-    setAvatar(
-        currentUser.avatar_url
-    );
-
-}
-
-
-async function openUserProfile(
-    userId
-) {
-
-    const response =
-        await request(
-            "/api/users/" +
-            userId
-        );
-
-    if (!response.ok) {
-        return;
-    }
-
-    const user =
-        await safeJson(response);
-
-    openModal(`
-        <h2>
-            👤 ${escapeHtml(
-                user.display_name ||
-                user.username
-            )}
-        </h2>
-
-        <p>
-            @${escapeHtml(
-                user.username
-            )}
-        </p>
-
-        ${
-            user.avatar_url
-            ?
-            `<img
-                class="big-avatar"
-                src="${mediaUrl(
-                    user.avatar_url
-                )}"
-            >`
-            :
-            ""
-        }
-
-        <p>
-            ${escapeHtml(
-                user.bio || "Нет описания"
-            )}
-        </p>
-
-        <button
-            class="primary"
-            onclick="openChatFromProfile(${user.id})"
-        >
-            💬 Написать
-        </button>
-    `);
-
-}
-
-
-async function openChatFromProfile(
-    userId
-) {
-
-    closeModal();
-
-    const response =
-        await request(
-            "/api/users/" +
-            userId
-        );
-
-    if (!response.ok) {
-        return;
-    }
-
-    const user =
-        await safeJson(response);
-
-    openChat(user);
-
-}
-
-
-function setAvatar(url) {
-
-    const image =
+    const avatar =
         document.getElementById(
             "bigAvatar"
         );
 
-    if (url) {
-
-        image.src =
-            mediaUrl(url);
-
+    if (user.avatar_url) {
+        avatar.src =
+            mediaUrl(
+                user.avatar_url
+            );
     } else {
-
-        image.removeAttribute(
+        avatar.removeAttribute(
             "src"
         );
-
     }
-
 }
 
 
@@ -3196,12 +2702,10 @@ async function saveProfile() {
             "/api/profile",
             {
                 method: "PUT",
-
                 headers: {
                     "Content-Type":
                         "application/json"
                 },
-
                 body:
                     JSON.stringify({
                         username,
@@ -3222,7 +2726,6 @@ async function saveProfile() {
         );
 
         return;
-
     }
 
     const file =
@@ -3240,38 +2743,42 @@ async function saveProfile() {
             file
         );
 
-        await request(
-            "/api/avatar",
-            {
-                method: "POST",
-                body: form
-            }
-        );
+        const avatarResponse =
+            await request(
+                "/api/avatar",
+                {
+                    method: "POST",
+                    body: form
+                }
+            );
 
+        if (!avatarResponse.ok) {
+
+            const avatarData =
+                await safeJson(
+                    avatarResponse
+                );
+
+            alert(
+                avatarData.detail ||
+                "Ошибка аватара"
+            );
+
+            return;
+        }
     }
-
-    const me =
-        await request(
-            "/api/me"
-        );
-
-    currentUser =
-        await safeJson(me);
 
     alert(
         "Профиль сохранён"
     );
 
-    searchUsers();
-
-    showProfile();
-
+    location.reload();
 }
 
 
-// =========================================================
-// SETTINGS
-// =========================================================
+/* =========================================================
+   SETTINGS
+========================================================= */
 
 async function showSettings() {
 
@@ -3281,15 +2788,14 @@ async function showSettings() {
 
     document.getElementById(
         "pageTitle"
-    ).innerText =
+    ).textContent =
         "⚙️ Настройки";
 
     await loadSettings();
 
-    loadGroups();
+    await loadGroups();
 
-    loadChannels();
-
+    await loadChannels();
 }
 
 
@@ -3304,93 +2810,91 @@ async function loadSettings() {
         return;
     }
 
-    const settings =
+    const data =
         await safeJson(response);
 
     document.getElementById(
         "language"
     ).value =
-        settings.language;
+        data.language || "ru";
 
     document.getElementById(
         "theme"
     ).value =
-        settings.theme;
+        data.theme || "dark";
 
     document.getElementById(
         "notifications"
     ).checked =
-        !!settings.notifications;
+        Boolean(
+            data.notifications
+        );
 
     document.getElementById(
         "showOnline"
     ).checked =
-        !!settings.show_online;
+        Boolean(
+            data.show_online
+        );
 
     document.getElementById(
         "showLastSeen"
     ).checked =
-        !!settings.show_last_seen;
+        Boolean(
+            data.show_last_seen
+        );
 
     applyTheme(
-        settings.theme
+        data.theme || "dark"
     );
-
 }
 
 
 async function saveSettings() {
 
-    const language =
-        document.getElementById(
-            "language"
-        ).value;
+    const data = {
+        language:
+            document.getElementById(
+                "language"
+            ).value,
 
-    const theme =
-        document.getElementById(
-            "theme"
-        ).value;
+        theme:
+            document.getElementById(
+                "theme"
+            ).value,
 
-    const notifications =
-        document.getElementById(
-            "notifications"
-        ).checked;
+        notifications:
+            document.getElementById(
+                "notifications"
+            ).checked,
 
-    const show_online =
-        document.getElementById(
-            "showOnline"
-        ).checked;
+        show_online:
+            document.getElementById(
+                "showOnline"
+            ).checked,
 
-    const show_last_seen =
-        document.getElementById(
-            "showLastSeen"
-        ).checked;
+        show_last_seen:
+            document.getElementById(
+                "showLastSeen"
+            ).checked
+    };
 
     applyTheme(
-        theme
+        data.theme
     );
 
     await request(
         "/api/settings",
         {
             method: "PUT",
-
             headers: {
                 "Content-Type":
                     "application/json"
             },
-
             body:
-                JSON.stringify({
-                    language,
-                    theme,
-                    notifications,
-                    show_online,
-                    show_last_seen
-                })
+                JSON.stringify(data)
         }
     );
-
 }
 
 
@@ -3398,104 +2902,36 @@ function applyTheme(
     theme
 ) {
 
-    document.body.classList.remove(
-        "light",
-        "blue"
-    );
+    if (theme === "light") {
 
-    if (
-        theme === "light"
-    ) {
+        document.body.style.background =
+            "#f1f3f7";
 
-        document.body.classList.add(
-            "light"
-        );
+        document.body.style.color =
+            "#111";
 
+    } else if (theme === "blue") {
+
+        document.body.style.background =
+            "#081421";
+
+        document.body.style.color =
+            "#fff";
+
+    } else {
+
+        document.body.style.background =
+            "#101114";
+
+        document.body.style.color =
+            "#fff";
     }
-
-    if (
-        theme === "blue"
-    ) {
-
-        document.body.classList.add(
-            "blue"
-        );
-
-    }
-
 }
 
 
-// =========================================================
-// FAVORITES
-// =========================================================
-
-async function showFavorites() {
-
-    showOnly(
-        "favoritesView"
-    );
-
-    document.getElementById(
-        "pageTitle"
-    ).innerText =
-        "⭐ Избранное";
-
-    const response =
-        await request(
-            "/api/favorites"
-        );
-
-    if (!response.ok) {
-        return;
-    }
-
-    const favorites =
-        await safeJson(response);
-
-    const container =
-        document.getElementById(
-            "favorites"
-        );
-
-    container.innerHTML = "";
-
-    favorites.forEach(
-        message => {
-
-            const div =
-                document.createElement(
-                    "div"
-                );
-
-            div.className =
-                "comment";
-
-            div.innerHTML = `
-                ${escapeHtml(
-                    message.text
-                )}
-
-                <div class="message-meta">
-                    ${formatTime(
-                        message.created_at
-                    )}
-                </div>
-            `;
-
-            container.appendChild(
-                div
-            );
-
-        }
-    );
-
-}
-
-
-// =========================================================
-// GROUPS
-// =========================================================
+/* =========================================================
+   GROUPS
+========================================================= */
 
 function openCreateGroup() {
 
@@ -3508,22 +2944,24 @@ function openCreateGroup() {
         <input
             id="newGroupName"
             placeholder="Название"
+            style="width:100%;margin-bottom:8px"
         >
 
         <textarea
             id="newGroupDescription"
             placeholder="Описание"
+            style="width:100%;min-height:90px"
         ></textarea>
 
         <button
             class="primary"
+            style="margin-top:10px;width:100%"
             onclick="createGroup()"
         >
             Создать
         </button>
 
     `);
-
 }
 
 
@@ -3544,12 +2982,10 @@ async function createGroup() {
             "/api/groups",
             {
                 method: "POST",
-
                 headers: {
                     "Content-Type":
                         "application/json"
                 },
-
                 body:
                     JSON.stringify({
                         name,
@@ -3569,13 +3005,11 @@ async function createGroup() {
         );
 
         return;
-
     }
 
     closeModal();
 
     loadGroups();
-
 }
 
 
@@ -3609,37 +3043,32 @@ async function loadGroups() {
                 );
 
             div.className =
-                "comment";
+                "post";
 
-            div.innerHTML = `
-                👥
-                <b>
-                    ${escapeHtml(
-                        group.name
-                    )}
-                </b>
-
-                <div>
-                    ${escapeHtml(
-                        group.description ||
-                        ""
-                    )}
-                </div>
-            `;
+            div.innerHTML =
+                "<b>👥 " +
+                escapeHtml(
+                    group.name
+                ) +
+                "</b>" +
+                "<div style='color:#9095a3;margin-top:5px'>" +
+                escapeHtml(
+                    group.description ||
+                    ""
+                ) +
+                "</div>";
 
             container.appendChild(
                 div
             );
-
         }
     );
-
 }
 
 
-// =========================================================
-// CHANNELS
-// =========================================================
+/* =========================================================
+   CHANNELS
+========================================================= */
 
 function openCreateChannel() {
 
@@ -3652,27 +3081,30 @@ function openCreateChannel() {
         <input
             id="newChannelName"
             placeholder="Название"
+            style="width:100%;margin-bottom:8px"
         >
 
         <input
             id="newChannelUsername"
             placeholder="username канала"
+            style="width:100%;margin-bottom:8px"
         >
 
         <textarea
             id="newChannelDescription"
             placeholder="Описание"
+            style="width:100%;min-height:90px"
         ></textarea>
 
         <button
             class="primary"
+            style="margin-top:10px;width:100%"
             onclick="createChannel()"
         >
             Создать
         </button>
 
     `);
-
 }
 
 
@@ -3698,12 +3130,10 @@ async function createChannel() {
             "/api/channels",
             {
                 method: "POST",
-
                 headers: {
                     "Content-Type":
                         "application/json"
                 },
-
                 body:
                     JSON.stringify({
                         name,
@@ -3724,13 +3154,11 @@ async function createChannel() {
         );
 
         return;
-
     }
 
     closeModal();
 
     loadChannels();
-
 }
 
 
@@ -3764,43 +3192,38 @@ async function loadChannels() {
                 );
 
             div.className =
-                "comment";
+                "post";
 
-            div.innerHTML = `
-                📢
-                <b>
-                    ${escapeHtml(
-                        channel.name
-                    )}
-                </b>
-
-                <div>
-                    @${escapeHtml(
-                        channel.username
-                    )}
-                </div>
-
-                <div>
-                    ${escapeHtml(
-                        channel.description ||
-                        ""
-                    )}
-                </div>
-            `;
+            div.innerHTML =
+                "<b>📢 " +
+                escapeHtml(
+                    channel.name
+                ) +
+                "</b>" +
+                "<div style='color:#9095a3;margin-top:5px'>" +
+                "@" +
+                escapeHtml(
+                    channel.username
+                ) +
+                "</div>" +
+                "<div style='margin-top:5px'>" +
+                escapeHtml(
+                    channel.description ||
+                    ""
+                ) +
+                "</div>";
 
             container.appendChild(
                 div
             );
-
         }
     );
-
 }
 
 
-// =========================================================
-// SECOND ACCOUNT
-// =========================================================
+/* =========================================================
+   SECOND ACCOUNT
+========================================================= */
 
 function openCreateAccount() {
 
@@ -3813,23 +3236,25 @@ function openCreateAccount() {
         <input
             id="secondUsername"
             placeholder="Username"
+            style="width:100%;margin-bottom:8px"
         >
 
         <input
             id="secondPassword"
             type="password"
             placeholder="Пароль"
+            style="width:100%;margin-bottom:8px"
         >
 
         <button
             class="primary"
+            style="width:100%"
             onclick="createSecondAccount()"
         >
             Создать
         </button>
 
     `);
-
 }
 
 
@@ -3850,12 +3275,10 @@ async function createSecondAccount() {
             API + "/api/register",
             {
                 method: "POST",
-
                 headers: {
                     "Content-Type":
                         "application/json"
                 },
-
                 body:
                     JSON.stringify({
                         username,
@@ -3875,7 +3298,6 @@ async function createSecondAccount() {
         );
 
         return;
-
     }
 
     const accounts =
@@ -3902,7 +3324,6 @@ async function createSecondAccount() {
     );
 
     closeModal();
-
 }
 
 
@@ -3922,7 +3343,6 @@ function switchAccount() {
         );
 
         return;
-
     }
 
     openModal(`
@@ -3941,7 +3361,7 @@ function switchAccount() {
         );
 
     accounts.forEach(
-        (account, index) => {
+        account => {
 
             const button =
                 document.createElement(
@@ -3957,7 +3377,7 @@ function switchAccount() {
             button.style.margin =
                 "5px 0";
 
-            button.innerText =
+            button.textContent =
                 "@" +
                 account.username;
 
@@ -3973,26 +3393,21 @@ function switchAccount() {
                     );
 
                     location.reload();
-
                 };
 
             list.appendChild(
                 button
             );
-
         }
     );
-
 }
 
 
-// =========================================================
-// UI
-// =========================================================
+/* =========================================================
+   NAVIGATION
+========================================================= */
 
-function showOnly(
-    id
-) {
+function showOnly(id) {
 
     [
         "feedView",
@@ -4003,15 +3418,11 @@ function showOnly(
     ].forEach(
         viewId => {
 
-            const element =
-                document.getElementById(
-                    viewId
-                );
-
-            element.classList.add(
+            document.getElementById(
+                viewId
+            ).classList.add(
                 "hidden"
             );
-
         }
     );
 
@@ -4020,13 +3431,98 @@ function showOnly(
     ).classList.remove(
         "hidden"
     );
-
 }
 
 
-function openModal(
-    html
-) {
+function showFeed() {
+
+    showOnly(
+        "feedView"
+    );
+
+    document.getElementById(
+        "pageTitle"
+    ).textContent =
+        "📰 Лента";
+
+    loadFeed();
+}
+
+
+async function showFavorites() {
+
+    showOnly(
+        "favoritesView"
+    );
+
+    document.getElementById(
+        "pageTitle"
+    ).textContent =
+        "⭐ Избранное";
+
+    const response =
+        await request(
+            "/api/favorites"
+        );
+
+    if (!response.ok) {
+        return;
+    }
+
+    const data =
+        await safeJson(response);
+
+    const container =
+        document.getElementById(
+            "favorites"
+        );
+
+    container.innerHTML = "";
+
+    if (!data.length) {
+
+        container.textContent =
+            "Избранных сообщений пока нет.";
+
+        return;
+    }
+
+    data.forEach(
+        message => {
+
+            const div =
+                document.createElement(
+                    "div"
+                );
+
+            div.className =
+                "post";
+
+            div.innerHTML =
+                "<div>" +
+                escapeHtml(
+                    message.text
+                ) +
+                "</div>" +
+                "<small style='color:#9095a3'>" +
+                formatTime(
+                    message.created_at
+                ) +
+                "</small>";
+
+            container.appendChild(
+                div
+            );
+        }
+    );
+}
+
+
+/* =========================================================
+   MODALS
+========================================================= */
+
+function openModal(html) {
 
     document.getElementById(
         "modal"
@@ -4038,13 +3534,10 @@ function openModal(
     ).classList.remove(
         "hidden"
     );
-
 }
 
 
-function closeModal(
-    event
-) {
+function closeModal(event) {
 
     if (
         event &&
@@ -4064,105 +3557,89 @@ function closeModal(
 
     document.getElementById(
         "modal"
-    ).innerHTML = "";
+    ).innerHTML =
+        "";
 
+    selectedMessageId =
+        null;
 }
 
 
-// =========================================================
-// HELPERS
-// =========================================================
+/* =========================================================
+   HELPERS
+========================================================= */
 
-function mediaUrl(
-    url
-) {
+function mediaUrl(url) {
 
     if (!url) {
         return "";
     }
 
     if (
-        url.startsWith("http://") ||
-        url.startsWith("https://")
+        url.startsWith(
+            "http://"
+        ) ||
+        url.startsWith(
+            "https://"
+        )
     ) {
         return url;
     }
 
     return API + url;
-
 }
 
 
-function escapeHtml(
-    text
-) {
+function escapeHtml(text) {
 
     return String(
         text ?? ""
     )
-        .replaceAll(
-            "&",
-            "&amp;"
-        )
-        .replaceAll(
-            "<",
-            "&lt;"
-        )
-        .replaceAll(
-            ">",
-            "&gt;"
-        )
-        .replaceAll(
-            '"',
-            "&quot;"
-        )
-        .replaceAll(
-            "'",
-            "&#039;"
-        );
-
-}
-
-
-function escapeJs(
-    text
-) {
-
-    return String(
-        text ?? ""
+    .replaceAll(
+        "&",
+        "&amp;"
     )
-        .replaceAll(
-            "\\",
-            "\\\\"
-        )
-        .replaceAll(
-            "'",
-            "\\'"
-        )
-        .replaceAll(
-            "\n",
-            "\\n"
-        )
-        .replaceAll(
-            "\r",
-            "\\r"
-        );
-
+    .replaceAll(
+        "<",
+        "&lt;"
+    )
+    .replaceAll(
+        ">",
+        "&gt;"
+    )
+    .replaceAll(
+        '"',
+        "&quot;"
+    )
+    .replaceAll(
+        "'",
+        "&#039;"
+    );
 }
 
 
-function formatTime(
-    value
-) {
+function formatTime(value) {
 
     if (!value) {
         return "";
     }
 
-    const date =
+    let date =
         new Date(
-            value + "Z"
+            value
         );
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+
+        date =
+            new Date(
+                value + "Z"
+            );
+    }
 
     if (
         Number.isNaN(
@@ -4179,1128 +3656,17 @@ function formatTime(
             minute: "2-digit"
         }
     );
-
 }
 
 
-// =========================================================
-// AUTO LOGIN
-// =========================================================
+/* =========================================================
+   AUTO LOGIN
+========================================================= */
 
 if (token) {
-
     startApp();
-
 }
-
 </script>
 
 </body>
 </html>
-// =========================================================
-// FIXED CHAT WEBSOCKET + INSTANT MESSAGES
-// =========================================================
-
-let messengerSocket = null;
-let currentChatUserId = null;
-let renderedMessageIds = new Set();
-
-function getToken() {
-    return localStorage.getItem("token") || "";
-}
-
-
-// ---------------------------------------------------------
-// WEBSOCKET
-// ---------------------------------------------------------
-
-function connectMessengerWebSocket() {
-    const token = getToken();
-
-    if (!token) {
-        return;
-    }
-
-    if (!window.currentUser) {
-        return;
-    }
-
-    const userId = window.currentUser.id;
-
-    if (messengerSocket) {
-        try {
-            messengerSocket.close();
-        } catch (e) {}
-    }
-
-    const protocol =
-        location.protocol === "https:"
-            ? "wss:"
-            : "ws:";
-
-    const url =
-        protocol +
-        "//" +
-        location.host +
-        "/ws/" +
-        userId +
-        "?token=" +
-        encodeURIComponent(token);
-
-    messengerSocket =
-        new WebSocket(url);
-
-    messengerSocket.onopen = function () {
-        console.log(
-            "MyMessenger WebSocket connected"
-        );
-    };
-
-    messengerSocket.onmessage = function (event) {
-        try {
-            const data =
-                JSON.parse(event.data);
-
-            if (
-                data.type === "message" &&
-                data.message
-            ) {
-                handleIncomingMessage(
-                    data.message
-                );
-            }
-
-            if (
-                data.type === "message_updated" &&
-                data.message
-            ) {
-                handleUpdatedMessage(
-                    data.message
-                );
-            }
-
-            if (
-                data.type === "message_deleted" &&
-                data.message
-            ) {
-                handleDeletedMessage(
-                    data.message
-                );
-            }
-
-        } catch (error) {
-            console.error(
-                "WebSocket message error:",
-                error
-            );
-        }
-    };
-
-    messengerSocket.onclose = function () {
-        console.log(
-            "MyMessenger WebSocket disconnected"
-        );
-
-        setTimeout(
-            function () {
-                if (
-                    getToken() &&
-                    window.currentUser
-                ) {
-                    connectMessengerWebSocket();
-                }
-            },
-            2000
-        );
-    };
-
-    messengerSocket.onerror = function (error) {
-        console.error(
-            "WebSocket error:",
-            error
-        );
-    };
-}
-
-
-// ---------------------------------------------------------
-// MESSAGE DEDUPLICATION
-// ---------------------------------------------------------
-
-function messageAlreadyRendered(messageId) {
-    if (!messageId) {
-        return false;
-    }
-
-    return renderedMessageIds.has(
-        String(messageId)
-    );
-}
-
-function rememberMessage(messageId) {
-    if (!messageId) {
-        return;
-    }
-
-    renderedMessageIds.add(
-        String(messageId)
-    );
-}
-
-
-// ---------------------------------------------------------
-// INCOMING MESSAGE
-// ---------------------------------------------------------
-
-function handleIncomingMessage(message) {
-    if (!message || !message.id) {
-        return;
-    }
-
-    /*
-     * Если сообщение уже добавили сразу после POST,
-     * WebSocket не должен добавить его второй раз.
-     */
-    if (
-        messageAlreadyRendered(
-            message.id
-        )
-    ) {
-        return;
-    }
-
-    /*
-     * Показываем только если это текущий чат.
-     */
-    if (
-        currentChatUserId ===
-        message.sender_id
-    ) {
-        rememberMessage(
-            message.id
-        );
-
-        appendMessageToChat(
-            message
-        );
-
-        scrollMessagesToBottom();
-    }
-}
-
-
-// ---------------------------------------------------------
-// UPDATED MESSAGE
-// ---------------------------------------------------------
-
-function handleUpdatedMessage(message) {
-    if (!message || !message.id) {
-        return;
-    }
-
-    const element =
-        document.querySelector(
-            '[data-message-id="' +
-            message.id +
-            '"]'
-        );
-
-    if (!element) {
-        return;
-    }
-
-    const text =
-        element.querySelector(
-            ".message-text"
-        );
-
-    if (text) {
-        text.textContent =
-            message.text;
-    }
-
-    const edited =
-        element.querySelector(
-            ".message-edited"
-        );
-
-    if (edited) {
-        edited.textContent =
-            "изменено";
-    }
-}
-
-
-// ---------------------------------------------------------
-// DELETED MESSAGE
-// ---------------------------------------------------------
-
-function handleDeletedMessage(message) {
-    if (!message || !message.id) {
-        return;
-    }
-
-    const element =
-        document.querySelector(
-            '[data-message-id="' +
-            message.id +
-            '"]'
-        );
-
-    if (!element) {
-        return;
-    }
-
-    const text =
-        element.querySelector(
-            ".message-text"
-        );
-
-    if (text) {
-        text.textContent =
-            "Сообщение удалено";
-    }
-
-    element.classList.add(
-        "message-deleted"
-    );
-}
-
-
-// ---------------------------------------------------------
-// ADD MESSAGE IMMEDIATELY
-// ---------------------------------------------------------
-
-function appendMessageToChat(message) {
-    const container =
-        document.getElementById(
-            "messages"
-        );
-
-    if (!container) {
-        return;
-    }
-
-    if (
-        messageAlreadyRendered(
-            message.id
-        )
-    ) {
-        return;
-    }
-
-    rememberMessage(
-        message.id
-    );
-
-    const own =
-        window.currentUser &&
-        Number(message.sender_id) ===
-            Number(window.currentUser.id);
-
-    const row =
-        document.createElement(
-            "div"
-        );
-
-    row.className =
-        "message-row" +
-        (own ? " own" : "");
-
-    row.dataset.messageId =
-        message.id;
-
-    const bubble =
-        document.createElement(
-            "div"
-        );
-
-    bubble.className =
-        "message-bubble";
-
-    const text =
-        document.createElement(
-            "div"
-        );
-
-    text.className =
-        "message-text";
-
-    text.textContent =
-        message.deleted
-            ? "Сообщение удалено"
-            : message.text;
-
-    const footer =
-        document.createElement(
-            "div"
-        );
-
-    footer.className =
-        "message-footer";
-
-    footer.textContent =
-        formatTime(
-            message.created_at
-        );
-
-    bubble.appendChild(
-        text
-    );
-
-    bubble.appendChild(
-        footer
-    );
-
-    row.appendChild(
-        bubble
-    );
-
-    container.appendChild(
-        row
-    );
-}
-
-
-// ---------------------------------------------------------
-// LOAD CHAT
-// ---------------------------------------------------------
-
-async function loadMessages(userId) {
-    currentChatUserId =
-        Number(userId);
-
-    renderedMessageIds =
-        new Set();
-
-    const container =
-        document.getElementById(
-            "messages"
-        );
-
-    if (!container) {
-        return;
-    }
-
-    container.innerHTML = "";
-
-    const response =
-        await request(
-            "/api/messages/" +
-            encodeURIComponent(
-                userId
-            )
-        );
-
-    if (!response.ok) {
-        return;
-    }
-
-    const messages =
-        await safeJson(response);
-
-    if (!Array.isArray(messages)) {
-        return;
-    }
-
-    messages.forEach(
-        function (message) {
-            appendMessageToChat(
-                message
-            );
-        }
-    );
-
-    scrollMessagesToBottom();
-}
-
-
-// ---------------------------------------------------------
-// SEND MESSAGE
-// ---------------------------------------------------------
-
-async function sendMessage() {
-    if (!currentChatUserId) {
-        alert(
-            "Сначала выберите пользователя"
-        );
-
-        return;
-    }
-
-    const input =
-        document.getElementById(
-            "messageInput"
-        );
-
-    if (!input) {
-        return;
-    }
-
-    const text =
-        input.value.trim();
-
-    if (!text) {
-        return;
-    }
-
-    const receiverId =
-        Number(
-            currentChatUserId
-        );
-
-    /*
-     * Очищаем поле сразу.
-     */
-    input.value = "";
-
-    const response =
-        await request(
-            "/api/messages",
-            {
-                method: "POST",
-
-                headers: {
-                    "Content-Type":
-                        "application/json"
-                },
-
-                body:
-                    JSON.stringify({
-                        receiver_id:
-                            receiverId,
-                        text: text
-                    })
-            }
-        );
-
-    const data =
-        await safeJson(response);
-
-    if (!response.ok) {
-        /*
-         * Если отправка реально не удалась,
-         * возвращаем текст в поле.
-         */
-        input.value = text;
-
-        alert(
-            data.detail ||
-            "Не удалось отправить сообщение"
-        );
-
-        return;
-    }
-
-    /*
-     * ГЛАВНОЕ:
-     *
-     * POST уже вернул созданное сообщение.
-     * Поэтому показываем его СРАЗУ.
-     *
-     * WebSocket потом тоже пришлёт его,
-     * но Set выше не даст сделать дубль.
-     */
-    if (
-        data &&
-        data.message
-    ) {
-        appendMessageToChat(
-            data.message
-        );
-
-        scrollMessagesToBottom();
-    }
-}
-
-
-// ---------------------------------------------------------
-// ENTER
-// ---------------------------------------------------------
-
-function messageKey(event) {
-    if (
-        event.key === "Enter" &&
-        !event.shiftKey
-    ) {
-        event.preventDefault();
-
-        sendMessage();
-    }
-}
-
-
-// ---------------------------------------------------------
-// SCROLL
-// ---------------------------------------------------------
-
-function scrollMessagesToBottom() {
-    const container =
-        document.getElementById(
-            "messages"
-        );
-
-    if (!container) {
-        return;
-    }
-
-    requestAnimationFrame(
-        function () {
-            container.scrollTop =
-                container.scrollHeight;
-        }
-    );
-}// =========================================================
-// FIXED CHAT WEBSOCKET + INSTANT MESSAGES
-// =========================================================
-
-let messengerSocket = null;
-let currentChatUserId = null;
-let renderedMessageIds = new Set();
-
-function getToken() {
-    return localStorage.getItem("token") || "";
-}
-
-
-// ---------------------------------------------------------
-// WEBSOCKET
-// ---------------------------------------------------------
-
-function connectMessengerWebSocket() {
-    const token = getToken();
-
-    if (!token) {
-        return;
-    }
-
-    if (!window.currentUser) {
-        return;
-    }
-
-    const userId = window.currentUser.id;
-
-    if (messengerSocket) {
-        try {
-            messengerSocket.close();
-        } catch (e) {}
-    }
-
-    const protocol =
-        location.protocol === "https:"
-            ? "wss:"
-            : "ws:";
-
-    const url =
-        protocol +
-        "//" +
-        location.host +
-        "/ws/" +
-        userId +
-        "?token=" +
-        encodeURIComponent(token);
-
-    messengerSocket =
-        new WebSocket(url);
-
-    messengerSocket.onopen = function () {
-        console.log(
-            "MyMessenger WebSocket connected"
-        );
-    };
-
-    messengerSocket.onmessage = function (event) {
-        try {
-            const data =
-                JSON.parse(event.data);
-
-            if (
-                data.type === "message" &&
-                data.message
-            ) {
-                handleIncomingMessage(
-                    data.message
-                );
-            }
-
-            if (
-                data.type === "message_updated" &&
-                data.message
-            ) {
-                handleUpdatedMessage(
-                    data.message
-                );
-            }
-
-            if (
-                data.type === "message_deleted" &&
-                data.message
-            ) {
-                handleDeletedMessage(
-                    data.message
-                );
-            }
-
-        } catch (error) {
-            console.error(
-                "WebSocket message error:",
-                error
-            );
-        }
-    };
-
-    messengerSocket.onclose = function () {
-        console.log(
-            "MyMessenger WebSocket disconnected"
-        );
-
-        setTimeout(
-            function () {
-                if (
-                    getToken() &&
-                    window.currentUser
-                ) {
-                    connectMessengerWebSocket();
-                }
-            },
-            2000
-        );
-    };
-
-    messengerSocket.onerror = function (error) {
-        console.error(
-            "WebSocket error:",
-            error
-        );
-    };
-}
-
-
-// ---------------------------------------------------------
-// MESSAGE DEDUPLICATION
-// ---------------------------------------------------------
-
-function messageAlreadyRendered(messageId) {
-    if (!messageId) {
-        return false;
-    }
-
-    return renderedMessageIds.has(
-        String(messageId)
-    );
-}
-
-function rememberMessage(messageId) {
-    if (!messageId) {
-        return;
-    }
-
-    renderedMessageIds.add(
-        String(messageId)
-    );
-}
-
-
-// ---------------------------------------------------------
-// INCOMING MESSAGE
-// ---------------------------------------------------------
-
-function handleIncomingMessage(message) {
-    if (!message || !message.id) {
-        return;
-    }
-
-    /*
-     * Если сообщение уже добавили сразу после POST,
-     * WebSocket не должен добавить его второй раз.
-     */
-    if (
-        messageAlreadyRendered(
-            message.id
-        )
-    ) {
-        return;
-    }
-
-    /*
-     * Показываем только если это текущий чат.
-     */
-    if (
-        currentChatUserId ===
-        message.sender_id
-    ) {
-        rememberMessage(
-            message.id
-        );
-
-        appendMessageToChat(
-            message
-        );
-
-        scrollMessagesToBottom();
-    }
-}
-
-
-// ---------------------------------------------------------
-// UPDATED MESSAGE
-// ---------------------------------------------------------
-
-function handleUpdatedMessage(message) {
-    if (!message || !message.id) {
-        return;
-    }
-
-    const element =
-        document.querySelector(
-            '[data-message-id="' +
-            message.id +
-            '"]'
-        );
-
-    if (!element) {
-        return;
-    }
-
-    const text =
-        element.querySelector(
-            ".message-text"
-        );
-
-    if (text) {
-        text.textContent =
-            message.text;
-    }
-
-    const edited =
-        element.querySelector(
-            ".message-edited"
-        );
-
-    if (edited) {
-        edited.textContent =
-            "изменено";
-    }
-}
-
-
-// ---------------------------------------------------------
-// DELETED MESSAGE
-// ---------------------------------------------------------
-
-function handleDeletedMessage(message) {
-    if (!message || !message.id) {
-        return;
-    }
-
-    const element =
-        document.querySelector(
-            '[data-message-id="' +
-            message.id +
-            '"]'
-        );
-
-    if (!element) {
-        return;
-    }
-
-    const text =
-        element.querySelector(
-            ".message-text"
-        );
-
-    if (text) {
-        text.textContent =
-            "Сообщение удалено";
-    }
-
-    element.classList.add(
-        "message-deleted"
-    );
-}
-
-
-// ---------------------------------------------------------
-// ADD MESSAGE IMMEDIATELY
-// ---------------------------------------------------------
-
-function appendMessageToChat(message) {
-    const container =
-        document.getElementById(
-            "messages"
-        );
-
-    if (!container) {
-        return;
-    }
-
-    if (
-        messageAlreadyRendered(
-            message.id
-        )
-    ) {
-        return;
-    }
-
-    rememberMessage(
-        message.id
-    );
-
-    const own =
-        window.currentUser &&
-        Number(message.sender_id) ===
-            Number(window.currentUser.id);
-
-    const row =
-        document.createElement(
-            "div"
-        );
-
-    row.className =
-        "message-row" +
-        (own ? " own" : "");
-
-    row.dataset.messageId =
-        message.id;
-
-    const bubble =
-        document.createElement(
-            "div"
-        );
-
-    bubble.className =
-        "message-bubble";
-
-    const text =
-        document.createElement(
-            "div"
-        );
-
-    text.className =
-        "message-text";
-
-    text.textContent =
-        message.deleted
-            ? "Сообщение удалено"
-            : message.text;
-
-    const footer =
-        document.createElement(
-            "div"
-        );
-
-    footer.className =
-        "message-footer";
-
-    footer.textContent =
-        formatTime(
-            message.created_at
-        );
-
-    bubble.appendChild(
-        text
-    );
-
-    bubble.appendChild(
-        footer
-    );
-
-    row.appendChild(
-        bubble
-    );
-
-    container.appendChild(
-        row
-    );
-}
-
-
-// ---------------------------------------------------------
-// LOAD CHAT
-// ---------------------------------------------------------
-
-async function loadMessages(userId) {
-    currentChatUserId =
-        Number(userId);
-
-    renderedMessageIds =
-        new Set();
-
-    const container =
-        document.getElementById(
-            "messages"
-        );
-
-    if (!container) {
-        return;
-    }
-
-    container.innerHTML = "";
-
-    const response =
-        await request(
-            "/api/messages/" +
-            encodeURIComponent(
-                userId
-            )
-        );
-
-    if (!response.ok) {
-        return;
-    }
-
-    const messages =
-        await safeJson(response);
-
-    if (!Array.isArray(messages)) {
-        return;
-    }
-
-    messages.forEach(
-        function (message) {
-            appendMessageToChat(
-                message
-            );
-        }
-    );
-
-    scrollMessagesToBottom();
-}
-
-
-// ---------------------------------------------------------
-// SEND MESSAGE
-// ---------------------------------------------------------
-
-async function sendMessage() {
-    if (!currentChatUserId) {
-        alert(
-            "Сначала выберите пользователя"
-        );
-
-        return;
-    }
-
-    const input =
-        document.getElementById(
-            "messageInput"
-        );
-
-    if (!input) {
-        return;
-    }
-
-    const text =
-        input.value.trim();
-
-    if (!text) {
-        return;
-    }
-
-    const receiverId =
-        Number(
-            currentChatUserId
-        );
-
-    /*
-     * Очищаем поле сразу.
-     */
-    input.value = "";
-
-    const response =
-        await request(
-            "/api/messages",
-            {
-                method: "POST",
-
-                headers: {
-                    "Content-Type":
-                        "application/json"
-                },
-
-                body:
-                    JSON.stringify({
-                        receiver_id:
-                            receiverId,
-                        text: text
-                    })
-            }
-        );
-
-    const data =
-        await safeJson(response);
-
-    if (!response.ok) {
-        /*
-         * Если отправка реально не удалась,
-         * возвращаем текст в поле.
-         */
-        input.value = text;
-
-        alert(
-            data.detail ||
-            "Не удалось отправить сообщение"
-        );
-
-        return;
-    }
-
-    /*
-     * ГЛАВНОЕ:
-     *
-     * POST уже вернул созданное сообщение.
-     * Поэтому показываем его СРАЗУ.
-     *
-     * WebSocket потом тоже пришлёт его,
-     * но Set выше не даст сделать дубль.
-     */
-    if (
-        data &&
-        data.message
-    ) {
-        appendMessageToChat(
-            data.message
-        );
-
-        scrollMessagesToBottom();
-    }
-}
-
-
-// ---------------------------------------------------------
-// ENTER
-// ---------------------------------------------------------
-
-function messageKey(event) {
-    if (
-        event.key === "Enter" &&
-        !event.shiftKey
-    ) {
-        event.preventDefault();
-
-        sendMessage();
-    }
-}
-
-
-// ---------------------------------------------------------
-// SCROLL
-// ---------------------------------------------------------
-
-function scrollMessagesToBottom() {
-    const container =
-        document.getElementById(
-            "messages"
-        );
-
-    if (!container) {
-        return;
-    }
-
-    requestAnimationFrame(
-        function () {
-            container.scrollTop =
-                container.scrollHeight;
-        }
-    );
-}
