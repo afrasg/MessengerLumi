@@ -1141,6 +1141,8 @@ let currentUser = null;
 
 let selectedUserId = null;
 
+let selectedGroupId = null;
+
 let selectedMessageId = null;
 
 let ws = null;
@@ -1390,6 +1392,8 @@ async function startApp() {
 
     await loadFeed();
 
+    await loadGroups();
+
     connectWebSocket();
 }
 
@@ -1506,6 +1510,9 @@ async function loadUsers(
             );
         }
     );
+
+    // Keep groups in sidebar after user search/refresh
+    loadGroups();
 }
 
 
@@ -1519,6 +1526,8 @@ async function openChat(
 
     selectedUserId =
         Number(user.id);
+
+    selectedGroupId = null;
 
     showOnly(
         "chatView"
@@ -2164,6 +2173,9 @@ function renderPost(
     article.className =
         "post";
 
+    article.dataset.postId =
+        post.id;
+
 
     const head =
         document.createElement(
@@ -2190,6 +2202,9 @@ function renderPost(
             );
     }
 
+    avatar.style.cursor = "pointer";
+    avatar.onclick = () => openUserProfile(post.author_id);
+
 
     const author =
         document.createElement(
@@ -2197,7 +2212,7 @@ function renderPost(
         );
 
     author.innerHTML =
-        "<strong>" +
+        "<strong style='cursor:pointer'>" +
         escapeHtml(
             post.display_name ||
             post.username
@@ -2210,6 +2225,9 @@ function renderPost(
             post.username
         ) +
         "</div>";
+
+    author.querySelector("strong").onclick =
+        () => openUserProfile(post.author_id);
 
 
     head.appendChild(
@@ -2343,6 +2361,45 @@ function renderPost(
     );
 
 
+    // Comments button
+    const commentsBtn =
+        document.createElement(
+            "button"
+        );
+
+    commentsBtn.textContent =
+        "💬 " +
+        (post.comments_count || 0);
+
+    commentsBtn.onclick =
+        () => toggleComments(
+            post.id,
+            article,
+            commentsBtn
+        );
+
+    actions.appendChild(
+        commentsBtn
+    );
+
+
+    // Share button
+    const shareBtn =
+        document.createElement(
+            "button"
+        );
+
+    shareBtn.textContent =
+        "🔗 Поделиться";
+
+    shareBtn.onclick =
+        () => sharePost(post);
+
+    actions.appendChild(
+        shareBtn
+    );
+
+
     if (
         Number(post.author_id) ===
         Number(currentUser.id)
@@ -2390,6 +2447,27 @@ function renderPost(
     article.appendChild(
         actions
     );
+
+
+    // Comments container (hidden by default)
+    const commentsBox =
+        document.createElement(
+            "div"
+        );
+
+    commentsBox.id =
+        "comments-" + post.id;
+
+    commentsBox.style.display =
+        "none";
+
+    commentsBox.style.marginTop =
+        "12px";
+
+    article.appendChild(
+        commentsBox
+    );
+
 
     container.appendChild(
         article
@@ -2956,6 +3034,9 @@ async function loadGroups() {
             div.className =
                 "comment";
 
+            div.style.cursor =
+                "pointer";
+
             div.innerHTML =
                 "<b>👥 " +
                 escapeHtml(
@@ -2968,6 +3049,19 @@ async function loadGroups() {
                     group.description ||
                     ""
                 ) +
+                "</div>" +
+
+                "<div style='margin-top:8px;display:flex;gap:6px'>" +
+                "<button class='primary' style='padding:6px 10px;font-size:13px' onclick='event.stopPropagation(); openGroupChat(" +
+                group.id +
+                ", \"" +
+                escapeHtml(group.name).replace(/"/g, "&quot;") +
+                "\")'>💬 Открыть чат</button>" +
+                "<button class='secondary' style='padding:6px 10px;font-size:13px' onclick='event.stopPropagation(); openInviteToGroup(" +
+                group.id +
+                ", \"" +
+                escapeHtml(group.name).replace(/"/g, "&quot;") +
+                "\")'>➕ Пригласить</button>" +
                 "</div>";
 
             container.appendChild(
@@ -2975,6 +3069,9 @@ async function loadGroups() {
             );
         }
     );
+
+    // Also refresh groups in sidebar
+    loadGroupsInSidebar(groups);
 }
 
 
@@ -3801,19 +3898,9 @@ function formatTime(
 
 
 /* =====================================================
-   INITIAL
-===================================================== */
-
-checkAuth();
-
-</script>
-
-</body>
-</html>
-
-/* =====================================================
    SHARE POST
 ===================================================== */
+
 async function sharePost(post) {
     const url = location.origin + location.pathname + "?post=" + post.id;
 
@@ -3836,9 +3923,11 @@ async function sharePost(post) {
     }
 }
 
+
 /* =====================================================
    COMMENTS
 ===================================================== */
+
 async function toggleComments(postId, article, btn) {
     const box = document.getElementById("comments-" + postId);
     if (!box) return;
@@ -3891,8 +3980,10 @@ async function toggleComments(postId, article, btn) {
             delBtn.onclick = async () => {
                 if (!confirm("Удалить комментарий?")) return;
                 await request("/api/comments/" + c.id, { method: "DELETE" });
-                toggleComments(postId, article, btn); // перезагрузить
-                // обновить счётчик
+                // reload comments
+                box.style.display = "none";
+                toggleComments(postId, article, btn);
+                // update counter
                 const num = Math.max(0, (parseInt(btn.textContent.replace(/\D/g, "")) || 1) - 1);
                 btn.textContent = "💬 " + num;
             };
@@ -3902,18 +3993,19 @@ async function toggleComments(postId, article, btn) {
         box.appendChild(div);
     });
 
-    // Форма нового комментария
+    // Form for new comment
     const form = document.createElement("div");
     form.style.cssText = "display:flex;gap:8px;margin-top:10px";
     form.innerHTML = `
-        <input id="commentInput-${postId}" 
-               placeholder="Написать комментарий..." 
+        <input id="commentInput-${postId}"
+               placeholder="Написать комментарий..."
                style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid #2a2b30;background:#121316;color:#fff"
                maxlength="2000">
         <button class="primary" onclick="sendComment(${postId})">➤</button>
     `;
     box.appendChild(form);
 }
+
 
 async function sendComment(postId) {
     const input = document.getElementById("commentInput-" + postId);
@@ -3932,21 +4024,25 @@ async function sendComment(postId) {
         return;
     }
 
-    // Обновляем счётчик и перезагружаем комменты
+    // Update counter and reload comments
     const article = document.querySelector(`article[data-post-id="${postId}"]`);
     const btn = article?.querySelector(".post-actions button:nth-child(2)");
     if (btn) {
         const current = parseInt(btn.textContent.replace(/\D/g, "")) || 0;
         btn.textContent = "💬 " + (current + 1);
     }
-    if (article) {
+    if (article && btn) {
+        const box = document.getElementById("comments-" + postId);
+        if (box) box.style.display = "none";
         toggleComments(postId, article, btn);
     }
 }
 
+
 /* =====================================================
-   USER PROFILE (клик по аве)
+   USER PROFILE (click on avatar)
 ===================================================== */
+
 async function openUserProfile(userId) {
     const response = await request("/api/users/" + userId);
     if (!response.ok) {
@@ -3961,7 +4057,7 @@ async function openUserProfile(userId) {
 
     openModal(`
         <div style="text-align:center">
-            ${avatarSrc 
+            ${avatarSrc
                 ? `<img src="${avatarSrc}" style="width:90px;height:90px;border-radius:50%;object-fit:cover;margin-bottom:12px">`
                 : `<div style="width:90px;height:90px;border-radius:50%;background:#2a2b30;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:36px">👤</div>`
             }
@@ -3975,7 +4071,7 @@ async function openUserProfile(userId) {
                 Создан: ${formatTime(user.created_at) || "—"}
             </div>
             ${!isMe ? `
-                <button class="primary" style="width:100%" 
+                <button class="primary" style="width:100%"
                     onclick="closeModal(); openChat({id:${user.id}, username:'${escapeHtml(user.username)}', display_name:'${escapeHtml(user.display_name || user.username)}'})">
                     💬 Написать
                 </button>
@@ -3986,3 +4082,203 @@ async function openUserProfile(userId) {
         </div>
     `);
 }
+
+
+/* =====================================================
+   GROUPS IN CHATS + INVITE
+===================================================== */
+
+function loadGroupsInSidebar(groups) {
+    // Remove previous group items
+    document.querySelectorAll(".group-item").forEach(el => el.remove());
+
+    const container = document.getElementById("users");
+    if (!container || !groups || !groups.length) return;
+
+    // Add a small separator/header
+    const header = document.createElement("div");
+    header.className = "group-item";
+    header.style.cssText = "padding:8px 10px;color:#8d929e;font-size:12px;font-weight:600;margin-top:10px";
+    header.textContent = "👥 ГРУППЫ";
+    container.appendChild(header);
+
+    groups.forEach(group => {
+        const div = document.createElement("div");
+        div.className = "user-item group-item";
+        div.innerHTML = `
+            <div class="user-avatar" style="display:flex;align-items:center;justify-content:center;font-size:18px;background:#30333b">👥</div>
+            <div class="user-info">
+                <strong>${escapeHtml(group.name)}</strong>
+                <small>группа</small>
+            </div>
+        `;
+        div.onclick = () => openGroupChat(group.id, group.name);
+        container.appendChild(div);
+    });
+}
+
+
+async function openGroupChat(groupId, groupName) {
+    selectedGroupId = Number(groupId);
+    selectedUserId = null; // not a private chat
+
+    showOnly("chatView");
+
+    document.getElementById("pageTitle").textContent = "👥 " + groupName;
+    document.getElementById("chatHeader").textContent = "👥 " + groupName;
+
+    await loadGroupMessages(groupId);
+}
+
+
+async function loadGroupMessages(groupId) {
+    const response = await request("/api/groups/" + groupId + "/messages");
+    if (!response.ok) {
+        // fallback: try generic messages endpoint if backend uses different path
+        const fallback = await request("/api/messages/group/" + groupId);
+        if (!fallback.ok) {
+            document.getElementById("messages").innerHTML =
+                "<div style='color:#9095a3;padding:20px;text-align:center'>Нет сообщений или API групп ещё не готов</div>";
+            return;
+        }
+        const messages = await safeJson(fallback);
+        renderGroupMessages(messages);
+        return;
+    }
+
+    const messages = await safeJson(response);
+    renderGroupMessages(messages);
+}
+
+
+function renderGroupMessages(messages) {
+    const container = document.getElementById("messages");
+    container.innerHTML = "";
+
+    messages.forEach(message => {
+        const mine = Number(message.sender_id) === Number(currentUser.id);
+
+        const row = document.createElement("div");
+        row.className = "message-row " + (mine ? "mine" : "theirs");
+
+        const bubble = document.createElement("div");
+        bubble.className = "message-bubble";
+        bubble.dataset.id = message.id;
+
+        if (!mine && message.sender_name) {
+            const name = document.createElement("div");
+            name.style.cssText = "font-size:11px;color:#a0a8b8;margin-bottom:3px;font-weight:600";
+            name.textContent = message.sender_name || message.username || "";
+            bubble.appendChild(name);
+        }
+
+        const text = document.createElement("div");
+        text.className = "message-text";
+        if (message.deleted) {
+            text.className += " message-deleted";
+            text.textContent = "Сообщение удалено";
+        } else {
+            text.textContent = message.text || "";
+        }
+        bubble.appendChild(text);
+
+        const meta = document.createElement("div");
+        meta.className = "message-meta";
+        meta.innerHTML = "<span>" + escapeHtml(formatTime(message.created_at)) + "</span>";
+        bubble.appendChild(meta);
+
+        row.appendChild(bubble);
+        container.appendChild(row);
+    });
+
+    scrollMessages();
+}
+
+
+// Override sendMessage to support groups
+const originalSendMessage = sendMessage;
+sendMessage = async function () {
+    if (selectedGroupId) {
+        const input = document.getElementById("messageInput");
+        const text = input.value.trim();
+        if (!text) return;
+
+        const response = await request("/api/groups/" + selectedGroupId + "/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text })
+        });
+
+        const data = await safeJson(response);
+        if (!response.ok) {
+            // try fallback endpoint
+            const fb = await request("/api/messages", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ group_id: selectedGroupId, text })
+            });
+            if (!fb.ok) {
+                alert(data.detail || "Не удалось отправить");
+                return;
+            }
+        }
+
+        input.value = "";
+        await loadGroupMessages(selectedGroupId);
+        return;
+    }
+
+    // private chat
+    return originalSendMessage();
+};
+
+
+function openInviteToGroup(groupId, groupName) {
+    openModal(`
+        <h2>➕ Пригласить в группу</h2>
+        <p style="color:#9095a3;margin-top:0">Группа: <b>${escapeHtml(groupName)}</b></p>
+        <input id="inviteUsername" placeholder="Username пользователя" style="width:100%;margin:10px 0">
+        <button class="primary" style="width:100%" onclick="inviteToGroup(${groupId})">
+            Пригласить
+        </button>
+        <button class="secondary" style="width:100%;margin-top:8px" onclick="closeModal()">
+            Отмена
+        </button>
+    `);
+}
+
+
+async function inviteToGroup(groupId) {
+    const username = document.getElementById("inviteUsername")?.value.trim();
+    if (!username) {
+        alert("Введите username");
+        return;
+    }
+
+    const response = await request("/api/groups/" + groupId + "/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username })
+    });
+
+    const data = await safeJson(response);
+    if (!response.ok) {
+        alert(data.detail || "Не удалось пригласить");
+        return;
+    }
+
+    alert("Приглашение отправлено!");
+    closeModal();
+}
+
+
+/* =====================================================
+   INITIAL
+===================================================== */
+
+checkAuth();
+
+</script>
+
+</body>
+</html>
