@@ -1,726 +1,272 @@
-```html
-<meta
-    name="viewport"
-    content="width=device-width,initial-scale=1"
+<!-- =========================================================
+     MESSENGER LUMI — CHAT
+========================================================= -->
+
+<section
+    id="chatView"
+    class="view hidden"
+    style="padding:0"
 >
 
-<!-- =====================================================
-     AUTH
-===================================================== -->
+    <div class="chat">
 
-<div class="auth-card">
+        <div
+            id="chatHeader"
+            class="chat-header"
+        >
+            Выберите пользователя
+        </div>
 
-    <h1>💬 Messenger Lumi</h1>
+        <div
+            id="messages"
+            class="messages"
+        ></div>
 
-    <input
-        id="username"
-        placeholder="Username"
-        autocomplete="username"
-    >
+        <div class="composer">
 
-    <input
-        id="password"
-        type="password"
-        placeholder="Пароль"
-        autocomplete="current-password"
-    >
-
-    <button onclick="login()">
-        Войти
-    </button>
-
-    <button
-        class="secondary"
-        onclick="register()"
-    >
-        Создать аккаунт
-    </button>
-
-    <p
-        id="authError"
-        class="error"
-    ></p>
-
-</div>
-
-
-<!-- =====================================================
-     SIDEBAR
-===================================================== -->
-
-<aside class="sidebar">
-
-    <div class="logo">
-        💬 Messenger Lumi
-    </div>
-
-    <input
-        id="search"
-        class="search"
-        placeholder="Поиск..."
-        oninput="searchUsers()"
-    >
-
-    <div
-        id="users"
-        class="users"
-    ></div>
-
-</aside>
-
-
-<!-- =====================================================
-     MAIN
-===================================================== -->
-
-<main class="main">
-
-    <div class="topbar">
-
-        <strong id="pageTitle">
-            📰 Лента
-        </strong>
-
-        <div class="top-actions">
-
-            <button
-                class="icon-button"
-                onclick="showFeed()"
-                title="Лента"
+            <input
+                id="messageInput"
+                placeholder="Сообщение..."
+                onkeydown="messageKey(event)"
+                autocomplete="off"
             >
-                📰
-            </button>
 
+            <!-- СТАРАЯ КНОПКА -->
             <button
-                class="icon-button"
-                onclick="showFavorites()"
-                title="Избранное"
+                class="send-message-button"
+                type="button"
+                onclick="sendMessage()"
             >
-                ⭐
-            </button>
-
-            <button
-                class="icon-button"
-                onclick="showSettings()"
-                title="Настройки"
-            >
-                ⚙️
-            </button>
-
-            <button
-                class="icon-button"
-                onclick="showProfile()"
-                title="Профиль"
-            >
-                👤
+                Отправить сообщение ➤
             </button>
 
         </div>
 
     </div>
 
+</section>
 
-    <div class="content">
 
+<script>
 
-        <!-- =================================================
-             FEED
-        ================================================== -->
+/* =========================================================
+   MESSENGER LUMI
+========================================================= */
 
-        <section
-            id="feedView"
-            class="view"
-        >
+const APP_NAME = "Messenger Lumi";
 
-            <div class="feed">
 
-                <div class="post-box">
+/* =========================================================
+   ОТПРАВКА СООБЩЕНИЯ
+========================================================= */
 
-                    <textarea
-                        id="postText"
-                        placeholder="Что нового?"
-                    ></textarea>
+function messageKey(event) {
 
-                    <div class="post-tools">
+    if (event.key !== "Enter") {
+        return;
+    }
 
-                        <button
-                            class="primary"
-                            onclick="publishPost()"
-                        >
-                            📝 Опубликовать
-                        </button>
+    if (event.shiftKey) {
+        return;
+    }
 
-                        <label class="primary">
+    event.preventDefault();
 
-                            📷 Фото / видео
-
-                            <input
-                                id="mediaFile"
-                                type="file"
-                                accept="image/*,video/*"
-                                hidden
-                                onchange="publishMediaPost()"
-                            >
-
-                        </label>
-
-                    </div>
-
-                </div>
-
-                <div id="feed"></div>
-
-            </div>
-
-        </section>
-
-
-        <!-- =================================================
-             CHAT
-        ================================================== -->
-
-        <section
-            id="chatView"
-            class="view hidden"
-            style="padding:0"
-        >
-
-            <div class="chat">
-
-                <div
-                    id="chatHeader"
-                    class="chat-header"
-                >
-                    Выберите пользователя
-                </div>
-
-
-                <div
-                    id="messages"
-                    class="messages"
-                ></div>
-
-
-                <!--
-                    СТАРАЯ КНОПКА:
-                    текст + стрелка находятся
-                    ВНУТРИ ОДНОЙ КНОПКИ
-                -->
-
-                <div class="composer">
-
-                    <input
-                        id="messageInput"
-                        placeholder="Сообщение..."
-                        onkeydown="messageKey(event)"
-                    >
-
-                    <button
-                        class="send"
-                        onclick="sendMessage()"
-                    >
-                        Отправить сообщение ➤
-                    </button>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- =================================================
-             PROFILE
-        ================================================== -->
-
-        <section
-            id="profileView"
-            class="view hidden"
-        >
-
-            <div class="profile">
-
-                <div class="card">
-
-                    <img
-                        id="bigAvatar"
-                        class="big-avatar"
-                        alt=""
-                    >
-
-                    <h2>
-                        👤 Профиль
-                    </h2>
-
-                    <input
-                        id="profileUsername"
-                        placeholder="Username"
-                    >
-
-                    <input
-                        id="profileName"
-                        placeholder="Имя"
-                    >
-
-                    <textarea
-                        id="profileBio"
-                        placeholder="О себе"
-                    ></textarea>
-
-                    <p>
-                        🖼️ Аватар
-                    </p>
-
-                    <input
-                        id="avatarFile"
-                        type="file"
-                        accept="image/*"
-                    >
-
-                    <button
-                        class="primary"
-                        onclick="saveProfile()"
-                    >
-                        Сохранить
-                    </button>
-
-                </div>
-
-
-                <div class="card">
-
-                    <h3>
-                        👥 Аккаунт
-                    </h3>
-
-                    <button
-                        class="primary"
-                        onclick="openCreateAccount()"
-                    >
-                        ➕ Добавить аккаунт
-                    </button>
-
-                    <button
-                        class="primary"
-                        onclick="switchAccount()"
-                    >
-                        🔄 Переключить аккаунт
-                    </button>
-
-                    <button
-                        style="
-                            background:#d84a4a;
-                            color:white;
-                            border:0;
-                            padding:11px;
-                            border-radius:10px;
-                            margin-top:8px;
-                            width:100%;
-                        "
-                        onclick="logout()"
-                    >
-                        🚪 Выйти
-                    </button>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- =================================================
-             SETTINGS
-        ================================================== -->
-
-        <section
-            id="settingsView"
-            class="view hidden"
-        >
-
-            <div class="profile">
-
-                <div class="card">
-
-                    <h2>
-                        ⚙️ Настройки
-                    </h2>
-
-                    <div class="setting">
-
-                        <label>
-
-                            <span>
-                                🌐 Язык
-                            </span>
-
-                            <select
-                                id="language"
-                                onchange="saveSettings()"
-                            >
-
-                                <option value="ru">
-                                    Русский
-                                </option>
-
-                                <option value="en">
-                                    English
-                                </option>
-
-                                <option value="be">
-                                    Беларуская
-                                </option>
-
-                                <option value="kk">
-                                    Қазақша
-                                </option>
-
-                            </select>
-
-                        </label>
-
-                    </div>
-
-
-                    <div class="setting">
-
-                        <label>
-
-                            <span>
-                                🎨 Тема
-                            </span>
-
-                            <select
-                                id="theme"
-                                onchange="saveSettings()"
-                            >
-
-                                <option value="dark">
-                                    Тёмная
-                                </option>
-
-                                <option value="light">
-                                    Светлая
-                                </option>
-
-                                <option value="blue">
-                                    Синяя
-                                </option>
-
-                            </select>
-
-                        </label>
-
-                    </div>
-
-
-                    <div class="setting">
-
-                        <label>
-
-                            🔔 Уведомления
-
-                            <input
-                                id="notifications"
-                                type="checkbox"
-                                onchange="saveSettings()"
-                            >
-
-                        </label>
-
-                    </div>
-
-
-                    <div class="setting">
-
-                        <label>
-
-                            🟢 Показывать онлайн
-
-                            <input
-                                id="showOnline"
-                                type="checkbox"
-                                onchange="saveSettings()"
-                            >
-
-                        </label>
-
-                    </div>
-
-
-                    <div class="setting">
-
-                        <label>
-
-                            🕒 Показывать время последнего визита
-
-                            <input
-                                id="showLastSeen"
-                                type="checkbox"
-                                onchange="saveSettings()"
-                            >
-
-                        </label>
-
-                    </div>
-
-                </div>
-
-
-                <!-- GROUPS -->
-
-                <div class="card">
-
-                    <h3>
-                        👥 Группы
-                    </h3>
-
-                    <button
-                        class="primary"
-                        onclick="openCreateGroup()"
-                    >
-                        ➕ Создать группу
-                    </button>
-
-                    <div id="groups"></div>
-
-                </div>
-
-
-                <!-- CHANNELS -->
-
-                <div class="card">
-
-                    <h3>
-                        📢 Каналы
-                    </h3>
-
-                    <button
-                        class="primary"
-                        onclick="openCreateChannel()"
-                    >
-                        ➕ Создать канал
-                    </button>
-
-                    <div id="channels"></div>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- =================================================
-             FAVORITES
-        ================================================== -->
-
-        <section
-            id="favoritesView"
-            class="view hidden"
-        >
-
-            <div class="profile">
-
-                <div class="card">
-
-                    <h2>
-                        ⭐ Избранные сообщения
-                    </h2>
-
-                    <div id="favorites"></div>
-
-                </div>
-
-            </div>
-
-        </section>
-
-    </div>
-
-</main>
-
-
-<!-- =====================================================
-     MODAL
-===================================================== -->
-
-<div
-    id="modalBg"
-    class="modal-bg hidden"
-    onclick="closeModal(event)"
->
-
-    <div
-        id="modal"
-        class="modal"
-        onclick="event.stopPropagation()"
-    ></div>
-
-</div>
-```
-
-```css
-/* =====================================================
-   TOP BUTTONS
-   ===================================================== */
-
-.top-actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    sendMessage();
 }
 
 
-/* Без цветной заливки */
+/* =========================================================
+   СТАРАЯ КНОПКА "ОТПРАВИТЬ СООБЩЕНИЕ"
+========================================================= */
 
-.icon-button {
-    background: transparent !important;
+const sendButton =
+    document.querySelector(
+        ".send-message-button"
+    );
+
+if (sendButton) {
+
+    sendButton.textContent =
+        "Отправить сообщение ➤";
+}
+
+
+/* =========================================================
+   НАЗВАНИЕ ПРИЛОЖЕНИЯ
+========================================================= */
+
+document
+    .querySelectorAll(
+        ".logo, .auth-card h1"
+    )
+    .forEach(
+        element => {
+
+            element.innerHTML =
+                element.innerHTML.replace(
+                    /MyMessenger/g,
+                    "Messenger Lumi"
+                );
+        }
+    );
+
+
+/* =========================================================
+   ВЕРХНИЕ КНОПКИ — БЕЗ ЦВЕТНОГО ФОНА
+========================================================= */
+
+const topButtons =
+    document.querySelectorAll(
+        ".top-actions .icon-button"
+    );
+
+topButtons.forEach(
+    button => {
+
+        button.style.background =
+            "transparent";
+
+        button.style.backgroundColor =
+            "transparent";
+
+        button.style.border =
+            "none";
+
+        button.style.boxShadow =
+            "none";
+
+        button.style.color =
+            "inherit";
+
+        button.style.cursor =
+            "pointer";
+    }
+);
+
+
+/* =========================================================
+   СТИЛЬ СТАРОЙ КНОПКИ ОТПРАВКИ
+========================================================= */
+
+const style =
+    document.createElement(
+        "style"
+    );
+
+style.textContent = `
+
+.send-message-button {
     border: 0;
-    box-shadow: none;
+    border-radius: 10px;
+    padding: 11px 16px;
     cursor: pointer;
-    padding: 8px;
-    border-radius: 8px;
+    background: #5865f2;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: opacity .15s ease,
+                transform .05s ease;
 }
 
-
-/* Только лёгкий hover */
-
-.icon-button:hover {
-    background: rgba(255,255,255,0.07) !important;
+.send-message-button:hover {
+    opacity: .9;
 }
 
-
-/* =====================================================
-   CHAT
-   ===================================================== */
-
-.chat {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    min-height: 0;
+.send-message-button:active {
+    transform: scale(.98);
 }
-
-
-.chat-header {
-    flex-shrink: 0;
-}
-
-
-/* Сообщения */
-
-.messages {
-    flex: 1;
-    overflow-y: auto;
-
-    display: flex;
-    flex-direction: column;
-
-    gap: 7px;
-
-    padding: 14px 16px;
-}
-
-
-/* Свои сообщения справа */
-
-.message.mine {
-    align-self: flex-end;
-}
-
-
-/* Чужие сообщения слева */
-
-.message:not(.mine) {
-    align-self: flex-start;
-}
-
-
-/* Пузырь сообщения */
-
-.message-bubble {
-    max-width: min(72%, 560px);
-
-    padding: 9px 12px;
-
-    border-radius: 16px;
-
-    word-break: break-word;
-    line-height: 1.35;
-}
-
-
-/* Свой пузырь */
-
-.message.mine .message-bubble {
-    border-bottom-right-radius: 5px;
-}
-
-
-/* Чужой пузырь */
-
-.message:not(.mine) .message-bubble {
-    border-bottom-left-radius: 5px;
-}
-
-
-/* =====================================================
-   КОМПОЗЕР
-===================================================== */
 
 .composer {
     display: flex;
     align-items: center;
     gap: 8px;
+    padding: 12px;
+}
 
-    padding: 10px;
+.composer #messageInput {
+    flex: 1;
+    min-width: 0;
+}
 
-    flex-shrink: 0;
+/* Старое расположение пузырьков */
+
+.messages {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow-y: auto;
+}
+
+.message {
+    max-width: 75%;
+    width: fit-content;
+    padding: 9px 12px;
+    border-radius: 14px;
+    word-break: break-word;
+}
+
+.message.mine {
+    align-self: flex-end;
+    border-bottom-right-radius: 5px;
+}
+
+.message.other {
+    align-self: flex-start;
+    border-bottom-left-radius: 5px;
+}
+
+/* Верхние кнопки */
+
+.top-actions .icon-button {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+`;
+
+document.head.appendChild(
+    style
+);
+
+
+/* =========================================================
+   ЕСЛИ КНОПКА БЫЛА СТАРОЙ .send — ПЕРЕВОДИМ ЕЁ
+========================================================= */
+
+const oldSend =
+    document.querySelector(
+        ".composer .send"
+    );
+
+if (oldSend) {
+
+    oldSend.classList.remove(
+        "send"
+    );
+
+    oldSend.classList.add(
+        "send-message-button"
+    );
+
+    oldSend.textContent =
+        "Отправить сообщение ➤";
 }
 
 
-/*
-   ВАЖНО:
+/* =========================================================
+   ОБНОВЛЯЕМ TITLE
+========================================================= */
 
-   Именно старая кнопка:
-   "Отправить сообщение ➤"
+if (
+    document.title ===
+    "MyMessenger"
+) {
 
-   Это ОДНА кнопка.
-*/
-
-.composer .send {
-    flex-shrink: 0;
-
-    border: 0;
-    border-radius: 10px;
-
-    padding: 11px 15px;
-
-    cursor: pointer;
-
-    white-space: nowrap;
+    document.title =
+        "Messenger Lumi";
 }
 
-
-/* =====================================================
-   MOBILE
-===================================================== */
-
-@media (max-width: 650px) {
-
-    .composer {
-        gap: 6px;
-    }
-
-    .composer .send {
-        padding: 10px 12px;
-        font-size: 13px;
-    }
-
-    .message-bubble {
-        max-width: 82%;
-    }
-
-}
-```
+</script>
