@@ -22,7 +22,7 @@ body {
     margin: 0;
     font-family: Arial, sans-serif;
     background: #0e1621;
-    color: #fff;
+    color: white;
 }
 
 button,
@@ -272,7 +272,8 @@ button {
     margin-top: 10px;
 }
 
-.post-tools button {
+.post-tools button,
+.post-tools label {
     border: 0;
     background: #2aabee;
     color: white;
@@ -312,6 +313,7 @@ button {
     display: flex;
     gap: 8px;
     margin-top: 10px;
+    flex-wrap: wrap;
 }
 
 .post-actions button {
@@ -328,9 +330,57 @@ button {
 
 .comment {
     background: #202d39;
-    padding: 8px;
-    border-radius: 8px;
-    margin-top: 6px;
+    padding: 10px;
+    border-radius: 9px;
+    margin-top: 7px;
+}
+
+.comment.reply {
+    margin-left: 30px;
+    background: #253644;
+}
+
+.comment-top {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.comment-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #2aabee;
+}
+
+.comment-user {
+    font-weight: bold;
+}
+
+.comment-date {
+    color: #8295a5;
+    font-size: 11px;
+}
+
+.comment-text {
+    margin-top: 7px;
+    white-space: pre-wrap;
+}
+
+.comment-buttons {
+    display: flex;
+    gap: 5px;
+    margin-top: 7px;
+}
+
+.comment-buttons button {
+    border: 0;
+    background: #304454;
+    color: white;
+    border-radius: 7px;
+    padding: 5px 8px;
+    font-size: 12px;
 }
 
 .comment-input {
@@ -346,6 +396,7 @@ button {
     padding: 9px;
     color: white;
     border-radius: 8px;
+    outline: none;
 }
 
 .comment-input button {
@@ -353,6 +404,13 @@ button {
     background: #2aabee;
     color: white;
     border-radius: 8px;
+    padding: 0 14px;
+}
+
+.reply-label {
+    color: #2aabee;
+    font-size: 12px;
+    margin-top: 5px;
 }
 
 .profile {
@@ -405,6 +463,13 @@ button {
     margin-top: 10px;
 }
 
+.share-copy {
+    color: #2aabee;
+    font-size: 12px;
+    margin-top: 7px;
+    display: none;
+}
+
 @media(max-width:750px) {
 
     .sidebar {
@@ -435,6 +500,10 @@ button {
 
     .message {
         max-width: 85%;
+    }
+
+    .comment.reply {
+        margin-left: 15px;
     }
 }
 
@@ -542,7 +611,10 @@ APP
 
         <div class="content">
 
-            <!-- FEED -->
+
+            <!-- =================================================
+            FEED
+            ================================================= -->
 
             <section
                 class="view"
@@ -564,7 +636,8 @@ APP
                                 📝 Опубликовать
                             </button>
 
-                            <label class="primary">
+                            <label>
+
                                 📷 Фото / видео
 
                                 <input
@@ -587,7 +660,9 @@ APP
             </section>
 
 
-            <!-- CHAT -->
+            <!-- =================================================
+            CHAT
+            ================================================= -->
 
             <section
                 class="view"
@@ -631,7 +706,9 @@ APP
             </section>
 
 
-            <!-- PROFILE -->
+            <!-- =================================================
+            PROFILE
+            ================================================= -->
 
             <section
                 class="view"
@@ -714,10 +791,14 @@ APP
 // CONFIG
 // =========================================================
 //
-// Если frontend открывается с Render — оставь пустым.
+// Если frontend и backend находятся на Render
+// и этот index.html лежит в static,
+// оставь:
 //
-// Если frontend остаётся на Netlify,
-// впиши сюда адрес Render:
+// const API = "";
+//
+// Если index.html находится на Netlify,
+// впиши сюда адрес своего Render backend:
 //
 // const API = "https://ТВОЙ-СЕРВЕР.onrender.com";
 //
@@ -812,7 +893,8 @@ async function register() {
         if (!response.ok) {
 
             throw new Error(
-                data.detail
+                data.detail ||
+                "Ошибка регистрации"
             );
 
         }
@@ -876,7 +958,8 @@ async function login() {
         if (!response.ok) {
 
             throw new Error(
-                data.detail
+                data.detail ||
+                "Ошибка входа"
             );
 
         }
@@ -908,35 +991,61 @@ async function login() {
 
 async function startApp() {
 
-    const response =
-        await request(
-            "/api/me"
-        );
+    try {
 
-    if (!response.ok) {
+        const response =
+            await request(
+                "/api/me"
+            );
 
-        logout();
+        if (!response.ok) {
 
-        return;
+            logout();
+
+            return;
+
+        }
+
+        currentUser =
+            await response.json();
+
+        document.getElementById(
+            "auth"
+        ).style.display = "none";
+
+        document.getElementById(
+            "app"
+        ).style.display = "flex";
+
+        connectWebSocket();
+
+        searchUsers();
+
+        showFeed();
+
+        // Если открыта ссылка на конкретный пост
+        const params =
+            new URLSearchParams(
+                window.location.search
+            );
+
+        const postId =
+            params.get("post");
+
+        if (postId) {
+
+            setTimeout(
+                () => openSharedPost(postId),
+                300
+            );
+
+        }
+
+    } catch (error) {
+
+        console.error(error);
 
     }
-
-    currentUser =
-        await response.json();
-
-    document.getElementById(
-        "auth"
-    ).style.display = "none";
-
-    document.getElementById(
-        "app"
-    ).style.display = "flex";
-
-    connectWebSocket();
-
-    searchUsers();
-
-    showFeed();
 
 }
 
@@ -1008,42 +1117,53 @@ function connectWebSocket() {
     socket.onmessage =
         event => {
 
-            const data =
-                JSON.parse(
-                    event.data
-                );
+            try {
 
-            if (
-                data.type === "message"
-            ) {
-
-                const message =
-                    data.message;
-
-                if (
-                    selectedUser &&
-                    (
-                        (
-                            message.sender_id ===
-                            currentUser.id &&
-                            message.receiver_id ===
-                            selectedUser.id
-                        )
-                        ||
-                        (
-                            message.sender_id ===
-                            selectedUser.id &&
-                            message.receiver_id ===
-                            currentUser.id
-                        )
-                    )
-                ) {
-
-                    addMessage(
-                        message
+                const data =
+                    JSON.parse(
+                        event.data
                     );
 
+                if (
+                    data.type === "message"
+                ) {
+
+                    const message =
+                        data.message;
+
+                    if (
+                        selectedUser &&
+                        (
+                            (
+                                message.sender_id ===
+                                currentUser.id &&
+                                message.receiver_id ===
+                                selectedUser.id
+                            )
+                            ||
+                            (
+                                message.sender_id ===
+                                selectedUser.id &&
+                                message.receiver_id ===
+                                currentUser.id
+                            )
+                        )
+                    ) {
+
+                        addMessage(
+                            message
+                        );
+
+                    }
+
                 }
+
+            } catch (error) {
+
+                console.error(
+                    "WebSocket error:",
+                    error
+                );
 
             }
 
@@ -1068,82 +1188,90 @@ function connectWebSocket() {
 
 async function searchUsers() {
 
-    const q =
-        document.getElementById(
-            "search"
-        ).value;
+    try {
 
-    const response =
-        await request(
-            "/api/users?q=" +
-            encodeURIComponent(q)
-        );
+        const q =
+            document.getElementById(
+                "search"
+            ).value;
 
-    if (!response.ok) return;
-
-    const users =
-        await response.json();
-
-    const container =
-        document.getElementById(
-            "users"
-        );
-
-    container.innerHTML = "";
-
-    users.forEach(
-        user => {
-
-            const element =
-                document.createElement(
-                    "div"
-                );
-
-            element.className =
-                "user";
-
-            element.innerHTML = `
-
-                ${
-                    user.avatar_url
-                    ?
-                    `<img
-                        class="avatar"
-                        src="${mediaUrl(user.avatar_url)}"
-                    >`
-                    :
-                    `<div class="avatar">
-                        👤
-                    </div>`
-                }
-
-                <div>
-
-                    <div class="user-name">
-                        ${escapeHtml(
-                            user.display_name ||
-                            user.username
-                        )}
-                    </div>
-
-                    <div class="user-username">
-                        @${escapeHtml(
-                            user.username
-                        )}
-                    </div>
-
-                </div>
-            `;
-
-            element.onclick =
-                () => openChat(user);
-
-            container.appendChild(
-                element
+        const response =
+            await request(
+                "/api/users?q=" +
+                encodeURIComponent(q)
             );
 
-        }
-    );
+        if (!response.ok) return;
+
+        const users =
+            await response.json();
+
+        const container =
+            document.getElementById(
+                "users"
+            );
+
+        container.innerHTML = "";
+
+        users.forEach(
+            user => {
+
+                const element =
+                    document.createElement(
+                        "div"
+                    );
+
+                element.className =
+                    "user";
+
+                element.innerHTML = `
+
+                    ${
+                        user.avatar_url
+                        ?
+                        `<img
+                            class="avatar"
+                            src="${mediaUrl(user.avatar_url)}"
+                        >`
+                        :
+                        `<div class="avatar">
+                            👤
+                        </div>`
+                    }
+
+                    <div>
+
+                        <div class="user-name">
+                            ${escapeHtml(
+                                user.display_name ||
+                                user.username
+                            )}
+                        </div>
+
+                        <div class="user-username">
+                            @${escapeHtml(
+                                user.username
+                            )}
+                        </div>
+
+                    </div>
+                `;
+
+                element.onclick =
+                    () => openChat(user);
+
+                container.appendChild(
+                    element
+                );
+
+            }
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+    }
 
 }
 
@@ -1191,6 +1319,8 @@ async function openChat(user) {
             "/api/messages/" +
             user.id
         );
+
+    if (!response.ok) return;
 
     const history =
         await response.json();
@@ -1317,13 +1447,23 @@ async function sendMessage() {
 
     if (!response.ok) {
 
-        const data =
-            await response.json();
+        try {
 
-        alert(
-            data.detail ||
-            "Ошибка"
-        );
+            const data =
+                await response.json();
+
+            alert(
+                data.detail ||
+                "Ошибка"
+            );
+
+        } catch {
+
+            alert(
+                "Ошибка отправки"
+            );
+
+        }
 
     }
 
@@ -1400,6 +1540,64 @@ async function loadFeed() {
 }
 
 
+async function openSharedPost(postId) {
+
+    const response =
+        await request(
+            "/api/posts/" +
+            postId
+        );
+
+    if (!response.ok) {
+
+        alert(
+            "Пост не найден"
+        );
+
+        return;
+
+    }
+
+    const post =
+        await response.json();
+
+    showFeed();
+
+    const container =
+        document.getElementById(
+            "feed"
+        );
+
+    container.innerHTML = "";
+
+    renderPost(
+        post
+    );
+
+    setTimeout(
+        () => {
+
+            const postElement =
+                document.querySelector(
+                    `[data-post-id="${post.id}"]`
+                );
+
+            if (postElement) {
+
+                postElement.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center"
+                });
+
+            }
+
+        },
+        100
+    );
+
+}
+
+
 function renderPost(post) {
 
     const container =
@@ -1414,6 +1612,9 @@ function renderPost(post) {
 
     element.className =
         "post";
+
+    element.dataset.postId =
+        post.id;
 
     const avatar =
         post.avatar_url
@@ -1517,6 +1718,12 @@ function renderPost(post) {
                 💬 ${post.comments}
             </button>
 
+            <button
+                onclick="sharePost(${post.id})"
+            >
+                🔗 Поделиться
+            </button>
+
             ${
                 post.author_id ===
                 currentUser.id
@@ -1533,6 +1740,13 @@ function renderPost(post) {
         </div>
 
         <div
+            class="share-copy"
+            id="share-${post.id}"
+        >
+            🔗 Ссылка скопирована
+        </div>
+
+        <div
             class="comments"
             id="comments-${post.id}"
         ></div>
@@ -1545,6 +1759,10 @@ function renderPost(post) {
 
 }
 
+
+// =========================================================
+// PUBLISH POST
+// =========================================================
 
 async function publishPost() {
 
@@ -1600,7 +1818,8 @@ async function publishPost() {
                     await response.json();
 
                 throw new Error(
-                    data.detail
+                    data.detail ||
+                    "Ошибка"
                 );
 
             }
@@ -1630,7 +1849,8 @@ async function publishPost() {
                     await response.json();
 
                 throw new Error(
-                    data.detail
+                    data.detail ||
+                    "Ошибка"
                 );
 
             }
@@ -1659,19 +1879,109 @@ async function publishPost() {
 
 
 // =========================================================
+// SHARE
+// =========================================================
+
+async function sharePost(postId) {
+
+    const url =
+        new URL(
+            window.location.href
+        );
+
+    url.search = "";
+    url.searchParams.set(
+        "post",
+        postId
+    );
+
+    const shareUrl =
+        url.toString();
+
+    try {
+
+        if (
+            navigator.share
+        ) {
+
+            await navigator.share({
+                title: "MyMessenger",
+                text: "Посмотри этот пост",
+                url: shareUrl
+            });
+
+            return;
+
+        }
+
+    } catch (error) {
+
+        if (
+            error.name ===
+            "AbortError"
+        ) {
+
+            return;
+
+        }
+
+    }
+
+    try {
+
+        await navigator.clipboard.writeText(
+            shareUrl
+        );
+
+        const label =
+            document.getElementById(
+                "share-" + postId
+            );
+
+        if (label) {
+
+            label.style.display =
+                "block";
+
+            setTimeout(
+                () => {
+                    label.style.display =
+                        "none";
+                },
+                2500
+            );
+
+        }
+
+    } catch {
+
+        prompt(
+            "Скопируй ссылку:",
+            shareUrl
+        );
+
+    }
+
+}
+
+
+// =========================================================
 // LIKES
 // =========================================================
 
 async function likePost(postId) {
 
-    await request(
-        "/api/posts/" +
-        postId +
-        "/like",
-        {
-            method: "POST"
-        }
-    );
+    const response =
+        await request(
+            "/api/posts/" +
+            postId +
+            "/like",
+            {
+                method: "POST"
+            }
+        );
+
+    if (!response.ok) return;
 
     loadFeed();
 
@@ -1691,7 +2001,7 @@ async function showComments(postId) {
         );
 
     if (
-        container.innerHTML
+        container.innerHTML.trim()
     ) {
 
         container.innerHTML = "";
@@ -1707,54 +2017,91 @@ async function showComments(postId) {
             "/comments"
         );
 
+    if (!response.ok) return;
+
     const comments =
         await response.json();
 
-    container.innerHTML = `
+    container.innerHTML = "";
 
-        <div class="comment-input">
+    const inputBox =
+        document.createElement(
+            "div"
+        );
 
-            <input
-                id="comment-${postId}"
-                placeholder="Написать комментарий..."
-            >
+    inputBox.className =
+        "comment-input";
 
-            <button
-                onclick="sendComment(${postId})"
-            >
-                ➤
-            </button>
+    inputBox.innerHTML = `
 
-        </div>
+        <input
+            id="comment-${postId}"
+            placeholder="Написать комментарий..."
+        >
+
+        <button
+            onclick="sendComment(${postId}, null)"
+        >
+            ➤
+        </button>
 
     `;
 
-    comments.forEach(
-        comment => {
+    container.appendChild(
+        inputBox
+    );
 
-            const div =
-                document.createElement(
-                    "div"
-                );
+    const list =
+        document.createElement(
+            "div"
+        );
 
-            div.className =
-                "comment";
+    list.id =
+        "comment-list-" +
+        postId;
 
-            div.innerHTML = `
-                <b>
-                    ${escapeHtml(
-                        comment.display_name ||
-                        comment.username
-                    )}
-                </b>
+    container.appendChild(
+        list
+    );
 
-                ${escapeHtml(
-                    comment.text
-                )}
-            `;
+    renderComments(
+        postId,
+        comments
+    );
 
-            container.appendChild(
-                div
+}
+
+
+function renderComments(
+    postId,
+    comments
+) {
+
+    const list =
+        document.getElementById(
+            "comment-list-" +
+            postId
+        );
+
+    if (!list) return;
+
+    list.innerHTML = "";
+
+    const roots =
+        comments.filter(
+            comment =>
+                !comment.parent_id
+        );
+
+    roots.forEach(
+        root => {
+
+            renderCommentTree(
+                postId,
+                root,
+                comments,
+                list,
+                0
             );
 
         }
@@ -1763,44 +2110,288 @@ async function showComments(postId) {
 }
 
 
-async function sendComment(postId) {
+function renderCommentTree(
+    postId,
+    comment,
+    allComments,
+    parentContainer,
+    level
+) {
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+    div.className =
+        "comment" +
+        (
+            level > 0
+            ? " reply"
+            : ""
+        );
+
+    const avatar =
+        comment.avatar_url
+        ?
+        `<img
+            class="comment-avatar"
+            src="${mediaUrl(
+                comment.avatar_url
+            )}"
+        >`
+        :
+        `<div class="comment-avatar">
+            👤
+        </div>`;
+
+    const date =
+        new Date(
+            comment.created_at
+        );
+
+    div.innerHTML = `
+
+        <div class="comment-top">
+
+            ${avatar}
+
+            <div>
+
+                <div class="comment-user">
+                    ${escapeHtml(
+                        comment.display_name ||
+                        comment.username
+                    )}
+                </div>
+
+                <div class="comment-date">
+                    @${escapeHtml(
+                        comment.username
+                    )}
+                    ·
+                    ${date.toLocaleString()}
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="comment-text">
+            ${escapeHtml(
+                comment.text
+            )}
+        </div>
+
+        <div class="comment-buttons">
+
+            <button
+                onclick="replyToComment(
+                    ${postId},
+                    ${comment.id},
+                    '${escapeJs(
+                        comment.username
+                    )}'
+                )"
+            >
+                ↩️ Ответить
+            </button>
+
+        </div>
+
+        <div
+            id="reply-box-${comment.id}"
+        ></div>
+
+        <div
+            id="children-${comment.id}"
+        ></div>
+
+    `;
+
+    parentContainer.appendChild(
+        div
+    );
+
+    const children =
+        allComments.filter(
+            child =>
+                child.parent_id ===
+                comment.id
+        );
+
+    const childContainer =
+        div.querySelector(
+            "#children-" +
+            comment.id
+        );
+
+    children.forEach(
+        child => {
+
+            renderCommentTree(
+                postId,
+                child,
+                allComments,
+                childContainer,
+                level + 1
+            );
+
+        }
+    );
+
+}
+
+
+function replyToComment(
+    postId,
+    commentId,
+    username
+) {
+
+    const box =
+        document.getElementById(
+            "reply-box-" +
+            commentId
+        );
+
+    if (!box) return;
+
+    if (
+        box.innerHTML.trim()
+    ) {
+
+        box.innerHTML = "";
+
+        return;
+
+    }
+
+    box.innerHTML = `
+
+        <div class="reply-label">
+            Ответ для @${escapeHtml(username)}
+        </div>
+
+        <div class="comment-input">
+
+            <input
+                id="reply-input-${commentId}"
+                placeholder="Написать ответ..."
+            >
+
+            <button
+                onclick="sendComment(
+                    ${postId},
+                    ${commentId}
+                )"
+            >
+                ➤
+            </button>
+
+        </div>
+    `;
 
     const input =
         document.getElementById(
-            "comment-" +
-            postId
+            "reply-input-" +
+            commentId
         );
+
+    if (input) {
+
+        input.focus();
+
+    }
+
+}
+
+
+async function sendComment(
+    postId,
+    parentId
+) {
+
+    let input;
+
+    if (parentId) {
+
+        input =
+            document.getElementById(
+                "reply-input-" +
+                parentId
+            );
+
+    } else {
+
+        input =
+            document.getElementById(
+                "comment-" +
+                postId
+            );
+
+    }
+
+    if (!input) return;
 
     const text =
         input.value.trim();
 
     if (!text) return;
 
-    await request(
-        "/api/posts/" +
-        postId +
-        "/comments",
-        {
-            method: "POST",
+    const response =
+        await request(
+            "/api/posts/" +
+            postId +
+            "/comments",
+            {
+                method: "POST",
 
-            headers: {
-                "Content-Type":
-                    "application/json"
-            },
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
 
-            body: JSON.stringify({
-                text
-            })
+                body: JSON.stringify({
+                    text,
+                    parent_id:
+                        parentId || null
+                })
+            }
+        );
+
+    if (!response.ok) {
+
+        try {
+
+            const data =
+                await response.json();
+
+            alert(
+                data.detail ||
+                "Ошибка"
+            );
+
+        } catch {
+
+            alert(
+                "Ошибка комментария"
+            );
+
         }
-    );
 
-    showComments(
+        return;
+
+    }
+
+    input.value = "";
+
+    await showComments(
         postId
     );
 
-    setTimeout(
-        () => showComments(postId),
-        50
+    await showComments(
+        postId
     );
 
 }
@@ -1818,13 +2409,24 @@ async function deletePost(postId) {
         )
     ) return;
 
-    await request(
-        "/api/posts/" +
-        postId,
-        {
-            method: "DELETE"
-        }
-    );
+    const response =
+        await request(
+            "/api/posts/" +
+            postId,
+            {
+                method: "DELETE"
+            }
+        );
+
+    if (!response.ok) {
+
+        alert(
+            "Не удалось удалить пост"
+        );
+
+        return;
+
+    }
 
     loadFeed();
 
@@ -1947,7 +2549,8 @@ async function saveProfile() {
                 await response.json();
 
             throw new Error(
-                data.detail
+                data.detail ||
+                "Ошибка"
             );
 
         }
@@ -1982,7 +2585,8 @@ async function saveProfile() {
                     await avatarResponse.json();
 
                 throw new Error(
-                    data.detail
+                    data.detail ||
+                    "Ошибка аватара"
                 );
 
             }
@@ -1996,6 +2600,10 @@ async function saveProfile() {
 
         currentUser =
             await me.json();
+
+        document.getElementById(
+            "avatarFile"
+        ).value = "";
 
         alert(
             "Профиль сохранён!"
@@ -2064,6 +2672,29 @@ function escapeHtml(text) {
 }
 
 
+function escapeJs(text) {
+
+    return String(text)
+        .replaceAll(
+            "\\",
+            "\\\\"
+        )
+        .replaceAll(
+            "'",
+            "\\'"
+        )
+        .replaceAll(
+            "\n",
+            "\\n"
+        )
+        .replaceAll(
+            "\r",
+            "\\r"
+        );
+
+}
+
+
 // =========================================================
 // AUTO LOGIN
 // =========================================================
@@ -2077,4 +2708,5 @@ if (token) {
 </script>
 
 </body>
+
 </html>
