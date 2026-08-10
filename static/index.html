@@ -702,8 +702,7 @@ select:focus {
                     onclick="showFeed()"
                     title="Лента"
                 >
-                    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAzUlEQVR4nO3UzQqCQBSG4Re6i9rWNbjIhZsWXWlBXVG7omU/tOlHx4wgYQjFmXNGpPDAtxA5PsonA/30A3NgDxTC7ICZBN4q0DIbCWwCwNeu4FtX8P2n4Mx6wNRjL7L2Hlo48diLrb1UC0uT+hwYg891GgDOfA6MKljasfH5i6tgace5FpYm7wp+SmBT03HU0L19v9DCSU2HVd3HIeFCkcYx1ld8v3Wr8CkgVubiAq9agNcu8Bg4BESPwATHGQIL4KwA37tLYOSK9vNf8wLXNGJYzhg1tAAAAABJRU5ErkJggg==" alt="newspaper-">
-                    
+                    📰
                 </button>
 
                 <button
@@ -711,7 +710,7 @@ select:focus {
                     onclick="showFavorites()"
                     title="Избранное"
                 >
-                    ☆
+                    ⭐
                 </button>
 
                 <button
@@ -719,8 +718,7 @@ select:focus {
                     onclick="showSettings()"
                     title="Настройки"
                 >
-                    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAAB8UlEQVR4nO1W3UpCQRD+8MoCyQt7AdMuCuopIgLtymfoKi3synqGnqK/B7B7QfEV+nmD0EBToTKzWPoWhmGPZ0+aQfTBwtnZmfl2Z8/sDPCPYCyoeRNAI0RnapQAjADkOM8C+OAw3wa71NmfJfExSfoA6gB6grhH2YDzyjRESZ4yBSAO4FoQhY0qbZYBHNCXN0p00gXQikBqR4u25rvoT/t10o7D4Q03tSFkG5TdOvQ79OWNuDrpM3ceEzp2zSLG0L6okxtfoSjxR5J3+gpgy6GriS22aSPv/IS+nVhkOuhwPQAoRCAu0Eb7eZuU53mmjFWWG6kB2ASwAuBKyM13mmu1ANu+eAMCURcGZQB74r5HKodlLluiFm3KYr0eRrqqHK9RbnLxlOEy8ncAZxxjEcpTkbframPZINKm4yQJpfNIuSG0OKfMrEkkHP4aLuKGB3F7AnHbg7gedOpMSKiHlI9JeCFCPQwJdQZz+rmOovxceY90Sqt0uvRIpwHL5q88ICNyOFFkPa2qJ3M7AvGO48ms+DYIukiYh//Qo0iUFWkrajuUCiiLd6xAuiyaTd079LtsCObaCHS+0wgkeScphuo7rU+KPpaiEGtUJjR7T5T1Z9HsaRSZDibPbTGxxPZFyv1EewtHDjYcL9LMG3r8GXwCWVtNc8Ye75UAAAAASUVORK5CYII=" alt="gear">
-                    
+                    ⚙️
                 </button>
 
                 <button
@@ -728,7 +726,7 @@ select:focus {
                     onclick="showProfile()"
                     title="Профиль"
                 >
-                    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAABpUlEQVR4nO2Wzy4DURTGfy+g/gQLSuwIEpa8ARZCGjsrNoKy8BiENQ32FixoWPIGNk0aYtOu/WkJEtNUTnKaTJrOvXdmKix8yZe5OXO/+80598ydgX/8QfQDaeAKyANvyrzG1oG+Zhr2AvuAB1QtrAAnwEBc0zng1cGwnmVgNqrppmYQ1tSf/UaUTCsxTP3mzpknI5bXVPYeF+NDy0IFIAW0KOe1s02ajMsr41lMOxroJFY06DytZCDSlieXTAUzaiSc1tiCRbtmMr60iKW01GUnVRAkLNqsyfjeIq7BNe5n3mRcjpFxq0N3B6JkEUsHo/taUE5pLGXRloJtIedQrqCuvrNocybjrMOBUNQOTihTDqZV4MJkvOqwQFSumIy7gK8fMPWAbizIBIg/gFNgERgD2pTjGjvTOY20BzbTWtZPPtEnsA20O2hlzo5qavpHoJMQn0VPD5RBX3wS2ANugReljHeBCd+8IeBBty30D8EyMKJjud447OU1MKyaUWCJmHgO0UiyTU3DkWO3y5xjmowksKUHgRyV70oZn+s94zf3H/wGvgGtGnT6PQah9AAAAABJRU5ErkJggg==" alt="test-account">
+                    👤
                 </button>
 
             </div>
@@ -1145,6 +1143,10 @@ let selectedUserId = null;
 
 let selectedGroupId = null;
 
+let selectedChannelId = null;
+
+let selectedChannelIsOwner = false;
+
 let selectedMessageId = null;
 
 let ws = null;
@@ -1396,6 +1398,8 @@ async function startApp() {
 
     await loadGroups();
 
+    await loadChannels();
+
     connectWebSocket();
 }
 
@@ -1419,6 +1423,23 @@ async function loadUsers(
     query = ""
 ) {
 
+    const container =
+        document.getElementById(
+            "users"
+        );
+
+    // Always clear user items, keep groups/channels via loadGroups/loadChannels later
+    container.innerHTML = "";
+
+    query = (query || "").trim();
+
+    // Без поискового запроса пользователей не показываем
+    if (!query) {
+        await loadGroups();
+        await loadChannels();
+        return;
+    }
+
     const response =
         await request(
             "/api/users?q=" +
@@ -1426,95 +1447,103 @@ async function loadUsers(
         );
 
     if (!response.ok) {
+        await loadGroups();
+        await loadChannels();
         return;
     }
 
     const users =
         await safeJson(response);
 
-    const container =
-        document.getElementById(
-            "users"
-        );
+    if (!users.length) {
+        const empty =
+            document.createElement(
+                "div"
+            );
+        empty.style.cssText =
+            "padding:14px 10px;color:#8d929e;font-size:13px;text-align:center";
+        empty.textContent =
+            "Ничего не найдено";
+        container.appendChild(empty);
+    } else {
+        users.forEach(
+            user => {
 
-    container.innerHTML = "";
+                if (
+                    Number(user.id) ===
+                    Number(currentUser.id)
+                ) {
+                    return;
+                }
 
-    users.forEach(
-        user => {
-
-            if (
-                Number(user.id) ===
-                Number(currentUser.id)
-            ) {
-                return;
-            }
-
-            const div =
-                document.createElement(
-                    "div"
-                );
-
-            div.className =
-                "user-item";
-
-            const avatar =
-                document.createElement(
-                    "img"
-                );
-
-            avatar.className =
-                "user-avatar";
-
-            if (user.avatar_url) {
-                avatar.src =
-                    mediaUrl(
-                        user.avatar_url
+                const div =
+                    document.createElement(
+                        "div"
                     );
+
+                div.className =
+                    "user-item";
+
+                const avatar =
+                    document.createElement(
+                        "img"
+                    );
+
+                avatar.className =
+                    "user-avatar";
+
+                if (user.avatar_url) {
+                    avatar.src =
+                        mediaUrl(
+                            user.avatar_url
+                        );
+                }
+
+                const info =
+                    document.createElement(
+                        "div"
+                    );
+
+                info.className =
+                    "user-info";
+
+                info.innerHTML =
+                    "<strong>" +
+                    escapeHtml(
+                        user.display_name ||
+                        user.username
+                    ) +
+                    "</strong>" +
+
+                    "<small>@" +
+                    escapeHtml(
+                        user.username
+                    ) +
+                    "</small>";
+
+                div.appendChild(
+                    avatar
+                );
+
+                div.appendChild(
+                    info
+                );
+
+                div.onclick =
+                    () => openChat(
+                        user
+                    );
+
+                container.appendChild(
+                    div
+                );
             }
+        );
+    }
 
-            const info =
-                document.createElement(
-                    "div"
-                );
-
-            info.className =
-                "user-info";
-
-            info.innerHTML =
-                "<strong>" +
-                escapeHtml(
-                    user.display_name ||
-                    user.username
-                ) +
-                "</strong>" +
-
-                "<small>@" +
-                escapeHtml(
-                    user.username
-                ) +
-                "</small>";
-
-            div.appendChild(
-                avatar
-            );
-
-            div.appendChild(
-                info
-            );
-
-            div.onclick =
-                () => openChat(
-                    user
-                );
-
-            container.appendChild(
-                div
-            );
-        }
-    );
-
-    // Keep groups in sidebar after user search/refresh
-    loadGroups();
+    // Groups & channels always below search results
+    await loadGroups();
+    await loadChannels();
 }
 
 
@@ -1530,6 +1559,9 @@ async function openChat(
         Number(user.id);
 
     selectedGroupId = null;
+    selectedChannelId = null;
+    selectedChannelIsOwner = false;
+    setComposerEnabled(true);
 
     showOnly(
         "chatView"
@@ -3201,45 +3233,59 @@ async function loadChannels() {
             "channels"
         );
 
-    container.innerHTML = "";
+    if (container) {
+        container.innerHTML = "";
 
-    channels.forEach(
-        channel => {
+        channels.forEach(
+            channel => {
 
-            const div =
-                document.createElement(
-                    "div"
+                const div =
+                    document.createElement(
+                        "div"
+                    );
+
+                div.className =
+                    "comment";
+
+                div.innerHTML =
+                    "<b>📢 " +
+                    escapeHtml(
+                        channel.name
+                    ) +
+                    "</b>" +
+
+                    "<div>" +
+                    "@" +
+                    escapeHtml(
+                        channel.username
+                    ) +
+                    "</div>" +
+
+                    "<div>" +
+                    escapeHtml(
+                        channel.description ||
+                        ""
+                    ) +
+                    "</div>" +
+
+                    "<div style='margin-top:8px'>" +
+                    "<button class='primary' style='padding:6px 10px;font-size:13px' onclick='openChannelChat(" +
+                    channel.id +
+                    ", \"" +
+                    escapeHtml(channel.name).replace(/"/g, "&quot;") +
+                    "\", " +
+                    (channel.is_owner ? "true" : "false") +
+                    ")'>💬 Открыть</button>" +
+                    "</div>";
+
+                container.appendChild(
+                    div
                 );
+            }
+        );
+    }
 
-            div.className =
-                "comment";
-
-            div.innerHTML =
-                "<b>📢 " +
-                escapeHtml(
-                    channel.name
-                ) +
-                "</b>" +
-
-                "<div>" +
-                "@" +
-                escapeHtml(
-                    channel.username
-                ) +
-                "</div>" +
-
-                "<div>" +
-                escapeHtml(
-                    channel.description ||
-                    ""
-                ) +
-                "</div>";
-
-            container.appendChild(
-                div
-            );
-        }
-    );
+    loadChannelsInSidebar(channels);
 }
 
 
@@ -3725,9 +3771,7 @@ function connectWebSocket() {
                 protocol +
                 "//" +
                 location.host +
-                "/ws/" +
-                currentUser.id +
-                "?token=" +
+                "/ws?token=" +
                 encodeURIComponent(
                     token
                 )
@@ -3753,17 +3797,16 @@ function connectWebSocket() {
 
 
                 /*
-                   При новом сообщении просто
-                   обновляем открытый диалог.
+                   При новом сообщении обновляем
+                   открытый диалог / группу / канал.
                 */
 
-                if (
-                    selectedUserId
-                ) {
-
-                    await loadMessages(
-                        selectedUserId
-                    );
+                if (selectedUserId) {
+                    await loadMessages(selectedUserId);
+                } else if (selectedGroupId) {
+                    await loadGroupMessages(selectedGroupId);
+                } else if (selectedChannelId) {
+                    await loadChannelMessages(selectedChannelId);
                 }
             };
 
@@ -4087,17 +4130,30 @@ async function openUserProfile(userId) {
 
 
 /* =====================================================
-   GROUPS IN CHATS + INVITE
+   GROUPS & CHANNELS IN CHATS + INVITE
 ===================================================== */
 
+function setComposerEnabled(enabled, placeholder) {
+    const input = document.getElementById("messageInput");
+    const btn = document.querySelector(".composer .send");
+    if (input) {
+        input.disabled = !enabled;
+        input.placeholder = placeholder || "Сообщение...";
+    }
+    if (btn) {
+        btn.disabled = !enabled;
+        btn.style.opacity = enabled ? "1" : "0.45";
+        btn.style.cursor = enabled ? "pointer" : "not-allowed";
+    }
+}
+
+
 function loadGroupsInSidebar(groups) {
-    // Remove previous group items
     document.querySelectorAll(".group-item").forEach(el => el.remove());
 
     const container = document.getElementById("users");
     if (!container || !groups || !groups.length) return;
 
-    // Add a small separator/header
     const header = document.createElement("div");
     header.className = "group-item";
     header.style.cssText = "padding:8px 10px;color:#8d929e;font-size:12px;font-weight:600;margin-top:10px";
@@ -4120,9 +4176,44 @@ function loadGroupsInSidebar(groups) {
 }
 
 
+function loadChannelsInSidebar(channels) {
+    document.querySelectorAll(".channel-item").forEach(el => el.remove());
+
+    const container = document.getElementById("users");
+    if (!container || !channels || !channels.length) return;
+
+    const header = document.createElement("div");
+    header.className = "channel-item";
+    header.style.cssText = "padding:8px 10px;color:#8d929e;font-size:12px;font-weight:600;margin-top:10px";
+    header.textContent = "📢 КАНАЛЫ";
+    container.appendChild(header);
+
+    channels.forEach(channel => {
+        const div = document.createElement("div");
+        div.className = "user-item channel-item";
+        div.innerHTML = `
+            <div class="user-avatar" style="display:flex;align-items:center;justify-content:center;font-size:18px;background:#30333b">📢</div>
+            <div class="user-info">
+                <strong>${escapeHtml(channel.name)}</strong>
+                <small>@${escapeHtml(channel.username)}</small>
+            </div>
+        `;
+        div.onclick = () => openChannelChat(
+            channel.id,
+            channel.name,
+            !!channel.is_owner
+        );
+        container.appendChild(div);
+    });
+}
+
+
 async function openGroupChat(groupId, groupName) {
     selectedGroupId = Number(groupId);
-    selectedUserId = null; // not a private chat
+    selectedUserId = null;
+    selectedChannelId = null;
+    selectedChannelIsOwner = false;
+    setComposerEnabled(true);
 
     showOnly("chatView");
 
@@ -4133,18 +4224,34 @@ async function openGroupChat(groupId, groupName) {
 }
 
 
+async function openChannelChat(channelId, channelName, isOwner) {
+    selectedChannelId = Number(channelId);
+    selectedChannelIsOwner = !!isOwner;
+    selectedUserId = null;
+    selectedGroupId = null;
+
+    // Only creator can write in channel
+    setComposerEnabled(
+        selectedChannelIsOwner,
+        selectedChannelIsOwner
+            ? "Сообщение в канал..."
+            : "Только создатель может писать в канал"
+    );
+
+    showOnly("chatView");
+
+    document.getElementById("pageTitle").textContent = "📢 " + channelName;
+    document.getElementById("chatHeader").textContent = "📢 " + channelName;
+
+    await loadChannelMessages(channelId);
+}
+
+
 async function loadGroupMessages(groupId) {
     const response = await request("/api/groups/" + groupId + "/messages");
     if (!response.ok) {
-        // fallback: try generic messages endpoint if backend uses different path
-        const fallback = await request("/api/messages/group/" + groupId);
-        if (!fallback.ok) {
-            document.getElementById("messages").innerHTML =
-                "<div style='color:#9095a3;padding:20px;text-align:center'>Нет сообщений или API групп ещё не готов</div>";
-            return;
-        }
-        const messages = await safeJson(fallback);
-        renderGroupMessages(messages);
+        document.getElementById("messages").innerHTML =
+            "<div style='color:#9095a3;padding:20px;text-align:center'>Нет сообщений</div>";
         return;
     }
 
@@ -4153,9 +4260,28 @@ async function loadGroupMessages(groupId) {
 }
 
 
+async function loadChannelMessages(channelId) {
+    const response = await request("/api/channels/" + channelId + "/messages");
+    if (!response.ok) {
+        document.getElementById("messages").innerHTML =
+            "<div style='color:#9095a3;padding:20px;text-align:center'>Нет сообщений</div>";
+        return;
+    }
+
+    const messages = await safeJson(response);
+    renderGroupMessages(messages); // same bubble layout
+}
+
+
 function renderGroupMessages(messages) {
     const container = document.getElementById("messages");
     container.innerHTML = "";
+
+    if (!messages.length) {
+        container.innerHTML =
+            "<div style='color:#9095a3;padding:20px;text-align:center'>Пока нет сообщений</div>";
+        return;
+    }
 
     messages.forEach(message => {
         const mine = Number(message.sender_id) === Number(currentUser.id);
@@ -4167,7 +4293,7 @@ function renderGroupMessages(messages) {
         bubble.className = "message-bubble";
         bubble.dataset.id = message.id;
 
-        if (!mine && message.sender_name) {
+        if (!mine && (message.sender_name || message.username)) {
             const name = document.createElement("div");
             name.style.cssText = "font-size:11px;color:#a0a8b8;margin-bottom:3px;font-weight:600";
             name.textContent = message.sender_name || message.username || "";
@@ -4197,14 +4323,14 @@ function renderGroupMessages(messages) {
 }
 
 
-// Override sendMessage to support groups
+// Override sendMessage to support groups & channels
 const originalSendMessage = sendMessage;
 sendMessage = async function () {
-    if (selectedGroupId) {
-        const input = document.getElementById("messageInput");
-        const text = input.value.trim();
-        if (!text) return;
+    const input = document.getElementById("messageInput");
+    const text = (input?.value || "").trim();
+    if (!text) return;
 
+    if (selectedGroupId) {
         const response = await request("/api/groups/" + selectedGroupId + "/messages", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -4213,20 +4339,35 @@ sendMessage = async function () {
 
         const data = await safeJson(response);
         if (!response.ok) {
-            // try fallback endpoint
-            const fb = await request("/api/messages", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ group_id: selectedGroupId, text })
-            });
-            if (!fb.ok) {
-                alert(data.detail || "Не удалось отправить");
-                return;
-            }
+            alert(data.detail || "Не удалось отправить");
+            return;
         }
 
         input.value = "";
         await loadGroupMessages(selectedGroupId);
+        return;
+    }
+
+    if (selectedChannelId) {
+        if (!selectedChannelIsOwner) {
+            alert("В канал может писать только создатель");
+            return;
+        }
+
+        const response = await request("/api/channels/" + selectedChannelId + "/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text })
+        });
+
+        const data = await safeJson(response);
+        if (!response.ok) {
+            alert(data.detail || "Не удалось отправить");
+            return;
+        }
+
+        input.value = "";
+        await loadChannelMessages(selectedChannelId);
         return;
     }
 
@@ -4269,7 +4410,7 @@ async function inviteToGroup(groupId) {
         return;
     }
 
-    alert("Приглашение отправлено!");
+    alert("Пользователь добавлен в группу!");
     closeModal();
 }
 
