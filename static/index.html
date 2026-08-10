@@ -1,418 +1,696 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+>
+
 <title>MyMessenger</title>
 
 <style>
-*{box-sizing:border-box}
 
-body{
-    margin:0;
-    font-family:Arial,sans-serif;
-    background:#0e1621;
-    color:#fff;
+* {
+    box-sizing: border-box;
 }
 
-button,input,textarea{font:inherit}
-button{cursor:pointer}
-
-.auth{
-    width:380px;
-    max-width:calc(100% - 30px);
-    margin:80px auto;
-    background:#17212b;
-    padding:30px;
-    border-radius:18px;
-    box-shadow:0 15px 50px #0005;
+:root {
+    --bg: #0e1621;
+    --panel: #17212b;
+    --panel2: #202b36;
+    --input: #242f3a;
+    --border: #2b3a48;
+    --accent: #2aabee;
+    --text: #ffffff;
+    --muted: #8295a5;
+    --danger: #e05252;
+    --mine: #2b5278;
 }
 
-.auth h1{text-align:center}
-
-.auth input{
-    width:100%;
-    padding:13px;
-    margin:6px 0;
-    border:0;
-    border-radius:10px;
-    background:#242f3a;
-    color:white;
-    outline:none;
+body.light {
+    --bg: #eef2f5;
+    --panel: #ffffff;
+    --panel2: #e5ebf0;
+    --input: #edf1f5;
+    --border: #d5dde5;
+    --text: #18222d;
+    --muted: #657382;
+    --mine: #cce8ff;
 }
 
-.auth button{
-    width:100%;
-    margin-top:10px;
-    padding:13px;
-    border:0;
-    border-radius:10px;
-    background:#2aabee;
-    color:white;
+body.blue {
+    --bg: #071b2e;
+    --panel: #0b2942;
+    --panel2: #123957;
+    --input: #123653;
+    --border: #1c4b6e;
+    --text: #ffffff;
+    --muted: #8eafc7;
+    --mine: #15547e;
 }
 
-#authError{
-    color:#ff7777;
-    text-align:center;
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family:
+        Inter,
+        Arial,
+        sans-serif;
+    height: 100vh;
+    overflow: hidden;
 }
 
-#app{
-    display:none;
-    height:100vh;
+button,
+input,
+textarea,
+select {
+    font: inherit;
 }
 
-.sidebar{
-    width:300px;
-    background:#17212b;
-    border-right:1px solid #263746;
-    display:flex;
-    flex-direction:column;
+button {
+    cursor: pointer;
 }
 
-.logo{
-    padding:18px;
-    font-size:21px;
-    font-weight:bold;
+.hidden {
+    display: none !important;
 }
 
-.search{
-    margin:0 12px 12px;
-    padding:12px;
-    border:0;
-    border-radius:10px;
-    background:#242f3a;
-    color:white;
-    outline:none;
+
+/* AUTH */
+
+.auth {
+    width: 400px;
+    max-width: calc(100% - 30px);
+    margin: 80px auto;
+    padding: 30px;
+    background: var(--panel);
+    border-radius: 22px;
+    box-shadow:
+        0 20px 60px #0005;
 }
 
-.users{
-    overflow-y:auto;
+.auth h1 {
+    text-align: center;
+    margin-top: 0;
 }
 
-.user{
-    padding:12px;
-    display:flex;
-    gap:10px;
-    align-items:center;
-    cursor:pointer;
+.auth input {
+    width: 100%;
+    padding: 14px;
+    margin: 6px 0;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--input);
+    color: var(--text);
+    outline: none;
 }
 
-.user:hover{
-    background:#202f3d;
+.auth button {
+    width: 100%;
+    padding: 13px;
+    margin-top: 8px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--accent);
+    color: white;
 }
 
-.avatar{
-    width:44px;
-    height:44px;
-    border-radius:50%;
-    object-fit:cover;
-    background:#2aabee;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    flex-shrink:0;
+.error {
+    color: #ff7777;
+    min-height: 20px;
 }
 
-.user-name{font-weight:bold}
 
-.user-username{
-    color:#8295a5;
-    font-size:12px;
-    margin-top:3px;
+/* APP */
+
+#app {
+    display: none;
+    height: 100vh;
 }
 
-.main{
-    flex:1;
-    display:flex;
-    flex-direction:column;
+.sidebar {
+    width: 310px;
+    flex-shrink: 0;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
 }
 
-.topbar{
-    height:62px;
-    background:#17212b;
-    border-bottom:1px solid #263746;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:0 18px;
+.logo {
+    padding: 20px;
+    font-size: 21px;
+    font-weight: 800;
 }
 
-.top-actions{
-    display:flex;
-    gap:7px;
+.search {
+    margin: 0 12px 12px;
+    padding: 13px;
+    border: 0;
+    border-radius: 13px;
+    background: var(--input);
+    color: var(--text);
+    outline: none;
 }
 
-.icon-button{
-    border:0;
-    background:#243342;
-    color:white;
-    border-radius:9px;
-    padding:9px 12px;
+.users {
+    overflow-y: auto;
+    flex: 1;
 }
 
-.content{
-    flex:1;
-    overflow:hidden;
-    position:relative;
+.user {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 12px 15px;
+    cursor: pointer;
 }
 
-.view{
-    height:100%;
-    overflow-y:auto;
-    padding:20px;
+.user:hover {
+    background: var(--panel2);
 }
 
-.chat{
-    height:100%;
-    display:flex;
-    flex-direction:column;
+.avatar {
+    width: 46px;
+    height: 46px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    object-fit: cover;
+    background: linear-gradient(
+        135deg,
+        #2aabee,
+        #6755d9
+    );
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-.chat-header{
-    padding:15px 20px;
-    background:#17212b;
-    border-bottom:1px solid #263746;
+.user-info {
+    min-width: 0;
 }
 
-.messages{
-    flex:1;
-    padding:20px;
-    overflow-y:auto;
+.user-name {
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.message{
-    width:fit-content;
-    max-width:70%;
-    background:#182533;
-    padding:9px 12px;
-    margin:7px 0;
-    border-radius:12px;
+.user-username {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 3px;
 }
 
-.message.mine{
-    margin-left:auto;
-    background:#2b5278;
+
+/* MAIN */
+
+.main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
 }
 
-.time{
-    color:#a8bac8;
-    font-size:11px;
-    text-align:right;
-    margin-top:4px;
+.topbar {
+    height: 64px;
+    flex-shrink: 0;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 17px;
 }
 
-.composer{
-    display:flex;
-    gap:8px;
-    padding:12px;
-    background:#17212b;
+.top-actions {
+    display: flex;
+    gap: 7px;
 }
 
-.composer input{
-    flex:1;
-    border:0;
-    border-radius:12px;
-    padding:13px;
-    background:#242f3a;
-    color:white;
-    outline:none;
+.icon-button {
+    border: 0;
+    background: var(--input);
+    color: var(--text);
+    padding: 9px 12px;
+    border-radius: 10px;
 }
 
-.send{
-    width:52px;
-    border:0;
-    border-radius:12px;
-    background:#2aabee;
-    color:white;
+.content {
+    flex: 1;
+    min-height: 0;
 }
 
-.feed{
-    max-width:700px;
-    margin:auto;
+.view {
+    height: 100%;
+    overflow-y: auto;
+    padding: 20px;
 }
 
-.post-box,.post{
-    background:#17212b;
-    border-radius:15px;
-    padding:15px;
-    margin-bottom:15px;
+
+/* CHAT */
+
+.chat {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
-.post-box textarea{
-    width:100%;
-    resize:vertical;
-    min-height:80px;
-    border:0;
-    border-radius:10px;
-    padding:12px;
-    background:#242f3a;
-    color:white;
-    outline:none;
+.chat-header {
+    padding: 13px 20px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
 }
 
-.post-tools{
-    display:flex;
-    gap:8px;
-    margin-top:10px;
+.messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
 }
 
-.post-tools button{
-    border:0;
-    background:#2aabee;
-    color:white;
-    padding:9px 13px;
-    border-radius:9px;
+.message-row {
+    display: flex;
+    margin: 6px 0;
 }
 
-.post-header{
-    display:flex;
-    gap:10px;
-    align-items:center;
+.message-row.mine {
+    justify-content: flex-end;
 }
 
-.post-author{font-weight:bold}
-
-.post-username{
-    color:#8295a5;
-    font-size:12px;
+.message {
+    position: relative;
+    max-width: min(70%, 600px);
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: var(--panel2);
 }
 
-.post-text{
-    white-space:pre-wrap;
-    margin:14px 0;
+.message.mine .bubble {
+    background: var(--mine);
 }
 
-.post-media{
-    width:100%;
-    max-height:600px;
-    object-fit:contain;
-    border-radius:12px;
-    background:#0e1621;
+.bubble {
+    padding: 9px 12px;
+    border-radius: 13px;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
-.post-actions{
-    display:flex;
-    gap:8px;
-    margin-top:10px;
+.message-meta {
+    color: var(--muted);
+    font-size: 10px;
+    text-align: right;
+    margin-top: 4px;
 }
 
-.post-actions button{
-    border:0;
-    border-radius:8px;
-    background:#243342;
-    color:white;
-    padding:8px 12px;
+.deleted-message {
+    color: var(--muted);
+    font-style: italic;
 }
 
-.comments{
-    margin-top:12px;
+.composer {
+    display: flex;
+    gap: 8px;
+    padding: 12px;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
 }
 
-.comment{
-    background:#202d39;
-    padding:8px;
-    border-radius:8px;
-    margin-top:6px;
+.composer input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    padding: 13px;
+    border-radius: 13px;
+    background: var(--input);
+    color: var(--text);
+    outline: none;
 }
 
-.comment-input{
-    display:flex;
-    gap:6px;
-    margin-top:8px;
+.send {
+    width: 52px;
+    border: 0;
+    border-radius: 13px;
+    background: var(--accent);
+    color: white;
 }
 
-.comment-input input{
-    flex:1;
-    background:#242f3a;
-    border:0;
-    padding:9px;
-    color:white;
-    border-radius:8px;
+
+/* CONTEXT MENU */
+
+.context-menu {
+    position: fixed;
+    z-index: 1000;
+    min-width: 190px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    box-shadow: 0 15px 40px #0008;
+    padding: 5px;
 }
 
-.comment-input button{
-    border:0;
-    background:#2aabee;
-    color:white;
-    border-radius:8px;
+.context-menu button {
+    width: 100%;
+    text-align: left;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    padding: 10px;
+    border-radius: 8px;
 }
 
-.profile{
-    max-width:600px;
-    margin:auto;
+.context-menu button:hover {
+    background: var(--panel2);
 }
 
-.profile-card{
-    background:#17212b;
-    border-radius:16px;
-    padding:25px;
-    text-align:center;
+
+/* FEED */
+
+.feed {
+    max-width: 720px;
+    margin: auto;
 }
 
-.big-avatar{
-    width:110px;
-    height:110px;
-    border-radius:50%;
-    object-fit:cover;
-    background:#2aabee;
-    margin:auto;
+.post-box,
+.post {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 17px;
+    padding: 15px;
+    margin-bottom: 15px;
 }
 
-.profile input,.profile textarea{
-    width:100%;
-    margin:7px 0;
-    border:0;
-    padding:12px;
-    border-radius:9px;
-    background:#242f3a;
-    color:white;
-    outline:none;
+.post-box textarea {
+    width: 100%;
+    min-height: 80px;
+    resize: vertical;
+    border: 0;
+    border-radius: 12px;
+    padding: 12px;
+    background: var(--input);
+    color: var(--text);
+    outline: none;
 }
 
-.primary{
-    background:#2aabee;
-    border:0;
-    color:white;
-    padding:11px 15px;
-    border-radius:9px;
+.post-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
 }
 
-.danger{
-    background:#d84a4a;
-    border:0;
-    color:white;
-    padding:11px 15px;
-    border-radius:9px;
-    margin-top:10px;
+.primary {
+    background: var(--accent);
+    color: white;
+    border: 0;
+    padding: 10px 14px;
+    border-radius: 10px;
 }
 
-@media(max-width:750px){
-    .sidebar{width:85px}
-    .logo{font-size:13px;padding:12px 5px}
-    .user{padding:10px 5px;justify-content:center}
-    .user>div:last-child{display:none}
-    .search{margin:5px}
-    .view{padding:10px}
-    .message{max-width:85%}
+.post-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
+
+.post-author {
+    font-weight: 700;
+}
+
+.post-username {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.post-text {
+    white-space: pre-wrap;
+    margin: 14px 0;
+}
+
+.post-media {
+    width: 100%;
+    max-height: 600px;
+    object-fit: contain;
+    border-radius: 12px;
+    background: #000;
+}
+
+.post-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 10px;
+}
+
+.post-actions button {
+    border: 0;
+    border-radius: 9px;
+    padding: 8px 11px;
+    background: var(--input);
+    color: var(--text);
+}
+
+
+/* COMMENTS */
+
+.comments {
+    margin-top: 12px;
+}
+
+.comment {
+    margin-top: 8px;
+    padding: 9px;
+    background: var(--panel2);
+    border-radius: 10px;
+}
+
+.comment-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.comment-user {
+    font-weight: 700;
+}
+
+.reply-label {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.comment-buttons {
+    display: flex;
+    gap: 5px;
+    margin-top: 6px;
+}
+
+.comment-buttons button {
+    border: 0;
+    background: var(--input);
+    color: var(--text);
+    border-radius: 7px;
+    padding: 5px 8px;
+}
+
+.comment-input {
+    display: flex;
+    gap: 7px;
+    margin-top: 9px;
+}
+
+.comment-input input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    border-radius: 9px;
+    padding: 10px;
+    background: var(--input);
+    color: var(--text);
+}
+
+
+/* PROFILE / SETTINGS */
+
+.profile {
+    max-width: 650px;
+    margin: auto;
+}
+
+.card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 22px;
+    margin-bottom: 15px;
+}
+
+.big-avatar {
+    width: 110px;
+    height: 110px;
+    display: block;
+    margin: 0 auto 15px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: linear-gradient(
+        135deg,
+        #2aabee,
+        #6755d9
+    );
+}
+
+.profile input,
+.profile textarea,
+.profile select {
+    width: 100%;
+    padding: 12px;
+    margin: 6px 0;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--input);
+    color: var(--text);
+    outline: none;
+}
+
+.setting {
+    padding: 13px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.setting:last-child {
+    border-bottom: 0;
+}
+
+.setting label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+
+/* MODAL */
+
+.modal-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+    background: #0009;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+}
+
+.modal {
+    width: 500px;
+    max-width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 22px;
+}
+
+.modal input,
+.modal textarea {
+    width: 100%;
+    margin: 7px 0;
+    padding: 12px;
+    border: 0;
+    border-radius: 10px;
+    background: var(--input);
+    color: var(--text);
+}
+
+
+/* MOBILE */
+
+@media(max-width:750px) {
+
+    .sidebar {
+        width: 75px;
+    }
+
+    .logo {
+        font-size: 11px;
+        padding: 13px 5px;
+    }
+
+    .search {
+        margin: 5px;
+    }
+
+    .user {
+        justify-content: center;
+        padding: 9px 4px;
+    }
+
+    .user-info {
+        display: none;
+    }
+
+    .view {
+        padding: 10px;
+    }
+
+    .message {
+        max-width: 85%;
+    }
+}
+
 </style>
+
 </head>
 
 <body>
+
+
+<!-- =====================================================
+AUTH
+===================================================== -->
 
 <div class="auth" id="auth">
 
     <h1>💬 MyMessenger</h1>
 
-    <input id="username" placeholder="Username">
-    <input id="password" type="password" placeholder="Пароль">
+    <input
+        id="username"
+        placeholder="Username"
+        autocomplete="username"
+    >
 
-    <button onclick="login()">Войти</button>
-    <button onclick="register()">Создать аккаунт</button>
+    <input
+        id="password"
+        type="password"
+        placeholder="Пароль"
+        autocomplete="current-password"
+    >
 
-    <p id="authError"></p>
+    <button onclick="login()">
+        Войти
+    </button>
+
+    <button onclick="register()">
+        Создать аккаунт
+    </button>
+
+    <p
+        id="authError"
+        class="error"
+    ></p>
+
 </div>
 
+
+<!-- =====================================================
+APP
+===================================================== -->
 
 <div id="app">
 
@@ -423,13 +701,16 @@ button{cursor:pointer}
         </div>
 
         <input
-            class="search"
             id="search"
+            class="search"
             placeholder="Поиск..."
             oninput="searchUsers()"
         >
 
-        <div class="users" id="users"></div>
+        <div
+            id="users"
+            class="users"
+        ></div>
 
     </aside>
 
@@ -447,17 +728,30 @@ button{cursor:pointer}
                 <button
                     class="icon-button"
                     onclick="showFeed()"
-                >📰</button>
+                >
+                    📰
+                </button>
+
+                <button
+                    class="icon-button"
+                    onclick="showFavorites()"
+                >
+                    ⭐
+                </button>
+
+                <button
+                    class="icon-button"
+                    onclick="showSettings()"
+                >
+                    ⚙️
+                </button>
 
                 <button
                     class="icon-button"
                     onclick="showProfile()"
-                >👤</button>
-
-                <button
-                    class="icon-button"
-                    onclick="logout()"
-                >🚪</button>
+                >
+                    👤
+                </button>
 
             </div>
 
@@ -466,9 +760,12 @@ button{cursor:pointer}
 
         <div class="content">
 
+
+            <!-- FEED -->
+
             <section
-                class="view"
                 id="feedView"
+                class="view"
             >
 
                 <div class="feed">
@@ -482,11 +779,15 @@ button{cursor:pointer}
 
                         <div class="post-tools">
 
-                            <button onclick="publishPost()">
+                            <button
+                                class="primary"
+                                onclick="publishPost()"
+                            >
                                 📝 Опубликовать
                             </button>
 
                             <label class="primary">
+
                                 📷 Фото / видео
 
                                 <input
@@ -495,6 +796,7 @@ button{cursor:pointer}
                                     accept="image/*,video/*"
                                     hidden
                                 >
+
                             </label>
 
                         </div>
@@ -508,24 +810,26 @@ button{cursor:pointer}
             </section>
 
 
+            <!-- CHAT -->
+
             <section
-                class="view"
                 id="chatView"
-                style="display:none;padding:0"
+                class="view hidden"
+                style="padding:0"
             >
 
                 <div class="chat">
 
                     <div
-                        class="chat-header"
                         id="chatHeader"
+                        class="chat-header"
                     >
                         Выберите пользователя
                     </div>
 
                     <div
-                        class="messages"
                         id="messages"
+                        class="messages"
                     ></div>
 
                     <div class="composer">
@@ -539,7 +843,9 @@ button{cursor:pointer}
                         <button
                             class="send"
                             onclick="sendMessage()"
-                        >➤</button>
+                        >
+                            ➤
+                        </button>
 
                     </div>
 
@@ -548,23 +854,26 @@ button{cursor:pointer}
             </section>
 
 
+            <!-- PROFILE -->
+
             <section
-                class="view"
                 id="profileView"
-                style="display:none"
+                class="view hidden"
             >
 
                 <div class="profile">
 
-                    <div class="profile-card">
+                    <div class="card">
 
                         <img
                             id="bigAvatar"
                             class="big-avatar"
-                            src=""
+                            alt=""
                         >
 
-                        <h2>⚙️ Профиль</h2>
+                        <h2>
+                            👤 Профиль
+                        </h2>
 
                         <input
                             id="profileUsername"
@@ -581,7 +890,9 @@ button{cursor:pointer}
                             placeholder="О себе"
                         ></textarea>
 
-                        <p>🖼️ Новый аватар</p>
+                        <p>
+                            🖼️ Аватар
+                        </p>
 
                         <input
                             id="avatarFile"
@@ -593,17 +904,244 @@ button{cursor:pointer}
                             class="primary"
                             onclick="saveProfile()"
                         >
-                            Сохранить профиль
+                            Сохранить
                         </button>
 
-                        <br>
+                    </div>
+
+                    <div class="card">
+
+                        <h3>
+                            👥 Аккаунт
+                        </h3>
 
                         <button
-                            class="danger"
+                            class="primary"
+                            onclick="openCreateAccount()"
+                        >
+                            ➕ Добавить аккаунт
+                        </button>
+
+                        <button
+                            class="primary"
+                            onclick="switchAccount()"
+                        >
+                            🔄 Переключить аккаунт
+                        </button>
+
+                        <button
+                            style="
+                                background:#d84a4a;
+                                color:white;
+                                border:0;
+                                padding:11px;
+                                border-radius:10px;
+                                margin-top:8px
+                            "
                             onclick="logout()"
                         >
-                            🚪 Выйти из аккаунта
+                            🚪 Выйти
                         </button>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- SETTINGS -->
+
+            <section
+                id="settingsView"
+                class="view hidden"
+            >
+
+                <div class="profile">
+
+                    <div class="card">
+
+                        <h2>
+                            ⚙️ Настройки
+                        </h2>
+
+                        <div class="setting">
+
+                            <label>
+
+                                <span>
+                                    🌐 Язык
+                                </span>
+
+                                <select
+                                    id="language"
+                                    onchange="saveSettings()"
+                                >
+
+                                    <option value="ru">
+                                        Русский
+                                    </option>
+
+                                    <option value="en">
+                                        English
+                                    </option>
+
+                                    <option value="be">
+                                        Беларуская
+                                    </option>
+
+                                    <option value="kk">
+                                        Қазақша
+                                    </option>
+
+                                </select>
+
+                            </label>
+
+                        </div>
+
+
+                        <div class="setting">
+
+                            <label>
+
+                                <span>
+                                    🎨 Тема
+                                </span>
+
+                                <select
+                                    id="theme"
+                                    onchange="saveSettings()"
+                                >
+
+                                    <option value="dark">
+                                        Тёмная
+                                    </option>
+
+                                    <option value="light">
+                                        Светлая
+                                    </option>
+
+                                    <option value="blue">
+                                        Синяя
+                                    </option>
+
+                                </select>
+
+                            </label>
+
+                        </div>
+
+
+                        <div class="setting">
+
+                            <label>
+
+                                🔔 Уведомления
+
+                                <input
+                                    id="notifications"
+                                    type="checkbox"
+                                    onchange="saveSettings()"
+                                >
+
+                            </label>
+
+                        </div>
+
+
+                        <div class="setting">
+
+                            <label>
+
+                                🟢 Показывать онлайн
+
+                                <input
+                                    id="showOnline"
+                                    type="checkbox"
+                                    onchange="saveSettings()"
+                                >
+
+                            </label>
+
+                        </div>
+
+
+                        <div class="setting">
+
+                            <label>
+
+                                🕒 Показывать время последнего визита
+
+                                <input
+                                    id="showLastSeen"
+                                    type="checkbox"
+                                    onchange="saveSettings()"
+                                >
+
+                            </label>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="card">
+
+                        <h3>
+                            👥 Группы
+                        </h3>
+
+                        <button
+                            class="primary"
+                            onclick="openCreateGroup()"
+                        >
+                            ➕ Создать группу
+                        </button>
+
+                        <div id="groups"></div>
+
+                    </div>
+
+
+                    <div class="card">
+
+                        <h3>
+                            📢 Каналы
+                        </h3>
+
+                        <button
+                            class="primary"
+                            onclick="openCreateChannel()"
+                        >
+                            ➕ Создать канал
+                        </button>
+
+                        <div id="channels"></div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- FAVORITES -->
+
+            <section
+                id="favoritesView"
+                class="view hidden"
+            >
+
+                <div class="profile">
+
+                    <div class="card">
+
+                        <h2>
+                            ⭐ Избранные сообщения
+                        </h2>
+
+                        <div id="favorites"></div>
 
                     </div>
 
@@ -618,70 +1156,114 @@ button{cursor:pointer}
 </div>
 
 
+<!-- =====================================================
+CONTEXT MENU
+===================================================== -->
+
+<div
+    id="contextMenu"
+    class="context-menu hidden"
+>
+
+    <button onclick="copySelectedMessage()">
+        📋 Копировать
+    </button>
+
+    <button onclick="favoriteSelectedMessage()">
+        ⭐ В избранное
+    </button>
+
+    <button
+        id="editMessageButton"
+        onclick="editSelectedMessage()"
+    >
+        ✏️ Изменить
+    </button>
+
+    <button
+        id="deleteMessageButton"
+        onclick="deleteSelectedMessage()"
+    >
+        🗑️ Удалить
+    </button>
+
+</div>
+
+
+<!-- =====================================================
+MODAL
+===================================================== -->
+
+<div
+    id="modalBg"
+    class="modal-bg hidden"
+    onclick="closeModal(event)"
+>
+
+    <div
+        class="modal"
+        id="modal"
+        onclick="event.stopPropagation()"
+    ></div>
+
+</div>
+
+
 <script>
 
-/*
-=========================================================
-НАСТРОЙКА API
-=========================================================
 
-Если index.html находится НА RENDER вместе с server.py:
+// =========================================================
+// CONFIG
+// =========================================================
 
 const API = "";
-
-Если index.html находится НА NETLIFY:
-
-const API = "https://ТВОЙ-СЕРВЕР.onrender.com";
-
-ВАЖНО:
-без / в конце.
-
-=========================================================
-*/
-
-const API = "";
-
 
 let token =
-    localStorage.getItem("token");
+    localStorage.getItem(
+        "token"
+    );
 
 let currentUser = null;
+
 let selectedUser = null;
 
 let socket = null;
-let reconnectTimer = null;
-let socketConnecting = false;
+
+let selectedMessage = null;
+
+let renderedMessageIds =
+    new Set();
 
 
 // =========================================================
 // API
 // =========================================================
 
-function api(path) {
-    return API + path;
-}
-
-
-async function request(path, options = {}) {
+async function request(
+    path,
+    options = {}
+) {
 
     options.headers =
         options.headers || {};
 
     if (token) {
+
         options.headers.Authorization =
             "Bearer " + token;
+
     }
 
-    return fetch(
-        api(path),
-        options
-    );
+    const response =
+        await fetch(
+            API + path,
+            options
+        );
+
+    return response;
+
 }
 
-
-// =========================================================
-// SAFE JSON
-// =========================================================
 
 async function safeJson(response) {
 
@@ -697,6 +1279,7 @@ async function safeJson(response) {
     } catch {
         return {};
     }
+
 }
 
 
@@ -720,19 +1303,18 @@ async function register() {
 
         const response =
             await fetch(
-                api("/api/register"),
+                API + "/api/register",
                 {
-                    method:"POST",
-
-                    headers:{
+                    method: "POST",
+                    headers: {
                         "Content-Type":
                             "application/json"
                     },
-
-                    body:JSON.stringify({
-                        username,
-                        password
-                    })
+                    body:
+                        JSON.stringify({
+                            username,
+                            password
+                        })
                 }
             );
 
@@ -740,10 +1322,9 @@ async function register() {
             await safeJson(response);
 
         if (!response.ok) {
-
             throw new Error(
                 data.detail ||
-                "Не удалось создать аккаунт"
+                "Ошибка регистрации"
             );
         }
 
@@ -756,14 +1337,14 @@ async function register() {
 
         await startApp();
 
-    } catch(error) {
+    } catch (error) {
 
-        document.getElementById(
-            "authError"
-        ).innerText =
-            error.message;
+        showAuthError(
+            error.message
+        );
 
     }
+
 }
 
 
@@ -783,19 +1364,18 @@ async function login() {
 
         const response =
             await fetch(
-                api("/api/login"),
+                API + "/api/login",
                 {
-                    method:"POST",
-
-                    headers:{
+                    method: "POST",
+                    headers: {
                         "Content-Type":
                             "application/json"
                     },
-
-                    body:JSON.stringify({
-                        username,
-                        password
-                    })
+                    body:
+                        JSON.stringify({
+                            username,
+                            password
+                        })
                 }
             );
 
@@ -803,10 +1383,9 @@ async function login() {
             await safeJson(response);
 
         if (!response.ok) {
-
             throw new Error(
                 data.detail ||
-                "Не удалось войти"
+                "Ошибка входа"
             );
         }
 
@@ -819,14 +1398,23 @@ async function login() {
 
         await startApp();
 
-    } catch(error) {
+    } catch (error) {
 
-        document.getElementById(
-            "authError"
-        ).innerText =
-            error.message;
+        showAuthError(
+            error.message
+        );
 
     }
+
+}
+
+
+function showAuthError(text) {
+
+    document.getElementById(
+        "authError"
+    ).innerText = text;
+
 }
 
 
@@ -836,48 +1424,42 @@ async function login() {
 
 async function startApp() {
 
-    try {
-
-        const response =
-            await request(
-                "/api/me"
-            );
-
-        if (!response.ok) {
-
-            logout();
-            return;
-
-        }
-
-        currentUser =
-            await safeJson(response);
-
-        document.getElementById(
-            "auth"
-        ).style.display =
-            "none";
-
-        document.getElementById(
-            "app"
-        ).style.display =
-            "flex";
-
-        connectWebSocket();
-
-        await searchUsers();
-
-        showFeed();
-
-    } catch(error) {
-
-        console.error(
-            "Ошибка запуска:",
-            error
+    const response =
+        await request(
+            "/api/me"
         );
 
-        logout();
+    if (!response.ok) {
+
+        localStorage.removeItem(
+            "token"
+        );
+
+        token = null;
+
+        return;
+
     }
+
+    currentUser =
+        await safeJson(response);
+
+    document.getElementById(
+        "auth"
+    ).style.display = "none";
+
+    document.getElementById(
+        "app"
+    ).style.display = "flex";
+
+    await loadSettings();
+
+    connectWebSocket();
+
+    await searchUsers();
+
+    showFeed();
+
 }
 
 
@@ -887,28 +1469,22 @@ async function startApp() {
 
 function logout() {
 
-    localStorage.removeItem(
-        "token"
-    );
-
-    token = null;
-    currentUser = null;
-
-    if (reconnectTimer) {
-        clearTimeout(reconnectTimer);
-        reconnectTimer = null;
-    }
-
     if (socket) {
 
         try {
             socket.close();
         } catch {}
 
-        socket = null;
     }
 
+    localStorage.removeItem(
+        "token"
+    );
+
+    token = null;
+
     location.reload();
+
 }
 
 
@@ -918,182 +1494,159 @@ function logout() {
 
 function connectWebSocket() {
 
-    if (!currentUser) return;
+    if (!currentUser || !token) {
+        return;
+    }
+
+    if (socket) {
+
+        try {
+            socket.close();
+        } catch {}
+
+        socket = null;
+
+    }
+
+    const protocol =
+        location.protocol === "https:"
+            ? "wss:"
+            : "ws:";
+
+    const host =
+        location.host;
+
+    socket =
+        new WebSocket(
+            protocol +
+            "//" +
+            host +
+            "/ws/" +
+            currentUser.id +
+            "?token=" +
+            encodeURIComponent(token)
+        );
+
+    socket.onopen = () => {
+
+        try {
+
+            socket.send(
+                JSON.stringify({
+                    type: "ping"
+                })
+            );
+
+        } catch {}
+
+    };
+
+
+    socket.onmessage =
+        event => {
+
+            let data;
+
+            try {
+                data =
+                    JSON.parse(
+                        event.data
+                    );
+            } catch {
+                return;
+            }
+
+            if (
+                data.type === "message"
+            ) {
+
+                receiveMessage(
+                    data.message
+                );
+
+            }
+
+
+            if (
+                data.type ===
+                "message_updated"
+            ) {
+
+                updateMessageElement(
+                    data.message
+                );
+
+            }
+
+
+            if (
+                data.type ===
+                "message_deleted"
+            ) {
+
+                deleteMessageElement(
+                    data.message
+                );
+
+            }
+
+        };
+
+
+    socket.onclose = () => {
+
+        if (token) {
+
+            setTimeout(
+                connectWebSocket,
+                3000
+            );
+
+        }
+
+    };
+
+}
+
+
+function receiveMessage(message) {
 
     if (
-        socket &&
-        (
-            socket.readyState === WebSocket.OPEN ||
-            socket.readyState === WebSocket.CONNECTING
+        renderedMessageIds.has(
+            message.id
         )
     ) {
         return;
     }
 
-    if (socketConnecting) return;
-
-    socketConnecting = true;
-
-    let base;
-
-    if (API) {
-
-        base = API;
-
-    } else {
-
-        base =
-            location.protocol === "https:"
-            ? "https://" + location.host
-            : "http://" + location.host;
-    }
-
-    const wsBase =
-        base
-            .replace(
-                "https://",
-                "wss://"
+    const belongsToCurrentChat =
+        selectedUser &&
+        (
+            (
+                message.sender_id ===
+                currentUser.id &&
+                message.receiver_id ===
+                selectedUser.id
             )
-            .replace(
-                "http://",
-                "ws://"
-            );
-
-    const wsUrl =
-        wsBase +
-        "/ws/" +
-        currentUser.id;
-
-    console.log(
-        "Подключение WebSocket:",
-        wsUrl
-    );
-
-    const newSocket =
-        new WebSocket(wsUrl);
-
-    socket = newSocket;
-
-
-    newSocket.onopen = () => {
-
-        socketConnecting = false;
-
-        console.log(
-            "WebSocket подключён"
+            ||
+            (
+                message.sender_id ===
+                selectedUser.id &&
+                message.receiver_id ===
+                currentUser.id
+            )
         );
 
-        if (reconnectTimer) {
+    if (
+        belongsToCurrentChat
+    ) {
 
-            clearTimeout(
-                reconnectTimer
-            );
+        addMessage(
+            message
+        );
 
-            reconnectTimer = null;
-        }
-    };
+    }
 
-
-    newSocket.onmessage =
-        event => {
-
-            try {
-
-                const data =
-                    JSON.parse(
-                        event.data
-                    );
-
-                if (
-                    data.type === "message" &&
-                    data.message
-                ) {
-
-                    /*
-                    Только WebSocket добавляет
-                    сообщение в интерфейс.
-
-                    POST /api/messages НЕ добавляет
-                    его повторно.
-                    */
-
-                    if (
-                        selectedUser &&
-                        (
-                            (
-                                data.message.sender_id ===
-                                currentUser.id &&
-                                data.message.receiver_id ===
-                                selectedUser.id
-                            )
-                            ||
-                            (
-                                data.message.sender_id ===
-                                selectedUser.id &&
-                                data.message.receiver_id ===
-                                currentUser.id
-                            )
-                        )
-                    ) {
-
-                        addMessageOnce(
-                            data.message
-                        );
-                    }
-                }
-
-            } catch(error) {
-
-                console.error(
-                    "Ошибка обработки WebSocket:",
-                    error
-                );
-            }
-        };
-
-
-    newSocket.onerror =
-        error => {
-
-            console.error(
-                "WebSocket error:",
-                error
-            );
-        };
-
-
-    newSocket.onclose =
-        () => {
-
-            socketConnecting = false;
-
-            if (
-                socket === newSocket
-            ) {
-                socket = null;
-            }
-
-            if (!currentUser) {
-                return;
-            }
-
-            if (reconnectTimer) {
-                return;
-            }
-
-            reconnectTimer =
-                setTimeout(
-                    () => {
-
-                        reconnectTimer =
-                            null;
-
-                        connectWebSocket();
-
-                    },
-                    3000
-                );
-        };
 }
 
 
@@ -1103,34 +1656,33 @@ function connectWebSocket() {
 
 async function searchUsers() {
 
-    if (!token) return;
+    const q =
+        document.getElementById(
+            "search"
+        ).value;
 
-    try {
+    const response =
+        await request(
+            "/api/users?q=" +
+            encodeURIComponent(q)
+        );
 
-        const q =
-            document.getElementById(
-                "search"
-            ).value;
+    if (!response.ok) {
+        return;
+    }
 
-        const response =
-            await request(
-                "/api/users?q=" +
-                encodeURIComponent(q)
-            );
+    const users =
+        await safeJson(response);
 
-        if (!response.ok) return;
+    const container =
+        document.getElementById(
+            "users"
+        );
 
-        const users =
-            await safeJson(response);
+    container.innerHTML = "";
 
-        const container =
-            document.getElementById(
-                "users"
-            );
-
-        container.innerHTML = "";
-
-        users.forEach(user => {
+    users.forEach(
+        user => {
 
             const element =
                 document.createElement(
@@ -1157,7 +1709,7 @@ async function searchUsers() {
                     </div>`
                 }
 
-                <div>
+                <div class="user-info">
 
                     <div class="user-name">
                         ${escapeHtml(
@@ -1181,15 +1733,10 @@ async function searchUsers() {
             container.appendChild(
                 element
             );
-        });
 
-    } catch(error) {
+        }
+    );
 
-        console.error(
-            "Ошибка поиска пользователей:",
-            error
-        );
-    }
 }
 
 
@@ -1201,20 +1748,9 @@ async function openChat(user) {
 
     selectedUser = user;
 
-    document.getElementById(
-        "feedView"
-    ).style.display =
-        "none";
-
-    document.getElementById(
-        "profileView"
-    ).style.display =
-        "none";
-
-    document.getElementById(
+    showOnly(
         "chatView"
-    ).style.display =
-        "block";
+    );
 
     document.getElementById(
         "pageTitle"
@@ -1227,12 +1763,37 @@ async function openChat(user) {
 
     document.getElementById(
         "chatHeader"
-    ).innerText =
-        "👤 " +
-        (
-            user.display_name ||
-            user.username
+    ).innerHTML = `
+        <b>
+            ${escapeHtml(
+                user.display_name ||
+                user.username
+            )}
+        </b>
+        <div style="
+            color:var(--muted);
+            font-size:12px
+        ">
+            @${escapeHtml(
+                user.username
+            )}
+        </div>
+    `;
+
+    renderedMessageIds.clear();
+
+    const response =
+        await request(
+            "/api/messages/" +
+            user.id
         );
+
+    if (!response.ok) {
+        return;
+    }
+
+    const history =
+        await safeJson(response);
 
     const messages =
         document.getElementById(
@@ -1241,155 +1802,208 @@ async function openChat(user) {
 
     messages.innerHTML = "";
 
-    try {
+    history.forEach(
+        addMessage
+    );
 
-        const response =
-            await request(
-                "/api/messages/" +
-                user.id
-            );
-
-        if (!response.ok) {
-
-            console.error(
-                "Не удалось загрузить сообщения"
-            );
-
-            return;
-        }
-
-        const history =
-            await safeJson(response);
-
-        history.forEach(
-            addMessageOnce
-        );
-
-    } catch(error) {
-
-        console.error(
-            "Ошибка истории:",
-            error
-        );
-    }
-}
-
-
-// =========================================================
-// MESSAGE - NO DUPLICATES
-// =========================================================
-
-function addMessageOnce(message) {
-
-    if (
-        !message ||
-        !message.id
-    ) {
-        return;
-    }
-
-    const container =
-        document.getElementById(
-            "messages"
-        );
-
-    const existing =
-        container.querySelector(
-            `[data-message-id="${message.id}"]`
-        );
-
-    if (existing) {
-        return;
-    }
-
-    addMessage(message);
 }
 
 
 function addMessage(message) {
 
-    const container =
-        document.getElementById(
-            "messages"
-        );
-
     if (
-        message.id &&
-        container.querySelector(
-            `[data-message-id="${message.id}"]`
+        renderedMessageIds.has(
+            message.id
         )
     ) {
         return;
     }
 
-    const element =
+    renderedMessageIds.add(
+        message.id
+    );
+
+    const container =
+        document.getElementById(
+            "messages"
+        );
+
+    const row =
         document.createElement(
             "div"
         );
 
     const mine =
-        Number(message.sender_id) ===
-        Number(currentUser.id);
+        message.sender_id ===
+        currentUser.id;
 
-    element.className =
+    row.className =
+        "message-row " +
+        (
+            mine
+                ? "mine"
+                : ""
+        );
+
+    const bubble =
+        document.createElement(
+            "div"
+        );
+
+    bubble.className =
         "message " +
         (
             mine
-            ? "mine"
-            : ""
+                ? "mine"
+                : ""
         );
 
-    if (message.id) {
+    bubble.dataset.id =
+        message.id;
 
-        element.dataset.messageId =
-            message.id;
+    if (
+        message.deleted
+    ) {
+
+        bubble.innerHTML = `
+            <div class="bubble deleted-message">
+                🚫 Сообщение удалено
+            </div>
+        `;
+
+    } else {
+
+        bubble.innerHTML = `
+            <div class="bubble">
+                ${escapeHtml(
+                    message.text
+                )}
+            </div>
+
+            <div class="message-meta">
+
+                ${formatTime(
+                    message.created_at
+                )}
+
+                ${
+                    message.edited_at
+                    ? " · изменено"
+                    : ""
+                }
+
+                ${
+                    mine
+                    ? " ✓"
+                    : ""
+                }
+
+            </div>
+        `;
+
+        bubble.addEventListener(
+            "contextmenu",
+            event => {
+
+                event.preventDefault();
+
+                showMessageMenu(
+                    event,
+                    message
+                );
+
+            }
+        );
+
     }
 
-    const date =
-        new Date(
-            message.created_at
+    row.appendChild(
+        bubble
+    );
+
+    container.appendChild(
+        row
+    );
+
+    container.scrollTop =
+        container.scrollHeight;
+
+}
+
+
+function updateMessageElement(
+    message
+) {
+
+    const bubble =
+        document.querySelector(
+            `.message[data-id="${message.id}"]`
         );
 
-    element.innerHTML = `
+    if (!bubble) {
 
-        <div>
+        if (
+            selectedUser &&
+            (
+                message.sender_id ===
+                selectedUser.id ||
+                message.receiver_id ===
+                selectedUser.id
+            )
+        ) {
+            addMessage(message);
+        }
+
+        return;
+
+    }
+
+    bubble.innerHTML = `
+        <div class="bubble">
             ${escapeHtml(
                 message.text
             )}
         </div>
 
-        <div class="time">
-
-            ${date.toLocaleTimeString(
-                [],
-                {
-                    hour:"2-digit",
-                    minute:"2-digit"
-                }
+        <div class="message-meta">
+            ${formatTime(
+                message.created_at
             )}
-
-            ${mine ? " ✓✓" : ""}
-
+            · изменено
         </div>
     `;
 
-    container.appendChild(
-        element
-    );
-
-    container.scrollTop =
-        container.scrollHeight;
 }
 
 
-// =========================================================
-// SEND MESSAGE - FIXED
-// =========================================================
+function deleteMessageElement(
+    message
+) {
+
+    const bubble =
+        document.querySelector(
+            `.message[data-id="${message.id}"]`
+        );
+
+    if (!bubble) {
+        return;
+    }
+
+    bubble.innerHTML = `
+        <div class="bubble deleted-message">
+            🚫 Сообщение удалено
+        </div>
+    `;
+
+}
+
 
 async function sendMessage() {
 
     if (!selectedUser) {
+
         return;
+
     }
 
     const input =
@@ -1404,11 +2018,6 @@ async function sendMessage() {
         return;
     }
 
-    /*
-    Сохраняем текст на случай
-    настоящей ошибки.
-    */
-
     input.value = "";
 
     try {
@@ -1417,104 +2026,54 @@ async function sendMessage() {
             await request(
                 "/api/messages",
                 {
-                    method:"POST",
+                    method: "POST",
 
-                    headers:{
+                    headers: {
                         "Content-Type":
                             "application/json"
                     },
 
-                    body:JSON.stringify({
-
-                        receiver_id:
-                            selectedUser.id,
-
-                        text:text
-
-                    })
+                    body:
+                        JSON.stringify({
+                            receiver_id:
+                                selectedUser.id,
+                            text
+                        })
                 }
             );
 
-
-        /*
-        Сервер может вернуть JSON.
-        Но мы больше НЕ делаем
-        response.json() вслепую.
-
-        Именно это предотвращает
-        Unexpected end of JSON input.
-        */
-
-        const raw =
-            await response.text();
-
-        let data = {};
-
-        if (raw) {
-
-            try {
-
-                data =
-                    JSON.parse(raw);
-
-            } catch(error) {
-
-                console.warn(
-                    "Ответ сервера не JSON:",
-                    raw
-                );
-            }
-        }
-
+        const data =
+            await safeJson(response);
 
         if (!response.ok) {
 
-            console.error(
-                "Сервер вернул ошибку:",
-                response.status,
-                raw
-            );
-
             input.value = text;
 
-            alert(
-                data.detail ||
-                "Не удалось отправить сообщение"
+            console.error(
+                data
             );
 
             return;
+
         }
 
+        // НЕ добавляем сообщение здесь.
+        //
+        // Сервер отправляет его через WebSocket.
+        //
+        // Это устраняет двойные сообщения.
 
-        /*
-        ВАЖНО:
-
-        НИКАКОГО addMessage(data.message)
-        ЗДЕСЬ НЕТ.
-
-        Сервер отправляет сообщение
-        через WebSocket.
-
-        Поэтому оно появится один раз.
-        */
-
-    } catch(error) {
+    } catch (error) {
 
         console.error(
-            "Ошибка отправки сообщения:",
+            "sendMessage:",
             error
         );
 
-        /*
-        Вот это настоящая ошибка сети.
-        */
-
         input.value = text;
 
-        alert(
-            "Нет соединения с сервером"
-        );
     }
+
 }
 
 
@@ -1528,7 +2087,197 @@ function messageKey(event) {
         event.preventDefault();
 
         sendMessage();
+
     }
+
+}
+
+
+// =========================================================
+// MESSAGE MENU
+// =========================================================
+
+function showMessageMenu(
+    event,
+    message
+) {
+
+    selectedMessage =
+        message;
+
+    const menu =
+        document.getElementById(
+            "contextMenu"
+        );
+
+    document.getElementById(
+        "editMessageButton"
+    ).style.display =
+        message.sender_id ===
+        currentUser.id
+        ? "block"
+        : "none";
+
+    document.getElementById(
+        "deleteMessageButton"
+    ).style.display =
+        message.sender_id ===
+        currentUser.id
+        ? "block"
+        : "none";
+
+    menu.style.left =
+        Math.min(
+            event.clientX,
+            window.innerWidth - 200
+        ) + "px";
+
+    menu.style.top =
+        Math.min(
+            event.clientY,
+            window.innerHeight - 230
+        ) + "px";
+
+    menu.classList.remove(
+        "hidden"
+    );
+
+}
+
+
+document.addEventListener(
+    "click",
+    () => {
+
+        document.getElementById(
+            "contextMenu"
+        ).classList.add(
+            "hidden"
+        );
+
+    }
+);
+
+
+async function copySelectedMessage() {
+
+    if (!selectedMessage) {
+        return;
+    }
+
+    try {
+
+        await navigator.clipboard.writeText(
+            selectedMessage.text
+        );
+
+    } catch {
+
+        const textarea =
+            document.createElement(
+                "textarea"
+            );
+
+        textarea.value =
+            selectedMessage.text;
+
+        document.body.appendChild(
+            textarea
+        );
+
+        textarea.select();
+
+        document.execCommand(
+            "copy"
+        );
+
+        textarea.remove();
+
+    }
+
+}
+
+
+async function favoriteSelectedMessage() {
+
+    if (!selectedMessage) {
+        return;
+    }
+
+    await request(
+        "/api/messages/" +
+        selectedMessage.id +
+        "/favorite",
+        {
+            method: "POST"
+        }
+    );
+
+}
+
+
+async function editSelectedMessage() {
+
+    if (!selectedMessage) {
+        return;
+    }
+
+    const text =
+        prompt(
+            "Изменить сообщение:",
+            selectedMessage.text
+        );
+
+    if (
+        text === null ||
+        !text.trim()
+    ) {
+        return;
+    }
+
+    await request(
+        "/api/messages/" +
+        selectedMessage.id,
+        {
+            method: "PUT",
+
+            headers: {
+                "Content-Type":
+                    "application/json"
+            },
+
+            body:
+                JSON.stringify({
+                    text
+                })
+        }
+    );
+
+}
+
+
+async function deleteSelectedMessage() {
+
+    if (!selectedMessage) {
+        return;
+    }
+
+    if (
+        !confirm(
+            "Удалить сообщение?"
+        )
+    ) {
+        return;
+    }
+
+    await request(
+        "/api/messages/" +
+        selectedMessage.id,
+        {
+            method: "DELETE"
+        }
+    );
+
 }
 
 
@@ -1538,20 +2287,9 @@ function messageKey(event) {
 
 function showFeed() {
 
-    document.getElementById(
+    showOnly(
         "feedView"
-    ).style.display =
-        "block";
-
-    document.getElementById(
-        "chatView"
-    ).style.display =
-        "none";
-
-    document.getElementById(
-        "profileView"
-    ).style.display =
-        "none";
+    );
 
     document.getElementById(
         "pageTitle"
@@ -1559,43 +2297,35 @@ function showFeed() {
         "📰 Лента";
 
     loadFeed();
+
 }
 
 
 async function loadFeed() {
 
-    try {
-
-        const response =
-            await request(
-                "/api/feed"
-            );
-
-        if (!response.ok) {
-            return;
-        }
-
-        const posts =
-            await safeJson(response);
-
-        const container =
-            document.getElementById(
-                "feed"
-            );
-
-        container.innerHTML = "";
-
-        posts.forEach(
-            renderPost
+    const response =
+        await request(
+            "/api/feed"
         );
 
-    } catch(error) {
-
-        console.error(
-            "Ошибка ленты:",
-            error
-        );
+    if (!response.ok) {
+        return;
     }
+
+    const posts =
+        await safeJson(response);
+
+    const container =
+        document.getElementById(
+            "feed"
+        );
+
+    container.innerHTML = "";
+
+    posts.forEach(
+        renderPost
+    );
+
 }
 
 
@@ -1606,12 +2336,12 @@ function renderPost(post) {
             "feed"
         );
 
-    const element =
+    const article =
         document.createElement(
             "article"
         );
 
-    element.className =
+    article.className =
         "post";
 
     const avatar =
@@ -1622,9 +2352,15 @@ function renderPost(post) {
             src="${mediaUrl(
                 post.avatar_url
             )}"
+            onclick="openUserProfile(${post.author_id})"
+            style="cursor:pointer"
         >`
         :
-        `<div class="avatar">
+        `<div
+            class="avatar"
+            onclick="openUserProfile(${post.author_id})"
+            style="cursor:pointer"
+        >
             👤
         </div>`;
 
@@ -1643,6 +2379,7 @@ function renderPost(post) {
                 )}"
             >
         `;
+
     }
 
     if (
@@ -1659,9 +2396,10 @@ function renderPost(post) {
                 )}"
             ></video>
         `;
+
     }
 
-    element.innerHTML = `
+    article.innerHTML = `
 
         <div class="post-header">
 
@@ -1714,6 +2452,12 @@ function renderPost(post) {
                 💬 ${post.comments}
             </button>
 
+            <button
+                onclick="sharePost(${post.id})"
+            >
+                🔗 Поделиться
+            </button>
+
             ${
                 post.author_id ===
                 currentUser.id
@@ -1730,20 +2474,18 @@ function renderPost(post) {
         </div>
 
         <div
-            class="comments"
             id="comments-${post.id}"
+            class="comments"
         ></div>
+
     `;
 
     container.appendChild(
-        element
+        article
     );
+
 }
 
-
-// =========================================================
-// PUBLISH
-// =========================================================
 
 async function publishPost() {
 
@@ -1758,11 +2500,6 @@ async function publishPost() {
         ).files[0];
 
     if (!text && !file) {
-
-        alert(
-            "Добавь текст, фото или видео"
-        );
-
         return;
     }
 
@@ -1787,15 +2524,14 @@ async function publishPost() {
                 await request(
                     "/api/posts/media",
                     {
-                        method:"POST",
-                        body:form
+                        method: "POST",
+                        body: form
                     }
                 );
 
-            const data =
-                await safeJson(response);
-
             if (!response.ok) {
+                const data =
+                    await safeJson(response);
 
                 throw new Error(
                     data.detail ||
@@ -1809,29 +2545,30 @@ async function publishPost() {
                 await request(
                     "/api/posts",
                     {
-                        method:"POST",
+                        method: "POST",
 
-                        headers:{
+                        headers: {
                             "Content-Type":
                                 "application/json"
                         },
 
-                        body:JSON.stringify({
-                            text:text
-                        })
+                        body:
+                            JSON.stringify({
+                                text
+                            })
                     }
                 );
 
-            const data =
-                await safeJson(response);
-
             if (!response.ok) {
+                const data =
+                    await safeJson(response);
 
                 throw new Error(
                     data.detail ||
                     "Ошибка публикации"
                 );
             }
+
         }
 
         document.getElementById(
@@ -1844,38 +2581,63 @@ async function publishPost() {
 
         await loadFeed();
 
-    } catch(error) {
+    } catch (error) {
 
         alert(
             error.message
         );
+
     }
+
 }
 
 
-// =========================================================
-// LIKES
-// =========================================================
+async function likePost(
+    postId
+) {
 
-async function likePost(postId) {
+    await request(
+        "/api/posts/" +
+        postId +
+        "/like",
+        {
+            method: "POST"
+        }
+    );
+
+    loadFeed();
+
+}
+
+
+async function sharePost(
+    postId
+) {
+
+    const url =
+        location.origin +
+        "/?post=" +
+        postId;
 
     try {
 
-        await request(
-            "/api/posts/" +
-            postId +
-            "/like",
-            {
-                method:"POST"
-            }
+        await navigator.clipboard.writeText(
+            url
         );
 
-        loadFeed();
+        alert(
+            "Ссылка скопирована"
+        );
 
-    } catch(error) {
+    } catch {
 
-        console.error(error);
+        prompt(
+            "Скопируй ссылку:",
+            url
+        );
+
     }
+
 }
 
 
@@ -1883,7 +2645,9 @@ async function likePost(postId) {
 // COMMENTS
 // =========================================================
 
-async function showComments(postId) {
+async function showComments(
+    postId
+) {
 
     const container =
         document.getElementById(
@@ -1891,184 +2655,307 @@ async function showComments(postId) {
             postId
         );
 
-    if (container.innerHTML) {
+    const response =
+        await request(
+            "/api/posts/" +
+            postId +
+            "/comments"
+        );
 
-        container.innerHTML = "";
-
+    if (!response.ok) {
         return;
     }
 
-    try {
+    const comments =
+        await safeJson(response);
 
-        const response =
-            await request(
-                "/api/posts/" +
-                postId +
-                "/comments"
-            );
+    container.innerHTML = "";
 
-        const comments =
-            await safeJson(response);
+    comments.forEach(
+        comment => {
 
-        container.innerHTML = `
+            const div =
+                document.createElement(
+                    "div"
+                );
 
-            <div class="comment-input">
+            div.className =
+                "comment";
 
-                <input
-                    id="comment-${postId}"
-                    placeholder="Написать комментарий..."
-                >
+            const replyText =
+                comment.reply_to_username
+                ?
+                `<div class="reply-label">
+                    @${escapeHtml(
+                        comment.reply_to_username
+                    )}
+                </div>`
+                :
+                "";
 
-                <button
-                    onclick="sendComment(${postId})"
-                >
-                    ➤
-                </button>
+            div.innerHTML = `
 
-            </div>
-        `;
+                <div class="comment-head">
 
-        comments.forEach(
-            comment => {
+                    <div>
 
-                const div =
-                    document.createElement(
-                        "div"
-                    );
+                        <div class="comment-user">
+                            @${escapeHtml(
+                                comment.username
+                            )}
+                        </div>
 
-                div.className =
-                    "comment";
+                        ${replyText}
 
-                div.innerHTML = `
-                    <b>
-                        ${escapeHtml(
-                            comment.display_name ||
-                            comment.username
-                        )}
-                    </b>
+                    </div>
 
+                </div>
+
+                <div style="margin-top:5px">
                     ${escapeHtml(
                         comment.text
                     )}
-                `;
+                </div>
 
-                container.appendChild(
-                    div
-                );
-            }
+                <div class="comment-buttons">
+
+                    <button
+                        onclick="replyComment(
+                            ${postId},
+                            ${comment.id},
+                            '${escapeJs(
+                                comment.username
+                            )}'
+                        )"
+                    >
+                        ↩️ Ответить
+                    </button>
+
+                    <button
+                        onclick="copyComment(
+                            '${escapeJs(
+                                comment.text
+                            )}'
+                        )"
+                    >
+                        📋 Копировать
+                    </button>
+
+                    ${
+                        comment.user_id ===
+                        currentUser.id
+                        ?
+                        `<button
+                            onclick="deleteComment(
+                                ${comment.id},
+                                ${postId}
+                            )"
+                        >
+                            🗑️
+                        </button>`
+                        :
+                        ""
+                    }
+
+                </div>
+
+            `;
+
+            container.appendChild(
+                div
+            );
+
+        }
+    );
+
+    const input =
+        document.createElement(
+            "div"
         );
 
-    } catch(error) {
+    input.className =
+        "comment-input";
 
-        console.error(
-            error
-        );
-    }
+    input.innerHTML = `
+
+        <input
+            id="comment-input-${postId}"
+            placeholder="Комментарий..."
+        >
+
+        <button
+            class="primary"
+            onclick="sendComment(${postId})"
+        >
+            ➤
+        </button>
+
+    `;
+
+    container.appendChild(
+        input
+    );
+
 }
 
 
-async function sendComment(postId) {
+let replyTarget = {};
+
+
+function replyComment(
+    postId,
+    commentId,
+    username
+) {
+
+    replyTarget[postId] =
+        commentId;
 
     const input =
         document.getElementById(
-            "comment-" +
+            "comment-input-" +
+            postId
+        );
+
+    if (input) {
+
+        input.placeholder =
+            "Ответ @" +
+            username +
+            "...";
+
+        input.focus();
+
+    }
+
+}
+
+
+async function sendComment(
+    postId
+) {
+
+    const input =
+        document.getElementById(
+            "comment-input-" +
             postId
         );
 
     const text =
         input.value.trim();
 
-    if (!text) return;
-
-    try {
-
-        const response =
-            await request(
-                "/api/posts/" +
-                postId +
-                "/comments",
-                {
-                    method:"POST",
-
-                    headers:{
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body:JSON.stringify({
-                        text:text
-                    })
-                }
-            );
-
-        const data =
-            await safeJson(response);
-
-        if (!response.ok) {
-
-            alert(
-                data.detail ||
-                "Ошибка комментария"
-            );
-
-            return;
-        }
-
-        input.value = "";
-
-        const container =
-            document.getElementById(
-                "comments-" +
-                postId
-            );
-
-        container.innerHTML = "";
-
-        await showComments(
-            postId
-        );
-
-    } catch(error) {
-
-        console.error(error);
-
-        alert(
-            "Ошибка соединения"
-        );
+    if (!text) {
+        return;
     }
+
+    await request(
+        "/api/posts/" +
+        postId +
+        "/comments",
+        {
+            method: "POST",
+
+            headers: {
+                "Content-Type":
+                    "application/json"
+            },
+
+            body:
+                JSON.stringify({
+                    text,
+                    parent_id:
+                        replyTarget[postId]
+                        || null
+                })
+        }
+    );
+
+    input.value = "";
+
+    delete replyTarget[
+        postId
+    ];
+
+    showComments(
+        postId
+    );
+
+    loadFeed();
+
 }
 
 
-// =========================================================
-// DELETE POST
-// =========================================================
-
-async function deletePost(postId) {
+async function deleteComment(
+    commentId,
+    postId
+) {
 
     if (
         !confirm(
-            "Удалить этот пост?"
+            "Удалить комментарий?"
         )
     ) {
         return;
     }
 
+    await request(
+        "/api/comments/" +
+        commentId,
+        {
+            method: "DELETE"
+        }
+    );
+
+    showComments(
+        postId
+    );
+
+    loadFeed();
+
+}
+
+
+async function copyComment(
+    text
+) {
+
     try {
 
-        await request(
-            "/api/posts/" +
-            postId,
-            {
-                method:"DELETE"
-            }
+        await navigator.clipboard.writeText(
+            text
         );
 
-        loadFeed();
+    } catch {}
 
-    } catch(error) {
+}
 
-        console.error(error);
+
+// =========================================================
+// POST DELETE
+// =========================================================
+
+async function deletePost(
+    postId
+) {
+
+    if (
+        !confirm(
+            "Удалить пост?"
+        )
+    ) {
+        return;
     }
+
+    await request(
+        "/api/posts/" +
+        postId,
+        {
+            method: "DELETE"
+        }
+    );
+
+    loadFeed();
+
 }
 
 
@@ -2078,25 +2965,14 @@ async function deletePost(postId) {
 
 function showProfile() {
 
-    document.getElementById(
-        "feedView"
-    ).style.display =
-        "none";
-
-    document.getElementById(
-        "chatView"
-    ).style.display =
-        "none";
-
-    document.getElementById(
+    showOnly(
         "profileView"
-    ).style.display =
-        "block";
+    );
 
     document.getElementById(
         "pageTitle"
     ).innerText =
-        "⚙️ Профиль";
+        "👤 Профиль";
 
     document.getElementById(
         "profileUsername"
@@ -2112,12 +2988,97 @@ function showProfile() {
     document.getElementById(
         "profileBio"
     ).value =
-        currentUser.bio ||
-        "";
+        currentUser.bio || "";
 
     setAvatar(
         currentUser.avatar_url
     );
+
+}
+
+
+async function openUserProfile(
+    userId
+) {
+
+    const response =
+        await request(
+            "/api/users/" +
+            userId
+        );
+
+    if (!response.ok) {
+        return;
+    }
+
+    const user =
+        await safeJson(response);
+
+    openModal(`
+        <h2>
+            👤 ${escapeHtml(
+                user.display_name ||
+                user.username
+            )}
+        </h2>
+
+        <p>
+            @${escapeHtml(
+                user.username
+            )}
+        </p>
+
+        ${
+            user.avatar_url
+            ?
+            `<img
+                class="big-avatar"
+                src="${mediaUrl(
+                    user.avatar_url
+                )}"
+            >`
+            :
+            ""
+        }
+
+        <p>
+            ${escapeHtml(
+                user.bio || "Нет описания"
+            )}
+        </p>
+
+        <button
+            class="primary"
+            onclick="openChatFromProfile(${user.id})"
+        >
+            💬 Написать
+        </button>
+    `);
+
+}
+
+
+async function openChatFromProfile(
+    userId
+) {
+
+    closeModal();
+
+    const response =
+        await request(
+            "/api/users/" +
+            userId
+        );
+
+    if (!response.ok) {
+        return;
+    }
+
+    const user =
+        await safeJson(response);
+
+    openChat(user);
+
 }
 
 
@@ -2138,7 +3099,9 @@ function setAvatar(url) {
         image.removeAttribute(
             "src"
         );
+
     }
+
 }
 
 
@@ -2159,102 +3122,881 @@ async function saveProfile() {
             "profileBio"
         ).value.trim();
 
-    try {
+    const response =
+        await request(
+            "/api/profile",
+            {
+                method: "PUT",
 
-        const response =
-            await request(
-                "/api/profile",
-                {
-                    method:"PUT",
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
 
-                    headers:{
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body:JSON.stringify({
+                body:
+                    JSON.stringify({
                         username,
                         display_name,
                         bio
                     })
-                }
-            );
-
-        const data =
-            await safeJson(response);
-
-        if (!response.ok) {
-
-            throw new Error(
-                data.detail ||
-                "Ошибка профиля"
-            );
-        }
-
-        const file =
-            document.getElementById(
-                "avatarFile"
-            ).files[0];
-
-        if (file) {
-
-            const form =
-                new FormData();
-
-            form.append(
-                "file",
-                file
-            );
-
-            const avatarResponse =
-                await request(
-                    "/api/avatar",
-                    {
-                        method:"POST",
-                        body:form
-                    }
-                );
-
-            const avatarData =
-                await safeJson(
-                    avatarResponse
-                );
-
-            if (!avatarResponse.ok) {
-
-                throw new Error(
-                    avatarData.detail ||
-                    "Ошибка аватара"
-                );
             }
-        }
+        );
 
-        const me =
-            await request(
-                "/api/me"
-            );
+    const data =
+        await safeJson(response);
 
-        currentUser =
-            await safeJson(me);
+    if (!response.ok) {
 
+        alert(
+            data.detail ||
+            "Ошибка"
+        );
+
+        return;
+
+    }
+
+    const file =
         document.getElementById(
             "avatarFile"
-        ).value = "";
+        ).files[0];
 
-        await searchUsers();
+    if (file) {
 
-        showProfile();
+        const form =
+            new FormData();
 
-        alert(
-            "Профиль сохранён!"
+        form.append(
+            "file",
+            file
         );
 
-    } catch(error) {
-
-        alert(
-            error.message
+        await request(
+            "/api/avatar",
+            {
+                method: "POST",
+                body: form
+            }
         );
+
     }
+
+    const me =
+        await request(
+            "/api/me"
+        );
+
+    currentUser =
+        await safeJson(me);
+
+    alert(
+        "Профиль сохранён"
+    );
+
+    searchUsers();
+
+    showProfile();
+
+}
+
+
+// =========================================================
+// SETTINGS
+// =========================================================
+
+async function showSettings() {
+
+    showOnly(
+        "settingsView"
+    );
+
+    document.getElementById(
+        "pageTitle"
+    ).innerText =
+        "⚙️ Настройки";
+
+    await loadSettings();
+
+    loadGroups();
+
+    loadChannels();
+
+}
+
+
+async function loadSettings() {
+
+    const response =
+        await request(
+            "/api/settings"
+        );
+
+    if (!response.ok) {
+        return;
+    }
+
+    const settings =
+        await safeJson(response);
+
+    document.getElementById(
+        "language"
+    ).value =
+        settings.language;
+
+    document.getElementById(
+        "theme"
+    ).value =
+        settings.theme;
+
+    document.getElementById(
+        "notifications"
+    ).checked =
+        !!settings.notifications;
+
+    document.getElementById(
+        "showOnline"
+    ).checked =
+        !!settings.show_online;
+
+    document.getElementById(
+        "showLastSeen"
+    ).checked =
+        !!settings.show_last_seen;
+
+    applyTheme(
+        settings.theme
+    );
+
+}
+
+
+async function saveSettings() {
+
+    const language =
+        document.getElementById(
+            "language"
+        ).value;
+
+    const theme =
+        document.getElementById(
+            "theme"
+        ).value;
+
+    const notifications =
+        document.getElementById(
+            "notifications"
+        ).checked;
+
+    const show_online =
+        document.getElementById(
+            "showOnline"
+        ).checked;
+
+    const show_last_seen =
+        document.getElementById(
+            "showLastSeen"
+        ).checked;
+
+    applyTheme(
+        theme
+    );
+
+    await request(
+        "/api/settings",
+        {
+            method: "PUT",
+
+            headers: {
+                "Content-Type":
+                    "application/json"
+            },
+
+            body:
+                JSON.stringify({
+                    language,
+                    theme,
+                    notifications,
+                    show_online,
+                    show_last_seen
+                })
+        }
+    );
+
+}
+
+
+function applyTheme(
+    theme
+) {
+
+    document.body.classList.remove(
+        "light",
+        "blue"
+    );
+
+    if (
+        theme === "light"
+    ) {
+
+        document.body.classList.add(
+            "light"
+        );
+
+    }
+
+    if (
+        theme === "blue"
+    ) {
+
+        document.body.classList.add(
+            "blue"
+        );
+
+    }
+
+}
+
+
+// =========================================================
+// FAVORITES
+// =========================================================
+
+async function showFavorites() {
+
+    showOnly(
+        "favoritesView"
+    );
+
+    document.getElementById(
+        "pageTitle"
+    ).innerText =
+        "⭐ Избранное";
+
+    const response =
+        await request(
+            "/api/favorites"
+        );
+
+    if (!response.ok) {
+        return;
+    }
+
+    const favorites =
+        await safeJson(response);
+
+    const container =
+        document.getElementById(
+            "favorites"
+        );
+
+    container.innerHTML = "";
+
+    favorites.forEach(
+        message => {
+
+            const div =
+                document.createElement(
+                    "div"
+                );
+
+            div.className =
+                "comment";
+
+            div.innerHTML = `
+                ${escapeHtml(
+                    message.text
+                )}
+
+                <div class="message-meta">
+                    ${formatTime(
+                        message.created_at
+                    )}
+                </div>
+            `;
+
+            container.appendChild(
+                div
+            );
+
+        }
+    );
+
+}
+
+
+// =========================================================
+// GROUPS
+// =========================================================
+
+function openCreateGroup() {
+
+    openModal(`
+
+        <h2>
+            👥 Новая группа
+        </h2>
+
+        <input
+            id="newGroupName"
+            placeholder="Название"
+        >
+
+        <textarea
+            id="newGroupDescription"
+            placeholder="Описание"
+        ></textarea>
+
+        <button
+            class="primary"
+            onclick="createGroup()"
+        >
+            Создать
+        </button>
+
+    `);
+
+}
+
+
+async function createGroup() {
+
+    const name =
+        document.getElementById(
+            "newGroupName"
+        ).value.trim();
+
+    const description =
+        document.getElementById(
+            "newGroupDescription"
+        ).value.trim();
+
+    const response =
+        await request(
+            "/api/groups",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body:
+                    JSON.stringify({
+                        name,
+                        description
+                    })
+            }
+        );
+
+    const data =
+        await safeJson(response);
+
+    if (!response.ok) {
+
+        alert(
+            data.detail ||
+            "Ошибка"
+        );
+
+        return;
+
+    }
+
+    closeModal();
+
+    loadGroups();
+
+}
+
+
+async function loadGroups() {
+
+    const response =
+        await request(
+            "/api/groups"
+        );
+
+    if (!response.ok) {
+        return;
+    }
+
+    const groups =
+        await safeJson(response);
+
+    const container =
+        document.getElementById(
+            "groups"
+        );
+
+    container.innerHTML = "";
+
+    groups.forEach(
+        group => {
+
+            const div =
+                document.createElement(
+                    "div"
+                );
+
+            div.className =
+                "comment";
+
+            div.innerHTML = `
+                👥
+                <b>
+                    ${escapeHtml(
+                        group.name
+                    )}
+                </b>
+
+                <div>
+                    ${escapeHtml(
+                        group.description ||
+                        ""
+                    )}
+                </div>
+            `;
+
+            container.appendChild(
+                div
+            );
+
+        }
+    );
+
+}
+
+
+// =========================================================
+// CHANNELS
+// =========================================================
+
+function openCreateChannel() {
+
+    openModal(`
+
+        <h2>
+            📢 Новый канал
+        </h2>
+
+        <input
+            id="newChannelName"
+            placeholder="Название"
+        >
+
+        <input
+            id="newChannelUsername"
+            placeholder="username канала"
+        >
+
+        <textarea
+            id="newChannelDescription"
+            placeholder="Описание"
+        ></textarea>
+
+        <button
+            class="primary"
+            onclick="createChannel()"
+        >
+            Создать
+        </button>
+
+    `);
+
+}
+
+
+async function createChannel() {
+
+    const name =
+        document.getElementById(
+            "newChannelName"
+        ).value.trim();
+
+    const username =
+        document.getElementById(
+            "newChannelUsername"
+        ).value.trim();
+
+    const description =
+        document.getElementById(
+            "newChannelDescription"
+        ).value.trim();
+
+    const response =
+        await request(
+            "/api/channels",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body:
+                    JSON.stringify({
+                        name,
+                        username,
+                        description
+                    })
+            }
+        );
+
+    const data =
+        await safeJson(response);
+
+    if (!response.ok) {
+
+        alert(
+            data.detail ||
+            "Ошибка"
+        );
+
+        return;
+
+    }
+
+    closeModal();
+
+    loadChannels();
+
+}
+
+
+async function loadChannels() {
+
+    const response =
+        await request(
+            "/api/channels"
+        );
+
+    if (!response.ok) {
+        return;
+    }
+
+    const channels =
+        await safeJson(response);
+
+    const container =
+        document.getElementById(
+            "channels"
+        );
+
+    container.innerHTML = "";
+
+    channels.forEach(
+        channel => {
+
+            const div =
+                document.createElement(
+                    "div"
+                );
+
+            div.className =
+                "comment";
+
+            div.innerHTML = `
+                📢
+                <b>
+                    ${escapeHtml(
+                        channel.name
+                    )}
+                </b>
+
+                <div>
+                    @${escapeHtml(
+                        channel.username
+                    )}
+                </div>
+
+                <div>
+                    ${escapeHtml(
+                        channel.description ||
+                        ""
+                    )}
+                </div>
+            `;
+
+            container.appendChild(
+                div
+            );
+
+        }
+    );
+
+}
+
+
+// =========================================================
+// SECOND ACCOUNT
+// =========================================================
+
+function openCreateAccount() {
+
+    openModal(`
+
+        <h2>
+            ➕ Новый аккаунт
+        </h2>
+
+        <input
+            id="secondUsername"
+            placeholder="Username"
+        >
+
+        <input
+            id="secondPassword"
+            type="password"
+            placeholder="Пароль"
+        >
+
+        <button
+            class="primary"
+            onclick="createSecondAccount()"
+        >
+            Создать
+        </button>
+
+    `);
+
+}
+
+
+async function createSecondAccount() {
+
+    const username =
+        document.getElementById(
+            "secondUsername"
+        ).value.trim();
+
+    const password =
+        document.getElementById(
+            "secondPassword"
+        ).value;
+
+    const response =
+        await fetch(
+            API + "/api/register",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body:
+                    JSON.stringify({
+                        username,
+                        password
+                    })
+            }
+        );
+
+    const data =
+        await safeJson(response);
+
+    if (!response.ok) {
+
+        alert(
+            data.detail ||
+            "Ошибка"
+        );
+
+        return;
+
+    }
+
+    const accounts =
+        JSON.parse(
+            localStorage.getItem(
+                "accounts"
+            ) || "[]"
+        );
+
+    accounts.push({
+        username,
+        token: data.token
+    });
+
+    localStorage.setItem(
+        "accounts",
+        JSON.stringify(
+            accounts
+        )
+    );
+
+    alert(
+        "Аккаунт создан"
+    );
+
+    closeModal();
+
+}
+
+
+function switchAccount() {
+
+    const accounts =
+        JSON.parse(
+            localStorage.getItem(
+                "accounts"
+            ) || "[]"
+        );
+
+    if (!accounts.length) {
+
+        alert(
+            "Дополнительных аккаунтов пока нет"
+        );
+
+        return;
+
+    }
+
+    openModal(`
+
+        <h2>
+            🔄 Переключение аккаунта
+        </h2>
+
+        <div id="accountList"></div>
+
+    `);
+
+    const list =
+        document.getElementById(
+            "accountList"
+        );
+
+    accounts.forEach(
+        (account, index) => {
+
+            const button =
+                document.createElement(
+                    "button"
+                );
+
+            button.className =
+                "primary";
+
+            button.style.width =
+                "100%";
+
+            button.style.margin =
+                "5px 0";
+
+            button.innerText =
+                "@" +
+                account.username;
+
+            button.onclick =
+                () => {
+
+                    token =
+                        account.token;
+
+                    localStorage.setItem(
+                        "token",
+                        token
+                    );
+
+                    location.reload();
+
+                };
+
+            list.appendChild(
+                button
+            );
+
+        }
+    );
+
+}
+
+
+// =========================================================
+// UI
+// =========================================================
+
+function showOnly(
+    id
+) {
+
+    [
+        "feedView",
+        "chatView",
+        "profileView",
+        "settingsView",
+        "favoritesView"
+    ].forEach(
+        viewId => {
+
+            const element =
+                document.getElementById(
+                    viewId
+                );
+
+            element.classList.add(
+                "hidden"
+            );
+
+        }
+    );
+
+    document.getElementById(
+        id
+    ).classList.remove(
+        "hidden"
+    );
+
+}
+
+
+function openModal(
+    html
+) {
+
+    document.getElementById(
+        "modal"
+    ).innerHTML =
+        html;
+
+    document.getElementById(
+        "modalBg"
+    ).classList.remove(
+        "hidden"
+    );
+
+}
+
+
+function closeModal(
+    event
+) {
+
+    if (
+        event &&
+        event.target !==
+        document.getElementById(
+            "modalBg"
+        )
+    ) {
+        return;
+    }
+
+    document.getElementById(
+        "modalBg"
+    ).classList.add(
+        "hidden"
+    );
+
+    document.getElementById(
+        "modal"
+    ).innerHTML = "";
+
 }
 
 
@@ -2262,23 +4004,33 @@ async function saveProfile() {
 // HELPERS
 // =========================================================
 
-function mediaUrl(url) {
+function mediaUrl(
+    url
+) {
 
-    if (!url) return "";
+    if (!url) {
+        return "";
+    }
 
     if (
-        url.startsWith("http")
+        url.startsWith("http://") ||
+        url.startsWith("https://")
     ) {
         return url;
     }
 
     return API + url;
+
 }
 
 
-function escapeHtml(text) {
+function escapeHtml(
+    text
+) {
 
-    return String(text)
+    return String(
+        text ?? ""
+    )
         .replaceAll(
             "&",
             "&amp;"
@@ -2299,6 +4051,66 @@ function escapeHtml(text) {
             "'",
             "&#039;"
         );
+
+}
+
+
+function escapeJs(
+    text
+) {
+
+    return String(
+        text ?? ""
+    )
+        .replaceAll(
+            "\\",
+            "\\\\"
+        )
+        .replaceAll(
+            "'",
+            "\\'"
+        )
+        .replaceAll(
+            "\n",
+            "\\n"
+        )
+        .replaceAll(
+            "\r",
+            "\\r"
+        );
+
+}
+
+
+function formatTime(
+    value
+) {
+
+    if (!value) {
+        return "";
+    }
+
+    const date =
+        new Date(
+            value + "Z"
+        );
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+        return "";
+    }
+
+    return date.toLocaleTimeString(
+        [],
+        {
+            hour: "2-digit",
+            minute: "2-digit"
+        }
+    );
+
 }
 
 
@@ -2307,7 +4119,9 @@ function escapeHtml(text) {
 // =========================================================
 
 if (token) {
+
     startApp();
+
 }
 
 </script>
