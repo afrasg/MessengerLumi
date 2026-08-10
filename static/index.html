@@ -1,587 +1,562 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+>
+
 <title>MyMessenger</title>
 
 <style>
-*{box-sizing:border-box}
 
-body{
-    margin:0;
-    font-family:Arial,sans-serif;
-    background:#0e1621;
-    color:#fff
+* {
+    box-sizing: border-box;
 }
 
-button,input,textarea{font:inherit}
-button{cursor:pointer}
-
-.hidden{display:none!important}
-
-.auth{
-    width:380px;
-    max-width:calc(100% - 30px);
-    margin:70px auto;
-    background:#17212b;
-    padding:30px;
-    border-radius:18px
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #0e1621;
+    color: white;
 }
-
-.auth h1{text-align:center}
 
-.auth input{
-    width:100%;
-    padding:13px;
-    margin:6px 0;
-    border:0;
-    border-radius:10px;
-    background:#242f3a;
-    color:#fff;
-    outline:none
+button,
+input,
+textarea {
+    font: inherit;
 }
 
-.auth button{
-    width:100%;
-    margin-top:10px;
-    padding:13px;
-    border:0;
-    border-radius:10px;
-    background:#2aabee;
-    color:#fff
+button {
+    cursor: pointer;
 }
 
-#app{
-    display:none;
-    height:100vh
+.auth {
+    width: 380px;
+    max-width: calc(100% - 30px);
+    margin: 80px auto;
+    background: #17212b;
+    padding: 30px;
+    border-radius: 18px;
 }
 
-.sidebar{
-    width:300px;
-    background:#17212b;
-    border-right:1px solid #263746;
-    display:flex;
-    flex-direction:column
+.auth h1 {
+    text-align: center;
 }
 
-.logo{
-    padding:18px;
-    font-size:21px;
-    font-weight:bold
+.auth input {
+    width: 100%;
+    padding: 13px;
+    margin: 6px 0;
+    border: 0;
+    border-radius: 10px;
+    background: #242f3a;
+    color: white;
+    outline: none;
 }
 
-.search{
-    margin:0 12px 12px;
-    padding:12px;
-    border:0;
-    border-radius:10px;
-    background:#242f3a;
-    color:#fff;
-    outline:none
+.auth button {
+    width: 100%;
+    margin-top: 10px;
+    padding: 13px;
+    border: 0;
+    border-radius: 10px;
+    background: #2aabee;
+    color: white;
 }
 
-.users{overflow-y:auto}
-
-.user{
-    padding:12px;
-    display:flex;
-    gap:10px;
-    align-items:center;
-    cursor:pointer
+#app {
+    display: none;
+    height: 100vh;
 }
-
-.user:hover{background:#202f3d}
 
-.avatar{
-    width:44px;
-    height:44px;
-    min-width:44px;
-    border-radius:50%;
-    object-fit:cover;
-    background:#2aabee;
-    display:flex;
-    align-items:center;
-    justify-content:center
+.sidebar {
+    width: 300px;
+    background: #17212b;
+    border-right: 1px solid #263746;
+    display: flex;
+    flex-direction: column;
 }
 
-.user-name{font-weight:bold}
-
-.user-username{
-    color:#8295a5;
-    font-size:12px;
-    margin-top:3px
+.logo {
+    padding: 18px;
+    font-size: 21px;
+    font-weight: bold;
 }
 
-.online{
-    color:#42d77d;
-    font-size:12px
+.search {
+    margin: 0 12px 12px;
+    padding: 12px;
+    border: 0;
+    border-radius: 10px;
+    background: #242f3a;
+    color: white;
+    outline: none;
 }
 
-.main{
-    flex:1;
-    display:flex;
-    flex-direction:column;
-    min-width:0
+.users {
+    overflow-y: auto;
 }
 
-.topbar{
-    height:62px;
-    background:#17212b;
-    border-bottom:1px solid #263746;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:0 18px
+.user {
+    padding: 12px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    cursor: pointer;
 }
 
-.top-actions{
-    display:flex;
-    gap:7px
+.user:hover {
+    background: #202f3d;
 }
 
-.icon-button{
-    border:0;
-    background:#243342;
-    color:#fff;
-    border-radius:9px;
-    padding:9px 12px
+.avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #2aabee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
-.content{
-    flex:1;
-    overflow:hidden;
-    position:relative
+.user-name {
+    font-weight: bold;
 }
 
-.view{
-    height:100%;
-    overflow-y:auto;
-    padding:20px
+.user-username {
+    color: #8295a5;
+    font-size: 12px;
+    margin-top: 3px;
 }
 
-.chat{
-    height:100%;
-    display:flex;
-    flex-direction:column
+.main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
-.chat-header{
-    padding:13px 20px;
-    background:#17212b;
-    border-bottom:1px solid #263746;
-    cursor:pointer
+.topbar {
+    height: 62px;
+    background: #17212b;
+    border-bottom: 1px solid #263746;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 18px;
 }
 
-.chat-status{
-    color:#8295a5;
-    font-size:12px;
-    margin-top:3px
+.top-actions {
+    display: flex;
+    gap: 7px;
 }
 
-.typing{
-    color:#2aabee
+.icon-button {
+    border: 0;
+    background: #243342;
+    color: white;
+    border-radius: 9px;
+    padding: 9px 12px;
 }
 
-.messages{
-    flex:1;
-    padding:20px;
-    overflow-y:auto
+.content {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
 }
 
-.message-wrap{
-    position:relative;
-    margin:7px 0;
-    max-width:70%
+.view {
+    height: 100%;
+    overflow-y: auto;
+    padding: 20px;
 }
 
-.message-wrap.mine{
-    margin-left:auto
+.chat {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
-.message{
-    width:fit-content;
-    max-width:100%;
-    background:#182533;
-    padding:9px 12px;
-    border-radius:12px
+.chat-header {
+    padding: 15px 20px;
+    background: #17212b;
+    border-bottom: 1px solid #263746;
 }
 
-.message.mine{
-    margin-left:auto;
-    background:#2b5278
+.messages {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
 }
 
-.message-image{
-    max-width:320px;
-    max-height:400px;
-    border-radius:10px;
-    display:block
+.message {
+    width: fit-content;
+    max-width: 70%;
+    background: #182533;
+    padding: 9px 12px;
+    margin: 7px 0;
+    border-radius: 12px;
 }
 
-.time{
-    color:#a8bac8;
-    font-size:11px;
-    text-align:right;
-    margin-top:4px
+.message.mine {
+    margin-left: auto;
+    background: #2b5278;
 }
 
-.message-actions{
-    display:none;
-    position:absolute;
-    right:0;
-    top:-34px;
-    background:#17212b;
-    border:1px solid #304352;
-    border-radius:8px;
-    padding:3px
+.time {
+    color: #a8bac8;
+    font-size: 11px;
+    text-align: right;
+    margin-top: 4px;
 }
 
-.message-wrap:hover .message-actions{
-    display:flex
+.composer {
+    display: flex;
+    gap: 8px;
+    padding: 12px;
+    background: #17212b;
 }
 
-.message-actions button{
-    border:0;
-    background:transparent;
-    color:#fff;
-    padding:6px
+.composer input {
+    flex: 1;
+    border: 0;
+    border-radius: 12px;
+    padding: 13px;
+    background: #242f3a;
+    color: white;
+    outline: none;
 }
 
-.editing{
-    display:flex;
-    gap:6px;
-    margin-top:6px
+.send {
+    width: 52px;
+    border: 0;
+    border-radius: 12px;
+    background: #2aabee;
+    color: white;
 }
 
-.editing input{
-    background:#242f3a;
-    color:#fff;
-    border:0;
-    border-radius:8px;
-    padding:7px
+.feed {
+    max-width: 700px;
+    margin: auto;
 }
 
-.composer{
-    display:flex;
-    gap:8px;
-    padding:12px;
-    background:#17212b
+.post-box,
+.post {
+    background: #17212b;
+    border-radius: 15px;
+    padding: 15px;
+    margin-bottom: 15px;
 }
 
-.composer input{
-    flex:1;
-    border:0;
-    border-radius:12px;
-    padding:13px;
-    background:#242f3a;
-    color:#fff;
-    outline:none
+.post-box textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 80px;
+    border: 0;
+    border-radius: 10px;
+    padding: 12px;
+    background: #242f3a;
+    color: white;
+    outline: none;
 }
 
-.send{
-    width:52px;
-    border:0;
-    border-radius:12px;
-    background:#2aabee;
-    color:#fff
+.post-tools {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
 }
 
-.attach{
-    width:45px;
-    border:0;
-    border-radius:12px;
-    background:#243342;
-    color:#fff
+.post-tools button,
+.post-tools label {
+    border: 0;
+    background: #2aabee;
+    color: white;
+    padding: 9px 13px;
+    border-radius: 9px;
 }
 
-.feed{
-    max-width:700px;
-    margin:auto
+.post-header {
+    display: flex;
+    gap: 10px;
+    align-items: center;
 }
 
-.post-box,.post{
-    background:#17212b;
-    border-radius:15px;
-    padding:15px;
-    margin-bottom:15px
+.post-author {
+    font-weight: bold;
 }
 
-.post-box textarea{
-    width:100%;
-    resize:vertical;
-    min-height:80px;
-    border:0;
-    border-radius:10px;
-    padding:12px;
-    background:#242f3a;
-    color:#fff;
-    outline:none
+.post-username {
+    color: #8295a5;
+    font-size: 12px;
 }
 
-.post-tools{
-    display:flex;
-    gap:8px;
-    margin-top:10px
+.post-text {
+    white-space: pre-wrap;
+    margin: 14px 0;
 }
 
-.post-tools button{
-    border:0;
-    background:#2aabee;
-    color:#fff;
-    padding:9px 13px;
-    border-radius:9px
+.post-media {
+    width: 100%;
+    max-height: 600px;
+    object-fit: contain;
+    border-radius: 12px;
+    background: #0e1621;
 }
 
-.post-header{
-    display:flex;
-    gap:10px;
-    align-items:center
+.post-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
 }
 
-.post-header .avatar{
-    cursor:pointer
+.post-actions button {
+    border: 0;
+    border-radius: 8px;
+    background: #243342;
+    color: white;
+    padding: 8px 12px;
 }
 
-.post-author{
-    font-weight:bold;
-    cursor:pointer
+.comments {
+    margin-top: 12px;
 }
 
-.post-username{
-    color:#8295a5;
-    font-size:12px
+.comment {
+    background: #202d39;
+    padding: 10px;
+    border-radius: 9px;
+    margin-top: 7px;
 }
 
-.post-text{
-    white-space:pre-wrap;
-    margin:14px 0
+.comment.reply {
+    margin-left: 30px;
+    background: #253644;
 }
 
-.post-media{
-    width:100%;
-    max-height:600px;
-    object-fit:contain;
-    border-radius:12px;
-    background:#0e1621
+.comment-top {
+    display: flex;
+    gap: 8px;
+    align-items: center;
 }
 
-.post-actions{
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px;
-    margin-top:10px
+.comment-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #2aabee;
 }
 
-.post-actions button{
-    border:0;
-    border-radius:8px;
-    background:#243342;
-    color:#fff;
-    padding:8px 12px
+.comment-user {
+    font-weight: bold;
 }
 
-.comments{
-    margin-top:12px
+.comment-date {
+    color: #8295a5;
+    font-size: 11px;
 }
 
-.comment{
-    background:#202d39;
-    padding:9px;
-    border-radius:8px;
-    margin-top:6px
+.comment-text {
+    margin-top: 7px;
+    white-space: pre-wrap;
 }
 
-.comment-top{
-    display:flex;
-    justify-content:space-between;
-    gap:10px
+.comment-buttons {
+    display: flex;
+    gap: 5px;
+    margin-top: 7px;
 }
 
-.comment-author{
-    font-weight:bold;
-    cursor:pointer
+.comment-buttons button {
+    border: 0;
+    background: #304454;
+    color: white;
+    border-radius: 7px;
+    padding: 5px 8px;
+    font-size: 12px;
 }
 
-.comment-reply{
-    color:#8295a5;
-    font-size:12px
+.comment-input {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
 }
 
-.comment-buttons{
-    display:flex;
-    gap:5px
+.comment-input input {
+    flex: 1;
+    background: #242f3a;
+    border: 0;
+    padding: 9px;
+    color: white;
+    border-radius: 8px;
+    outline: none;
 }
 
-.comment-buttons button{
-    border:0;
-    background:transparent;
-    color:#8295a5
+.comment-input button {
+    border: 0;
+    background: #2aabee;
+    color: white;
+    border-radius: 8px;
+    padding: 0 14px;
 }
 
-.comment-input{
-    display:flex;
-    gap:6px;
-    margin-top:8px
+.reply-label {
+    color: #2aabee;
+    font-size: 12px;
+    margin-top: 5px;
 }
 
-.comment-input input{
-    flex:1;
-    background:#242f3a;
-    border:0;
-    padding:9px;
-    color:#fff;
-    border-radius:8px
+.profile {
+    max-width: 600px;
+    margin: auto;
 }
 
-.comment-input button{
-    border:0;
-    background:#2aabee;
-    color:#fff;
-    border-radius:8px
+.profile-card {
+    background: #17212b;
+    border-radius: 16px;
+    padding: 25px;
+    text-align: center;
 }
 
-.reply-box{
-    color:#2aabee;
-    font-size:12px;
-    margin-top:6px;
-    cursor:pointer
+.big-avatar {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #2aabee;
+    margin: auto;
 }
 
-.profile{
-    max-width:600px;
-    margin:auto
+.profile input,
+.profile textarea {
+    width: 100%;
+    margin: 7px 0;
+    border: 0;
+    padding: 12px;
+    border-radius: 9px;
+    background: #242f3a;
+    color: white;
+    outline: none;
 }
 
-.profile-card,.settings-card{
-    background:#17212b;
-    border-radius:16px;
-    padding:25px;
-    margin-bottom:15px
+.primary {
+    background: #2aabee;
+    border: 0;
+    color: white;
+    padding: 11px 15px;
+    border-radius: 9px;
 }
 
-.big-avatar{
-    width:110px;
-    height:110px;
-    border-radius:50%;
-    object-fit:cover;
-    background:#2aabee;
-    display:block;
-    margin:auto;
-    cursor:pointer
+.danger {
+    background: #d84a4a;
+    border: 0;
+    color: white;
+    padding: 11px 15px;
+    border-radius: 9px;
+    margin-top: 10px;
 }
 
-.profile input,.profile textarea,
-.settings-card input,.settings-card select{
-    width:100%;
-    margin:7px 0;
-    border:0;
-    padding:12px;
-    border-radius:9px;
-    background:#242f3a;
-    color:#fff;
-    outline:none
+.share-copy {
+    color: #2aabee;
+    font-size: 12px;
+    margin-top: 7px;
+    display: none;
 }
 
-.primary{
-    background:#2aabee;
-    border:0;
-    color:#fff;
-    padding:11px 15px;
-    border-radius:9px
-}
+@media(max-width:750px) {
 
-.danger{
-    background:#d84a4a;
-    border:0;
-    color:#fff;
-    padding:11px 15px;
-    border-radius:9px;
-    margin-top:10px
-}
+    .sidebar {
+        width: 85px;
+    }
 
-.settings-item{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:15px;
-    padding:14px 0;
-    border-bottom:1px solid #263746
-}
+    .logo {
+        font-size: 13px;
+        padding: 12px 5px;
+    }
 
-.settings-item:last-child{border-bottom:0}
+    .user {
+        padding: 10px 5px;
+        justify-content: center;
+    }
 
-.account-item{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:10px;
-    background:#202d39;
-    border-radius:10px;
-    margin-top:8px
-}
+    .user > div:last-child {
+        display: none;
+    }
 
-.account-left{
-    display:flex;
-    align-items:center;
-    gap:10px
-}
+    .search {
+        margin: 5px;
+    }
 
-.profile-user-card{
-    max-width:500px;
-    margin:auto;
-    background:#17212b;
-    border-radius:16px;
-    padding:25px;
-    text-align:center
-}
+    .view {
+        padding: 10px;
+    }
 
-.profile-user-card .big-avatar{
-    cursor:default
-}
+    .message {
+        max-width: 85%;
+    }
 
-.back-button{
-    border:0;
-    background:#243342;
-    color:#fff;
-    padding:8px 12px;
-    border-radius:8px;
-    margin-bottom:10px
+    .comment.reply {
+        margin-left: 15px;
+    }
 }
 
-@media(max-width:750px){
-    .sidebar{width:75px}
-    .logo{font-size:11px;padding:12px 4px}
-    .user{padding:10px 5px;justify-content:center}
-    .user>div:last-child{display:none}
-    .search{margin:5px}
-    .view{padding:10px}
-    .message-wrap{max-width:85%}
-    .top-actions .icon-button{padding:7px}
-}
 </style>
+
 </head>
 
 <body>
 
+
+<!-- =====================================================
+AUTH
+===================================================== -->
+
 <div class="auth" id="auth">
+
     <h1>💬 MyMessenger</h1>
 
-    <input id="username" placeholder="Username">
-    <input id="password" type="password" placeholder="Пароль">
+    <input
+        id="username"
+        placeholder="Username"
+    >
 
-    <button onclick="login()">Войти</button>
-    <button onclick="register()">Создать аккаунт</button>
+    <input
+        id="password"
+        type="password"
+        placeholder="Пароль"
+    >
+
+    <button onclick="login()">
+        Войти
+    </button>
+
+    <button onclick="register()">
+        Создать аккаунт
+    </button>
 
     <p id="authError"></p>
+
 </div>
 
+
+<!-- =====================================================
+APP
+===================================================== -->
 
 <div id="app">
 
     <aside class="sidebar">
 
-        <div class="logo">💬 MyMessenger</div>
+        <div class="logo">
+            💬 MyMessenger
+        </div>
 
         <input
             class="search"
@@ -590,7 +565,10 @@ button{cursor:pointer}
             oninput="searchUsers()"
         >
 
-        <div class="users" id="users"></div>
+        <div
+            class="users"
+            id="users"
+        ></div>
 
     </aside>
 
@@ -599,13 +577,32 @@ button{cursor:pointer}
 
         <div class="topbar">
 
-            <strong id="pageTitle">📰 Лента</strong>
+            <strong id="pageTitle">
+                📰 Лента
+            </strong>
 
             <div class="top-actions">
 
-                <button class="icon-button" onclick="showFeed()">📰</button>
+                <button
+                    class="icon-button"
+                    onclick="showFeed()"
+                >
+                    📰
+                </button>
 
-                <button class="icon-button" onclick="showSettings()">⚙️</button>
+                <button
+                    class="icon-button"
+                    onclick="showProfile()"
+                >
+                    👤
+                </button>
+
+                <button
+                    class="icon-button"
+                    onclick="logout()"
+                >
+                    🚪
+                </button>
 
             </div>
 
@@ -614,9 +611,15 @@ button{cursor:pointer}
 
         <div class="content">
 
-            <!-- FEED -->
 
-            <section class="view" id="feedView">
+            <!-- =================================================
+            FEED
+            ================================================= -->
+
+            <section
+                class="view"
+                id="feedView"
+            >
 
                 <div class="feed">
 
@@ -633,7 +636,8 @@ button{cursor:pointer}
                                 📝 Опубликовать
                             </button>
 
-                            <label class="primary">
+                            <label>
+
                                 📷 Фото / видео
 
                                 <input
@@ -642,6 +646,7 @@ button{cursor:pointer}
                                     accept="image/*,video/*"
                                     hidden
                                 >
+
                             </label>
 
                         </div>
@@ -655,7 +660,9 @@ button{cursor:pointer}
             </section>
 
 
-            <!-- CHAT -->
+            <!-- =================================================
+            CHAT
+            ================================================= -->
 
             <section
                 class="view"
@@ -668,7 +675,6 @@ button{cursor:pointer}
                     <div
                         class="chat-header"
                         id="chatHeader"
-                        onclick="openSelectedProfile()"
                     >
                         Выберите пользователя
                     </div>
@@ -678,30 +684,12 @@ button{cursor:pointer}
                         id="messages"
                     ></div>
 
-                    <div
-                        class="typing"
-                        id="typing"
-                        style="padding:0 15px 5px"
-                    ></div>
-
                     <div class="composer">
-
-                        <label class="attach">
-                            📷
-                            <input
-                                id="chatFile"
-                                type="file"
-                                accept="image/*"
-                                hidden
-                                onchange="sendChatImage()"
-                            >
-                        </label>
 
                         <input
                             id="messageInput"
                             placeholder="Сообщение..."
                             onkeydown="messageKey(event)"
-                            oninput="typingEvent()"
                         >
 
                         <button
@@ -718,85 +706,9 @@ button{cursor:pointer}
             </section>
 
 
-            <!-- SETTINGS -->
-
-            <section
-                class="view"
-                id="settingsView"
-                style="display:none"
-            >
-
-                <div class="profile">
-
-                    <div class="settings-card">
-
-                        <h2>⚙️ Настройки</h2>
-
-                        <div class="settings-item">
-
-                            <span>🌐 Язык</span>
-
-                            <select
-                                id="languageSelect"
-                                onchange="changeLanguage()"
-                            >
-                                <option value="ru">Русский</option>
-                                <option value="en">English</option>
-                            </select>
-
-                        </div>
-
-                        <div class="settings-item">
-
-                            <span>👤 Профиль</span>
-
-                            <button
-                                class="primary"
-                                onclick="showProfile()"
-                            >
-                                Изменить
-                            </button>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="settings-card">
-
-                        <h2>👥 Аккаунты</h2>
-
-                        <p>
-                            Здесь можно добавить второй аккаунт
-                            и переключаться между ними.
-                        </p>
-
-                        <div id="accountsList"></div>
-
-                        <button
-                            class="primary"
-                            onclick="createAnotherAccount()"
-                        >
-                            ➕ Добавить аккаунт
-                        </button>
-
-                        <br>
-
-                        <button
-                            class="danger"
-                            onclick="logoutCurrentAccount()"
-                        >
-                            🚪 Выйти из этого аккаунта
-                        </button>
-
-                    </div>
-
-                </div>
-
-            </section>
-
-
-            <!-- PROFILE -->
+            <!-- =================================================
+            PROFILE
+            ================================================= -->
 
             <section
                 class="view"
@@ -814,7 +726,9 @@ button{cursor:pointer}
                             src=""
                         >
 
-                        <h2>👤 Профиль</h2>
+                        <h2>
+                            ⚙️ Профиль
+                        </h2>
 
                         <input
                             id="profileUsername"
@@ -831,7 +745,9 @@ button{cursor:pointer}
                             placeholder="О себе"
                         ></textarea>
 
-                        <p>🖼️ Новый аватар</p>
+                        <p>
+                            🖼️ Новый аватар
+                        </p>
 
                         <input
                             id="avatarFile"
@@ -846,47 +762,16 @@ button{cursor:pointer}
                             Сохранить профиль
                         </button>
 
+                        <br>
+
+                        <button
+                            class="danger"
+                            onclick="logout()"
+                        >
+                            🚪 Выйти из аккаунта
+                        </button>
+
                     </div>
-
-                </div>
-
-            </section>
-
-
-            <!-- OTHER PROFILE -->
-
-            <section
-                class="view"
-                id="otherProfileView"
-                style="display:none"
-            >
-
-                <div class="profile-user-card">
-
-                    <button
-                        class="back-button"
-                        onclick="goBackFromProfile()"
-                    >
-                        ← Назад
-                    </button>
-
-                    <img
-                        id="otherBigAvatar"
-                        class="big-avatar"
-                    >
-
-                    <h2 id="otherName"></h2>
-
-                    <p id="otherUsername"></p>
-
-                    <p id="otherBio"></p>
-
-                    <button
-                        class="primary"
-                        onclick="messageOtherUser()"
-                    >
-                        💬 Написать сообщение
-                    </button>
 
                 </div>
 
@@ -901,748 +786,642 @@ button{cursor:pointer}
 
 <script>
 
+
+// =========================================================
+// CONFIG
+// =========================================================
+//
+// Если frontend и backend находятся на Render
+// и этот index.html лежит в static,
+// оставь:
+//
+// const API = "";
+//
+// Если index.html находится на Netlify,
+// впиши сюда адрес своего Render backend:
+//
+// const API = "https://ТВОЙ-СЕРВЕР.onrender.com";
+//
+// =========================================================
+
 const API = "";
 
-let token = localStorage.getItem("token");
+
+let token =
+    localStorage.getItem("token");
+
 let currentUser = null;
+
 let selectedUser = null;
+
 let socket = null;
-let typingTimer = null;
-let currentReplyComment = null;
-let previousView = "feedView";
 
 
-// ========================================================
-// HELPERS
-// ========================================================
+// =========================================================
+// API
+// =========================================================
 
-function api(path){
+function api(path) {
+
     return API + path;
+
 }
 
-function mediaUrl(url){
 
-    if(!url) return "";
+async function request(
+    path,
+    options = {}
+) {
 
-    if(url.startsWith("http"))
-        return url;
+    options.headers =
+        options.headers || {};
 
-    return API + url;
-}
+    if (token) {
 
-function escapeHtml(text){
-
-    return String(text ?? "")
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
-}
-
-async function request(path,options={}){
-
-    options.headers = options.headers || {};
-
-    if(token){
         options.headers.Authorization =
             "Bearer " + token;
+
     }
 
-    return fetch(api(path),options);
+    return fetch(
+        api(path),
+        options
+    );
+
 }
 
 
-// ========================================================
+// =========================================================
 // AUTH
-// ========================================================
+// =========================================================
 
-async function register(){
+async function register() {
 
     const username =
-        document.getElementById("username").value.trim();
+        document.getElementById(
+            "username"
+        ).value.trim();
 
     const password =
-        document.getElementById("password").value;
+        document.getElementById(
+            "password"
+        ).value;
 
-    try{
+    try {
 
-        const response = await fetch(
-            api("/api/register"),
-            {
-                method:"POST",
-                headers:{
-                    "Content-Type":"application/json"
-                },
-                body:JSON.stringify({
-                    username,
-                    password
-                })
-            }
-        );
+        const response =
+            await fetch(
+                api("/api/register"),
+                {
+                    method: "POST",
 
-        const data = await response.json();
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
 
-        if(!response.ok)
-            throw new Error(data.detail);
+                    body: JSON.stringify({
+                        username,
+                        password
+                    })
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.detail ||
+                "Ошибка регистрации"
+            );
+
+        }
 
         token = data.token;
 
-        localStorage.setItem("token",token);
-
-        saveAccountToken(username,token);
-
-        await startApp();
-
-    }catch(error){
-
-        document.getElementById("authError").innerText =
-            error.message;
-    }
-}
-
-
-async function login(){
-
-    const username =
-        document.getElementById("username").value.trim();
-
-    const password =
-        document.getElementById("password").value;
-
-    try{
-
-        const response = await fetch(
-            api("/api/login"),
-            {
-                method:"POST",
-                headers:{
-                    "Content-Type":"application/json"
-                },
-                body:JSON.stringify({
-                    username,
-                    password
-                })
-            }
-        );
-
-        const data = await response.json();
-
-        if(!response.ok)
-            throw new Error(data.detail);
-
-        token = data.token;
-
-        localStorage.setItem("token",token);
-
-        saveAccountToken(
-            data.user.username,
+        localStorage.setItem(
+            "token",
             token
         );
 
         await startApp();
 
-    }catch(error){
+    } catch (error) {
 
-        document.getElementById("authError").innerText =
+        document.getElementById(
+            "authError"
+        ).innerText =
             error.message;
+
     }
+
 }
 
 
-// ========================================================
-// MULTI ACCOUNTS
-// ========================================================
+async function login() {
 
-function getAccounts(){
+    const username =
+        document.getElementById(
+            "username"
+        ).value.trim();
 
-    try{
-        return JSON.parse(
-            localStorage.getItem("accounts") || "[]"
-        );
-    }catch{
-        return [];
-    }
-}
+    const password =
+        document.getElementById(
+            "password"
+        ).value;
 
-function saveAccounts(accounts){
+    try {
 
-    localStorage.setItem(
-        "accounts",
-        JSON.stringify(accounts)
-    );
-}
+        const response =
+            await fetch(
+                api("/api/login"),
+                {
+                    method: "POST",
 
-function saveAccountToken(username,token){
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
 
-    const accounts = getAccounts();
+                    body: JSON.stringify({
+                        username,
+                        password
+                    })
+                }
+            );
 
-    const index = accounts.findIndex(
-        x => x.username === username
-    );
+        const data =
+            await response.json();
 
-    if(index >= 0){
-        accounts[index].token = token;
-    }else{
-        accounts.push({
-            username,
+        if (!response.ok) {
+
+            throw new Error(
+                data.detail ||
+                "Ошибка входа"
+            );
+
+        }
+
+        token = data.token;
+
+        localStorage.setItem(
+            "token",
             token
-        });
+        );
+
+        await startApp();
+
+    } catch (error) {
+
+        document.getElementById(
+            "authError"
+        ).innerText =
+            error.message;
+
     }
 
-    saveAccounts(accounts);
 }
 
-function renderAccounts(){
 
-    const container =
-        document.getElementById("accountsList");
+// =========================================================
+// START
+// =========================================================
 
-    if(!container) return;
+async function startApp() {
 
-    const accounts = getAccounts();
+    try {
 
-    container.innerHTML = "";
+        const response =
+            await request(
+                "/api/me"
+            );
 
-    accounts.forEach(account => {
+        if (!response.ok) {
 
-        const div =
-            document.createElement("div");
+            logout();
 
-        div.className = "account-item";
+            return;
 
-        div.innerHTML = `
-            <div class="account-left">
-                <div class="avatar">👤</div>
-                <b>@${escapeHtml(account.username)}</b>
-            </div>
+        }
 
-            <button
-                class="icon-button"
-                onclick="switchAccount('${escapeHtml(account.username)}')"
-            >
-                ${currentUser &&
-                  currentUser.username === account.username
-                  ? "✓"
-                  : "Переключить"}
-            </button>
-        `;
+        currentUser =
+            await response.json();
 
-        container.appendChild(div);
-    });
-}
+        document.getElementById(
+            "auth"
+        ).style.display = "none";
 
-function createAnotherAccount(){
+        document.getElementById(
+            "app"
+        ).style.display = "flex";
 
-    if(socket){
-        try{socket.close()}catch{}
+        connectWebSocket();
+
+        searchUsers();
+
+        showFeed();
+
+        // Если открыта ссылка на конкретный пост
+        const params =
+            new URLSearchParams(
+                window.location.search
+            );
+
+        const postId =
+            params.get("post");
+
+        if (postId) {
+
+            setTimeout(
+                () => openSharedPost(postId),
+                300
+            );
+
+        }
+
+    } catch (error) {
+
+        console.error(error);
+
     }
 
-    currentUser = null;
-    selectedUser = null;
+}
+
+
+// =========================================================
+// LOGOUT
+// =========================================================
+
+function logout() {
+
+    localStorage.removeItem(
+        "token"
+    );
 
     token = null;
 
-    localStorage.removeItem("token");
+    if (socket) {
 
-    document.getElementById("app").style.display = "none";
-    document.getElementById("auth").style.display = "block";
+        try {
+            socket.close();
+        } catch {}
 
-    document.getElementById("username").value = "";
-    document.getElementById("password").value = "";
-
-    document.getElementById("authError").innerText =
-        "Создай новый аккаунт. Старый сохранён.";
-
-}
-
-function switchAccount(username){
-
-    const account =
-        getAccounts().find(
-            x => x.username === username
-        );
-
-    if(!account) return;
-
-    if(socket){
-        try{socket.close()}catch{}
     }
-
-    token = account.token;
-
-    localStorage.setItem("token",token);
-
-    startApp();
-}
-
-function logoutCurrentAccount(){
-
-    if(!currentUser) return;
-
-    const accounts = getAccounts()
-        .filter(
-            x => x.username !== currentUser.username
-        );
-
-    saveAccounts(accounts);
-
-    if(socket){
-        try{socket.close()}catch{}
-    }
-
-    token = null;
-
-    localStorage.removeItem("token");
-
-    currentUser = null;
 
     location.reload();
+
 }
 
 
-// ========================================================
-// START
-// ========================================================
-
-async function startApp(){
-
-    const response =
-        await request("/api/me");
-
-    if(!response.ok){
-
-        localStorage.removeItem("token");
-
-        token = null;
-
-        document.getElementById("app").style.display =
-            "none";
-
-        document.getElementById("auth").style.display =
-            "block";
-
-        return;
-    }
-
-    currentUser = await response.json();
-
-    saveAccountToken(
-        currentUser.username,
-        token
-    );
-
-    document.getElementById("auth").style.display =
-        "none";
-
-    document.getElementById("app").style.display =
-        "flex";
-
-    connectWebSocket();
-
-    searchUsers();
-
-    showFeed();
-}
-
-
-// ========================================================
+// =========================================================
 // WEBSOCKET
-// ========================================================
+// =========================================================
 
-function connectWebSocket(){
+function connectWebSocket() {
 
-    if(!currentUser) return;
+    if (!currentUser) return;
 
     let base;
 
-    if(API){
+    if (API) {
+
         base = API;
-    }else{
+
+    } else {
+
         base =
             location.protocol === "https:"
-            ? "https://" + location.host
-            : "http://" + location.host;
+                ? "https://" + location.host
+                : "http://" + location.host;
+
     }
 
     const wsBase =
-        base
-            .replace("https://","wss://")
-            .replace("http://","ws://");
-
-    socket = new WebSocket(
-        wsBase +
-        "/ws/" +
-        currentUser.id
-    );
-
-    socket.onmessage = event => {
-
-        let data;
-
-        try{
-            data = JSON.parse(event.data);
-        }catch{
-            return;
-        }
-
-        if(data.type === "message"){
-
-            const message = data.message;
-
-            if(
-                selectedUser &&
-                (
-                    (
-                        message.sender_id === currentUser.id &&
-                        message.receiver_id === selectedUser.id
-                    )
-                    ||
-                    (
-                        message.sender_id === selectedUser.id &&
-                        message.receiver_id === currentUser.id
-                    )
-                )
-            ){
-
-                loadChatMessages();
-
-            }
-        }
-
-        if(data.type === "message_updated"){
-            loadChatMessages();
-        }
-
-        if(data.type === "message_deleted"){
-            loadChatMessages();
-        }
-
-        if(data.type === "typing"){
-
-            if(
-                selectedUser &&
-                data.user_id === selectedUser.id
-            ){
-
-                document.getElementById("typing")
-                    .innerText =
-                    data.typing
-                    ? "печатает..."
-                    : "";
-            }
-        }
-    };
-
-    socket.onclose = () => {
-
-        setTimeout(
-            connectWebSocket,
-            3000
-        );
-    };
-}
-
-
-// ========================================================
-// USERS
-// ========================================================
-
-async function searchUsers(){
-
-    const q =
-        document.getElementById("search").value;
-
-    const response =
-        await request(
-            "/api/users?q=" +
-            encodeURIComponent(q)
+        base.replace(
+            "https://",
+            "wss://"
+        ).replace(
+            "http://",
+            "ws://"
         );
 
-    if(!response.ok) return;
+    socket =
+        new WebSocket(
+            wsBase +
+            "/ws/" +
+            currentUser.id
+        );
 
-    const users = await response.json();
+    socket.onmessage =
+        event => {
 
-    const container =
-        document.getElementById("users");
+            try {
 
-    container.innerHTML = "";
+                const data =
+                    JSON.parse(
+                        event.data
+                    );
 
-    users.forEach(user => {
+                if (
+                    data.type === "message"
+                ) {
 
-        const element =
-            document.createElement("div");
+                    const message =
+                        data.message;
 
-        element.className = "user";
+                    if (
+                        selectedUser &&
+                        (
+                            (
+                                message.sender_id ===
+                                currentUser.id &&
+                                message.receiver_id ===
+                                selectedUser.id
+                            )
+                            ||
+                            (
+                                message.sender_id ===
+                                selectedUser.id &&
+                                message.receiver_id ===
+                                currentUser.id
+                            )
+                        )
+                    ) {
 
-        let avatar = user.avatar_url
-            ? `<img class="avatar"
-                    src="${mediaUrl(user.avatar_url)}">`
-            : `<div class="avatar">👤</div>`;
+                        addMessage(
+                            message
+                        );
 
-        element.innerHTML = `
-            ${avatar}
+                    }
 
-            <div>
-                <div class="user-name">
-                    ${escapeHtml(
-                        user.display_name ||
-                        user.username
-                    )}
-                </div>
+                }
 
-                <div class="user-username">
-                    @${escapeHtml(user.username)}
-                </div>
+            } catch (error) {
 
-                <div class="online">
-                    ${isOnline(user.last_seen)
-                        ? "● в сети"
-                        : "был(а) недавно"}
-                </div>
-            </div>
-        `;
+                console.error(
+                    "WebSocket error:",
+                    error
+                );
 
-        element.onclick =
-            () => openChat(user);
+            }
 
-        const avatarElement =
-            element.querySelector(".avatar");
-
-        avatarElement.onclick = event => {
-
-            event.stopPropagation();
-
-            openUserProfile(user);
         };
 
-        container.appendChild(element);
-    });
-}
+    socket.onclose =
+        () => {
 
-function isOnline(lastSeen){
+            setTimeout(
+                connectWebSocket,
+                3000
+            );
 
-    if(!lastSeen) return false;
+        };
 
-    const time =
-        new Date(
-            lastSeen.endsWith("Z")
-            ? lastSeen
-            : lastSeen + "Z"
-        ).getTime();
-
-    return Date.now() - time < 90000;
 }
 
 
-// ========================================================
+// =========================================================
+// USERS
+// =========================================================
+
+async function searchUsers() {
+
+    try {
+
+        const q =
+            document.getElementById(
+                "search"
+            ).value;
+
+        const response =
+            await request(
+                "/api/users?q=" +
+                encodeURIComponent(q)
+            );
+
+        if (!response.ok) return;
+
+        const users =
+            await response.json();
+
+        const container =
+            document.getElementById(
+                "users"
+            );
+
+        container.innerHTML = "";
+
+        users.forEach(
+            user => {
+
+                const element =
+                    document.createElement(
+                        "div"
+                    );
+
+                element.className =
+                    "user";
+
+                element.innerHTML = `
+
+                    ${
+                        user.avatar_url
+                        ?
+                        `<img
+                            class="avatar"
+                            src="${mediaUrl(user.avatar_url)}"
+                        >`
+                        :
+                        `<div class="avatar">
+                            👤
+                        </div>`
+                    }
+
+                    <div>
+
+                        <div class="user-name">
+                            ${escapeHtml(
+                                user.display_name ||
+                                user.username
+                            )}
+                        </div>
+
+                        <div class="user-username">
+                            @${escapeHtml(
+                                user.username
+                            )}
+                        </div>
+
+                    </div>
+                `;
+
+                element.onclick =
+                    () => openChat(user);
+
+                container.appendChild(
+                    element
+                );
+
+            }
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+    }
+
+}
+
+
+// =========================================================
 // CHAT
-// ========================================================
+// =========================================================
 
-async function openChat(user){
+async function openChat(user) {
 
     selectedUser = user;
 
-    previousView = "feedView";
+    document.getElementById(
+        "feedView"
+    ).style.display = "none";
 
-    document.getElementById("feedView")
-        .style.display = "none";
+    document.getElementById(
+        "profileView"
+    ).style.display = "none";
 
-    document.getElementById("settingsView")
-        .style.display = "none";
+    document.getElementById(
+        "chatView"
+    ).style.display = "block";
 
-    document.getElementById("profileView")
-        .style.display = "none";
-
-    document.getElementById("otherProfileView")
-        .style.display = "none";
-
-    document.getElementById("chatView")
-        .style.display = "block";
-
-    document.getElementById("pageTitle")
-        .innerText =
+    document.getElementById(
+        "pageTitle"
+    ).innerText =
         "💬 " +
         (
             user.display_name ||
             user.username
         );
 
-    updateChatHeader();
-
-    loadChatMessages();
-}
-
-function updateChatHeader(){
-
-    if(!selectedUser) return;
-
-    document.getElementById("chatHeader")
-        .innerHTML = `
-            <div>
-                👤
-                <b>
-                    ${escapeHtml(
-                        selectedUser.display_name ||
-                        selectedUser.username
-                    )}
-                </b>
-            </div>
-
-            <div class="chat-status">
-                ${isOnline(selectedUser.last_seen)
-                    ? "🟢 в сети"
-                    : "был(а) недавно"}
-            </div>
-        `;
-}
-
-async function loadChatMessages(){
-
-    if(!selectedUser) return;
+    document.getElementById(
+        "chatHeader"
+    ).innerText =
+        "👤 " +
+        (
+            user.display_name ||
+            user.username
+        );
 
     const response =
         await request(
             "/api/messages/" +
-            selectedUser.id
+            user.id
         );
 
-    if(!response.ok) return;
+    if (!response.ok) return;
 
     const history =
         await response.json();
 
     const messages =
-        document.getElementById("messages");
+        document.getElementById(
+            "messages"
+        );
 
     messages.innerHTML = "";
 
-    history.forEach(addMessage);
+    history.forEach(
+        addMessage
+    );
 
-    messages.scrollTop =
-        messages.scrollHeight;
 }
 
-function addMessage(message){
+
+function addMessage(message) {
 
     const container =
-        document.getElementById("messages");
+        document.getElementById(
+            "messages"
+        );
 
-    const wrap =
-        document.createElement("div");
+    const element =
+        document.createElement(
+            "div"
+        );
 
     const mine =
-        message.sender_id === currentUser.id;
+        message.sender_id ===
+        currentUser.id;
 
-    wrap.className =
-        "message-wrap " +
-        (mine ? "mine" : "");
-
-    let content = "";
-
-    if(message.media_url){
-
-        content += `
-            <img
-                class="message-image"
-                src="${mediaUrl(message.media_url)}"
-            >
-        `;
-    }
-
-    if(message.text){
-
-        content += `
-            <div>
-                ${escapeHtml(message.text)}
-            </div>
-        `;
-    }
+    element.className =
+        "message " +
+        (
+            mine
+            ? "mine"
+            : ""
+        );
 
     const date =
         new Date(
-            message.created_at.endsWith("Z")
-            ? message.created_at
-            : message.created_at + "Z"
+            message.created_at
         );
 
-    wrap.innerHTML = `
+    element.innerHTML = `
 
-        <div class="message">
-
-            ${content}
-
-            <div class="time">
-
-                ${date.toLocaleTimeString(
-                    [],
-                    {
-                        hour:"2-digit",
-                        minute:"2-digit"
-                    }
-                )}
-
-                ${
-                    mine
-                    ? (message.is_read ? " ✓✓" : " ✓")
-                    : ""
-                }
-
-                ${
-                    message.edited
-                    ? " · изменено"
-                    : ""
-                }
-
-            </div>
-
+        <div>
+            ${escapeHtml(
+                message.text
+            )}
         </div>
 
-        ${
-            mine && !message.media_url
-            ?
-            `
-            <div class="message-actions">
+        <div class="time">
 
-                <button
-                    onclick="editMessage(${message.id},'${escapeHtml(message.text)}')"
-                >
-                    ✏️
-                </button>
+            ${date.toLocaleTimeString(
+                [],
+                {
+                    hour: "2-digit",
+                    minute: "2-digit"
+                }
+            )}
 
-                <button
-                    onclick="deleteMessage(${message.id})"
-                >
-                    🗑️
-                </button>
+            ${mine ? " ✓✓" : ""}
 
-            </div>
-            `
-            :
-            ""
-        }
+        </div>
     `;
 
-    container.appendChild(wrap);
+    container.appendChild(
+        element
+    );
+
+    container.scrollTop =
+        container.scrollHeight;
+
 }
 
 
-async function sendMessage(){
+async function sendMessage() {
 
-    if(!selectedUser){
+    if (!selectedUser) {
 
-        alert("Выбери пользователя");
+        alert(
+            "Выбери пользователя"
+        );
 
         return;
+
     }
 
     const input =
-        document.getElementById("messageInput");
+        document.getElementById(
+            "messageInput"
+        );
 
     const text =
         input.value.trim();
 
-    if(!text) return;
+    if (!text) return;
 
     input.value = "";
 
@@ -1650,510 +1429,240 @@ async function sendMessage(){
         await request(
             "/api/messages",
             {
-                method:"POST",
+                method: "POST",
 
-                headers:{
+                headers: {
                     "Content-Type":
                         "application/json"
                 },
 
-                body:JSON.stringify({
-                    receiver_id:selectedUser.id,
+                body: JSON.stringify({
+                    receiver_id:
+                        selectedUser.id,
+
                     text
                 })
             }
         );
 
-    if(!response.ok){
+    if (!response.ok) {
 
-        const data = await response.json();
-
-        alert(
-            data.detail ||
-            "Ошибка"
-        );
-    }
-}
-
-async function sendChatImage(){
-
-    if(!selectedUser) return;
-
-    const input =
-        document.getElementById("chatFile");
-
-    const file =
-        input.files[0];
-
-    if(!file) return;
-
-    const form = new FormData();
-
-    form.append("file",file);
-
-    const response =
-        await request(
-            "/api/messages/media",
-            {
-                method:"POST",
-                body:form
-            }
-        );
-
-    input.value = "";
-
-    if(!response.ok){
-
-        const data = await response.json();
-
-        alert(
-            data.detail ||
-            "Ошибка"
-        );
-
-        return;
-    }
-
-    loadChatMessages();
-}
-
-
-async function editMessage(id,text){
-
-    const newText =
-        prompt(
-            "Изменить сообщение:",
-            text
-        );
-
-    if(
-        newText === null ||
-        !newText.trim()
-    ) return;
-
-    const response =
-        await request(
-            "/api/messages/" + id,
-            {
-                method:"PUT",
-
-                headers:{
-                    "Content-Type":
-                        "application/json"
-                },
-
-                body:JSON.stringify({
-                    text:newText.trim()
-                })
-            }
-        );
-
-    if(!response.ok){
-
-        const data = await response.json();
-
-        alert(data.detail || "Ошибка");
-
-        return;
-    }
-
-    loadChatMessages();
-}
-
-
-async function deleteMessage(id){
-
-    if(!confirm("Удалить сообщение?"))
-        return;
-
-    const response =
-        await request(
-            "/api/messages/" + id,
-            {
-                method:"DELETE"
-            }
-        );
-
-    if(!response.ok){
-
-        const data = await response.json();
-
-        alert(data.detail || "Ошибка");
-
-        return;
-    }
-
-    loadChatMessages();
-}
-
-
-function messageKey(event){
-
-    if(
-        event.key === "Enter" &&
-        !event.shiftKey
-    ){
-
-        event.preventDefault();
-
-        sendMessage();
-    }
-}
-
-
-function typingEvent(){
-
-    if(!socket || !selectedUser) return;
-
-    socket.send(
-        JSON.stringify({
-            type:"typing",
-            receiver_id:selectedUser.id,
-            typing:true
-        })
-    );
-
-    clearTimeout(typingTimer);
-
-    typingTimer =
-        setTimeout(() => {
-
-            if(socket){
-
-                socket.send(
-                    JSON.stringify({
-                        type:"typing",
-                        receiver_id:selectedUser.id,
-                        typing:false
-                    })
-                );
-            }
-
-        },1000);
-}
-
-
-// ========================================================
-// PROFILE
-// ========================================================
-
-function showProfile(){
-
-    hideViews();
-
-    document.getElementById("profileView")
-        .style.display = "block";
-
-    document.getElementById("pageTitle")
-        .innerText = "⚙️ Профиль";
-
-    document.getElementById("profileUsername")
-        .value = currentUser.username;
-
-    document.getElementById("profileName")
-        .value =
-        currentUser.display_name ||
-        currentUser.username;
-
-    document.getElementById("profileBio")
-        .value =
-        currentUser.bio || "";
-
-    setAvatar(currentUser.avatar_url);
-}
-
-
-function setAvatar(url){
-
-    const image =
-        document.getElementById("bigAvatar");
-
-    if(url){
-
-        image.src =
-            mediaUrl(url);
-
-    }else{
-
-        image.removeAttribute("src");
-    }
-}
-
-
-async function saveProfile(){
-
-    const username =
-        document.getElementById(
-            "profileUsername"
-        ).value.trim();
-
-    const display_name =
-        document.getElementById(
-            "profileName"
-        ).value.trim();
-
-    const bio =
-        document.getElementById(
-            "profileBio"
-        ).value.trim();
-
-    try{
-
-        const response =
-            await request(
-                "/api/profile",
-                {
-                    method:"PUT",
-
-                    headers:{
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body:JSON.stringify({
-                        username,
-                        display_name,
-                        bio
-                    })
-                }
-            );
-
-        if(!response.ok){
+        try {
 
             const data =
                 await response.json();
 
-            throw new Error(
-                data.detail
+            alert(
+                data.detail ||
+                "Ошибка"
             );
+
+        } catch {
+
+            alert(
+                "Ошибка отправки"
+            );
+
         }
 
-        const file =
-            document.getElementById(
-                "avatarFile"
-            ).files[0];
-
-        if(file){
-
-            const form =
-                new FormData();
-
-            form.append("file",file);
-
-            const avatarResponse =
-                await request(
-                    "/api/avatar",
-                    {
-                        method:"POST",
-                        body:form
-                    }
-                );
-
-            if(!avatarResponse.ok){
-
-                const data =
-                    await avatarResponse.json();
-
-                throw new Error(
-                    data.detail
-                );
-            }
-        }
-
-        const me =
-            await request("/api/me");
-
-        currentUser =
-            await me.json();
-
-        saveAccountToken(
-            currentUser.username,
-            token
-        );
-
-        alert("Профиль сохранён!");
-
-        searchUsers();
-
-        showProfile();
-
-    }catch(error){
-
-        alert(error.message);
     }
+
 }
 
 
-// ========================================================
-// OTHER USER PROFILE
-// ========================================================
+function messageKey(event) {
 
-async function openUserProfile(user){
+    if (
+        event.key === "Enter" &&
+        !event.shiftKey
+    ) {
 
-    previousView =
-        document.getElementById("chatView")
-            .style.display !== "none"
-        ? "chatView"
-        : "feedView";
+        event.preventDefault();
 
-    hideViews();
+        sendMessage();
 
-    document.getElementById("otherProfileView")
-        .style.display = "block";
-
-    document.getElementById("pageTitle")
-        .innerText = "👤 Профиль";
-
-    document.getElementById("otherBigAvatar").src =
-        user.avatar_url
-        ? mediaUrl(user.avatar_url)
-        : "";
-
-    document.getElementById("otherName")
-        .innerText =
-        user.display_name ||
-        user.username;
-
-    document.getElementById("otherUsername")
-        .innerText =
-        "@" + user.username;
-
-    document.getElementById("otherBio")
-        .innerText =
-        user.bio || "";
-
-    selectedUser = user;
-}
-
-
-function openSelectedProfile(){
-
-    if(selectedUser)
-        openUserProfile(selectedUser);
-}
-
-
-function messageOtherUser(){
-
-    if(!selectedUser) return;
-
-    openChat(selectedUser);
-}
-
-
-function goBackFromProfile(){
-
-    if(previousView === "chatView" && selectedUser){
-
-        openChat(selectedUser);
-
-    }else{
-
-        showFeed();
     }
+
 }
 
 
-// ========================================================
+// =========================================================
 // FEED
-// ========================================================
+// =========================================================
 
-function hideViews(){
+function showFeed() {
 
-    [
-        "feedView",
-        "chatView",
-        "settingsView",
-        "profileView",
-        "otherProfileView"
-    ].forEach(id => {
+    document.getElementById(
+        "feedView"
+    ).style.display = "block";
 
-        document.getElementById(id)
-            .style.display = "none";
-    });
-}
+    document.getElementById(
+        "chatView"
+    ).style.display = "none";
 
+    document.getElementById(
+        "profileView"
+    ).style.display = "none";
 
-function showFeed(){
-
-    hideViews();
-
-    document.getElementById("feedView")
-        .style.display = "block";
-
-    document.getElementById("pageTitle")
-        .innerText = "📰 Лента";
+    document.getElementById(
+        "pageTitle"
+    ).innerText =
+        "📰 Лента";
 
     loadFeed();
+
 }
 
 
-async function loadFeed(){
+async function loadFeed() {
 
     const response =
-        await request("/api/feed");
+        await request(
+            "/api/feed"
+        );
 
-    if(!response.ok) return;
+    if (!response.ok) return;
 
     const posts =
         await response.json();
 
     const container =
-        document.getElementById("feed");
+        document.getElementById(
+            "feed"
+        );
 
     container.innerHTML = "";
 
-    posts.forEach(renderPost);
+    posts.forEach(
+        renderPost
+    );
+
 }
 
 
-function renderPost(post){
+async function openSharedPost(postId) {
+
+    const response =
+        await request(
+            "/api/posts/" +
+            postId
+        );
+
+    if (!response.ok) {
+
+        alert(
+            "Пост не найден"
+        );
+
+        return;
+
+    }
+
+    const post =
+        await response.json();
+
+    showFeed();
 
     const container =
-        document.getElementById("feed");
+        document.getElementById(
+            "feed"
+        );
+
+    container.innerHTML = "";
+
+    renderPost(
+        post
+    );
+
+    setTimeout(
+        () => {
+
+            const postElement =
+                document.querySelector(
+                    `[data-post-id="${post.id}"]`
+                );
+
+            if (postElement) {
+
+                postElement.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center"
+                });
+
+            }
+
+        },
+        100
+    );
+
+}
+
+
+function renderPost(post) {
+
+    const container =
+        document.getElementById(
+            "feed"
+        );
 
     const element =
-        document.createElement("article");
+        document.createElement(
+            "article"
+        );
 
-    element.className = "post";
+    element.className =
+        "post";
+
+    element.dataset.postId =
+        post.id;
 
     const avatar =
         post.avatar_url
         ?
         `<img
             class="avatar"
-            src="${mediaUrl(post.avatar_url)}"
+            src="${mediaUrl(
+                post.avatar_url
+            )}"
         >`
         :
-        `<div class="avatar">👤</div>`;
+        `<div class="avatar">
+            👤
+        </div>`;
 
     let media = "";
 
-    if(
+    if (
         post.media_url &&
         post.media_type === "image"
-    ){
+    ) {
 
         media = `
             <img
                 class="post-media"
-                src="${mediaUrl(post.media_url)}"
+                src="${mediaUrl(
+                    post.media_url
+                )}"
             >
         `;
+
     }
 
-    if(
+    if (
         post.media_url &&
         post.media_type === "video"
-    ){
+    ) {
 
         media = `
             <video
                 class="post-media"
                 controls
-                src="${mediaUrl(post.media_url)}"
+                src="${mediaUrl(
+                    post.media_url
+                )}"
             ></video>
         `;
+
     }
 
     element.innerHTML = `
@@ -2172,7 +1681,9 @@ function renderPost(post){
                 </div>
 
                 <div class="post-username">
-                    @${escapeHtml(post.username)}
+                    @${escapeHtml(
+                        post.username
+                    )}
                 </div>
 
             </div>
@@ -2183,7 +1694,9 @@ function renderPost(post){
             post.text
             ?
             `<div class="post-text">
-                ${escapeHtml(post.text)}
+                ${escapeHtml(
+                    post.text
+                )}
             </div>`
             :
             ""
@@ -2212,7 +1725,8 @@ function renderPost(post){
             </button>
 
             ${
-                post.author_id === currentUser.id
+                post.author_id ===
+                currentUser.id
                 ?
                 `<button
                     onclick="deletePost(${post.id})"
@@ -2226,196 +1740,274 @@ function renderPost(post){
         </div>
 
         <div
+            class="share-copy"
+            id="share-${post.id}"
+        >
+            🔗 Ссылка скопирована
+        </div>
+
+        <div
             class="comments"
             id="comments-${post.id}"
         ></div>
 
     `;
 
-    container.appendChild(element);
+    container.appendChild(
+        element
+    );
 
-    const avatarElement =
-        element.querySelector(".post-header .avatar");
-
-    avatarElement.onclick = () => {
-
-        openUserProfile({
-            id:post.author_id,
-            username:post.username,
-            display_name:post.display_name,
-            avatar_url:post.avatar_url,
-            bio:post.author_bio || ""
-        });
-    };
-
-    element.querySelector(".post-author")
-        .onclick = () => {
-
-            openUserProfile({
-                id:post.author_id,
-                username:post.username,
-                display_name:post.display_name,
-                avatar_url:post.avatar_url,
-                bio:post.author_bio || ""
-            });
-        };
 }
 
 
-async function publishPost(){
+// =========================================================
+// PUBLISH POST
+// =========================================================
+
+async function publishPost() {
 
     const text =
-        document.getElementById("postText")
-            .value.trim();
+        document.getElementById(
+            "postText"
+        ).value.trim();
 
     const file =
-        document.getElementById("mediaFile")
-            .files[0];
+        document.getElementById(
+            "mediaFile"
+        ).files[0];
 
-    if(!text && !file){
+    if (!text && !file) {
 
         alert(
             "Добавь текст, фото или видео"
         );
 
         return;
+
     }
 
-    try{
+    try {
 
-        if(file){
+        if (file) {
 
             const form =
                 new FormData();
 
-            form.append("file",file);
-            form.append("text",text);
+            form.append(
+                "file",
+                file
+            );
+
+            form.append(
+                "text",
+                text
+            );
 
             const response =
                 await request(
                     "/api/posts/media",
                     {
-                        method:"POST",
-                        body:form
+                        method: "POST",
+                        body: form
                     }
                 );
 
-            if(!response.ok){
+            if (!response.ok) {
 
                 const data =
                     await response.json();
 
                 throw new Error(
-                    data.detail
+                    data.detail ||
+                    "Ошибка"
                 );
+
             }
 
-        }else{
+        } else {
 
             const response =
                 await request(
                     "/api/posts",
                     {
-                        method:"POST",
+                        method: "POST",
 
-                        headers:{
+                        headers: {
                             "Content-Type":
                                 "application/json"
                         },
 
-                        body:JSON.stringify({
+                        body: JSON.stringify({
                             text
                         })
                     }
                 );
 
-            if(!response.ok){
+            if (!response.ok) {
 
                 const data =
                     await response.json();
 
                 throw new Error(
-                    data.detail
+                    data.detail ||
+                    "Ошибка"
                 );
+
             }
+
         }
 
-        document.getElementById("postText")
-            .value = "";
+        document.getElementById(
+            "postText"
+        ).value = "";
 
-        document.getElementById("mediaFile")
-            .value = "";
+        document.getElementById(
+            "mediaFile"
+        ).value = "";
 
-        loadFeed();
+        await loadFeed();
 
-    }catch(error){
+    } catch (error) {
 
-        alert(error.message);
+        alert(
+            error.message
+        );
+
     }
+
 }
 
 
-// ========================================================
-// LIKE / SHARE
-// ========================================================
+// =========================================================
+// SHARE
+// =========================================================
 
-async function likePost(postId){
-
-    await request(
-        "/api/posts/" +
-        postId +
-        "/like",
-        {
-            method:"POST"
-        }
-    );
-
-    loadFeed();
-}
-
-
-async function sharePost(postId){
+async function sharePost(postId) {
 
     const url =
-        location.origin +
-        location.pathname +
-        "?post=" +
-        postId;
+        new URL(
+            window.location.href
+        );
 
-    try{
+    url.search = "";
+    url.searchParams.set(
+        "post",
+        postId
+    );
 
-        await navigator.clipboard.writeText(url);
+    const shareUrl =
+        url.toString();
 
-        alert("🔗 Ссылка скопирована!");
+    try {
 
-    }catch{
+        if (
+            navigator.share
+        ) {
+
+            await navigator.share({
+                title: "MyMessenger",
+                text: "Посмотри этот пост",
+                url: shareUrl
+            });
+
+            return;
+
+        }
+
+    } catch (error) {
+
+        if (
+            error.name ===
+            "AbortError"
+        ) {
+
+            return;
+
+        }
+
+    }
+
+    try {
+
+        await navigator.clipboard.writeText(
+            shareUrl
+        );
+
+        const label =
+            document.getElementById(
+                "share-" + postId
+            );
+
+        if (label) {
+
+            label.style.display =
+                "block";
+
+            setTimeout(
+                () => {
+                    label.style.display =
+                        "none";
+                },
+                2500
+            );
+
+        }
+
+    } catch {
 
         prompt(
             "Скопируй ссылку:",
-            url
+            shareUrl
         );
+
     }
+
 }
 
 
-// ========================================================
-// COMMENTS + REPLIES
-// ========================================================
+// =========================================================
+// LIKES
+// =========================================================
 
-async function showComments(postId){
+async function likePost(postId) {
+
+    const response =
+        await request(
+            "/api/posts/" +
+            postId +
+            "/like",
+            {
+                method: "POST"
+            }
+        );
+
+    if (!response.ok) return;
+
+    loadFeed();
+
+}
+
+
+// =========================================================
+// COMMENTS
+// =========================================================
+
+async function showComments(postId) {
 
     const container =
         document.getElementById(
-            "comments-" + postId
+            "comments-" +
+            postId
         );
 
-    if(container.dataset.open === "1"){
+    if (
+        container.innerHTML.trim()
+    ) {
 
         container.innerHTML = "";
 
-        container.dataset.open = "0";
-
         return;
+
     }
 
     const response =
@@ -2425,21 +2017,274 @@ async function showComments(postId){
             "/comments"
         );
 
-    if(!response.ok) return;
+    if (!response.ok) return;
 
     const comments =
         await response.json();
 
-    container.innerHTML = `
+    container.innerHTML = "";
+
+    const inputBox =
+        document.createElement(
+            "div"
+        );
+
+    inputBox.className =
+        "comment-input";
+
+    inputBox.innerHTML = `
+
+        <input
+            id="comment-${postId}"
+            placeholder="Написать комментарий..."
+        >
+
+        <button
+            onclick="sendComment(${postId}, null)"
+        >
+            ➤
+        </button>
+
+    `;
+
+    container.appendChild(
+        inputBox
+    );
+
+    const list =
+        document.createElement(
+            "div"
+        );
+
+    list.id =
+        "comment-list-" +
+        postId;
+
+    container.appendChild(
+        list
+    );
+
+    renderComments(
+        postId,
+        comments
+    );
+
+}
+
+
+function renderComments(
+    postId,
+    comments
+) {
+
+    const list =
+        document.getElementById(
+            "comment-list-" +
+            postId
+        );
+
+    if (!list) return;
+
+    list.innerHTML = "";
+
+    const roots =
+        comments.filter(
+            comment =>
+                !comment.parent_id
+        );
+
+    roots.forEach(
+        root => {
+
+            renderCommentTree(
+                postId,
+                root,
+                comments,
+                list,
+                0
+            );
+
+        }
+    );
+
+}
+
+
+function renderCommentTree(
+    postId,
+    comment,
+    allComments,
+    parentContainer,
+    level
+) {
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+    div.className =
+        "comment" +
+        (
+            level > 0
+            ? " reply"
+            : ""
+        );
+
+    const avatar =
+        comment.avatar_url
+        ?
+        `<img
+            class="comment-avatar"
+            src="${mediaUrl(
+                comment.avatar_url
+            )}"
+        >`
+        :
+        `<div class="comment-avatar">
+            👤
+        </div>`;
+
+    const date =
+        new Date(
+            comment.created_at
+        );
+
+    div.innerHTML = `
+
+        <div class="comment-top">
+
+            ${avatar}
+
+            <div>
+
+                <div class="comment-user">
+                    ${escapeHtml(
+                        comment.display_name ||
+                        comment.username
+                    )}
+                </div>
+
+                <div class="comment-date">
+                    @${escapeHtml(
+                        comment.username
+                    )}
+                    ·
+                    ${date.toLocaleString()}
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="comment-text">
+            ${escapeHtml(
+                comment.text
+            )}
+        </div>
+
+        <div class="comment-buttons">
+
+            <button
+                onclick="replyToComment(
+                    ${postId},
+                    ${comment.id},
+                    '${escapeJs(
+                        comment.username
+                    )}'
+                )"
+            >
+                ↩️ Ответить
+            </button>
+
+        </div>
+
+        <div
+            id="reply-box-${comment.id}"
+        ></div>
+
+        <div
+            id="children-${comment.id}"
+        ></div>
+
+    `;
+
+    parentContainer.appendChild(
+        div
+    );
+
+    const children =
+        allComments.filter(
+            child =>
+                child.parent_id ===
+                comment.id
+        );
+
+    const childContainer =
+        div.querySelector(
+            "#children-" +
+            comment.id
+        );
+
+    children.forEach(
+        child => {
+
+            renderCommentTree(
+                postId,
+                child,
+                allComments,
+                childContainer,
+                level + 1
+            );
+
+        }
+    );
+
+}
+
+
+function replyToComment(
+    postId,
+    commentId,
+    username
+) {
+
+    const box =
+        document.getElementById(
+            "reply-box-" +
+            commentId
+        );
+
+    if (!box) return;
+
+    if (
+        box.innerHTML.trim()
+    ) {
+
+        box.innerHTML = "";
+
+        return;
+
+    }
+
+    box.innerHTML = `
+
+        <div class="reply-label">
+            Ответ для @${escapeHtml(username)}
+        </div>
+
         <div class="comment-input">
 
             <input
-                id="comment-${postId}"
-                placeholder="Написать комментарий..."
+                id="reply-input-${commentId}"
+                placeholder="Написать ответ..."
             >
 
             <button
-                onclick="sendComment(${postId})"
+                onclick="sendComment(
+                    ${postId},
+                    ${commentId}
+                )"
             >
                 ➤
             </button>
@@ -2447,148 +2292,52 @@ async function showComments(postId){
         </div>
     `;
 
-    container.dataset.open = "1";
-
-    comments.forEach(
-        comment =>
-            renderComment(
-                postId,
-                comment,
-                container
-            )
-    );
-}
-
-
-function renderComment(postId,comment,container){
-
-    const div =
-        document.createElement("div");
-
-    div.className = "comment";
-
-    const replyText =
-        comment.reply_to_username
-        ?
-        `
-        <div class="comment-reply">
-            ${escapeHtml(comment.username)}
-            →
-            ${escapeHtml(comment.reply_to_username)}
-        </div>
-        `
-        :
-        "";
-
-    div.innerHTML = `
-
-        <div class="comment-top">
-
-            <div>
-
-                <span
-                    class="comment-author"
-                >
-                    ${escapeHtml(
-                        comment.display_name ||
-                        comment.username
-                    )}
-                </span>
-
-                ${replyText}
-
-            </div>
-
-            <div class="comment-buttons">
-
-                <button
-                    onclick="replyComment(
-                        ${postId},
-                        ${comment.id},
-                        '${escapeHtml(comment.username)}'
-                    )"
-                >
-                    ↩️
-                </button>
-
-                ${
-                    comment.user_id === currentUser.id
-                    ?
-                    `
-                    <button
-                        onclick="deleteComment(
-                            ${postId},
-                            ${comment.id}
-                        )"
-                    >
-                        🗑️
-                    </button>
-                    `
-                    :
-                    ""
-                }
-
-            </div>
-
-        </div>
-
-        <div>
-            ${escapeHtml(comment.text)}
-        </div>
-
-    `;
-
-    container.appendChild(div);
-}
-
-
-function replyComment(
-    postId,
-    commentId,
-    username
-){
-
-    currentReplyComment = {
-        id:commentId,
-        username
-    };
-
     const input =
         document.getElementById(
-            "comment-" + postId
+            "reply-input-" +
+            commentId
         );
 
-    if(input){
-
-        input.placeholder =
-            "Ответ @" + username;
+    if (input) {
 
         input.focus();
+
     }
+
 }
 
 
-async function sendComment(postId){
+async function sendComment(
+    postId,
+    parentId
+) {
 
-    const input =
-        document.getElementById(
-            "comment-" + postId
-        );
+    let input;
+
+    if (parentId) {
+
+        input =
+            document.getElementById(
+                "reply-input-" +
+                parentId
+            );
+
+    } else {
+
+        input =
+            document.getElementById(
+                "comment-" +
+                postId
+            );
+
+    }
+
+    if (!input) return;
 
     const text =
         input.value.trim();
 
-    if(!text) return;
-
-    const body = {
-        text
-    };
-
-    if(currentReplyComment){
-
-        body.reply_to_id =
-            currentReplyComment.id;
-    }
+    if (!text) return;
 
     const response =
         await request(
@@ -2596,163 +2345,368 @@ async function sendComment(postId){
             postId +
             "/comments",
             {
-                method:"POST",
+                method: "POST",
 
-                headers:{
+                headers: {
                     "Content-Type":
                         "application/json"
                 },
 
-                body:JSON.stringify(body)
+                body: JSON.stringify({
+                    text,
+                    parent_id:
+                        parentId || null
+                })
             }
         );
 
-    if(!response.ok){
+    if (!response.ok) {
 
-        const data =
-            await response.json();
+        try {
 
-        alert(
-            data.detail ||
-            "Ошибка"
-        );
+            const data =
+                await response.json();
+
+            alert(
+                data.detail ||
+                "Ошибка"
+            );
+
+        } catch {
+
+            alert(
+                "Ошибка комментария"
+            );
+
+        }
 
         return;
-    }
 
-    currentReplyComment = null;
+    }
 
     input.value = "";
 
-    showComments(postId);
-
-    setTimeout(
-        () => showComments(postId),
-        30
+    await showComments(
+        postId
     );
+
+    await showComments(
+        postId
+    );
+
 }
 
 
-async function deleteComment(
-    postId,
-    commentId
-){
+// =========================================================
+// DELETE POST
+// =========================================================
 
-    if(!confirm("Удалить комментарий?"))
-        return;
+async function deletePost(postId) {
+
+    if (
+        !confirm(
+            "Удалить этот пост?"
+        )
+    ) return;
 
     const response =
         await request(
-            "/api/comments/" +
-            commentId,
+            "/api/posts/" +
+            postId,
             {
-                method:"DELETE"
+                method: "DELETE"
             }
         );
 
-    if(!response.ok){
-
-        const data =
-            await response.json();
+    if (!response.ok) {
 
         alert(
-            data.detail ||
-            "Ошибка"
+            "Не удалось удалить пост"
         );
 
         return;
+
     }
-
-    const container =
-        document.getElementById(
-            "comments-" + postId
-        );
-
-    container.innerHTML = "";
-    container.dataset.open = "0";
-
-    showComments(postId);
-}
-
-
-// ========================================================
-// DELETE POST
-// ========================================================
-
-async function deletePost(postId){
-
-    if(!confirm("Удалить этот пост?"))
-        return;
-
-    await request(
-        "/api/posts/" +
-        postId,
-        {
-            method:"DELETE"
-        }
-    );
 
     loadFeed();
+
 }
 
 
-// ========================================================
-// SETTINGS
-// ========================================================
+// =========================================================
+// PROFILE
+// =========================================================
 
-function showSettings(){
+function showProfile() {
 
-    hideViews();
+    document.getElementById(
+        "feedView"
+    ).style.display = "none";
 
-    document.getElementById("settingsView")
-        .style.display = "block";
+    document.getElementById(
+        "chatView"
+    ).style.display = "none";
 
-    document.getElementById("pageTitle")
-        .innerText = "⚙️ Настройки";
+    document.getElementById(
+        "profileView"
+    ).style.display = "block";
 
-    renderAccounts();
+    document.getElementById(
+        "pageTitle"
+    ).innerText =
+        "⚙️ Профиль";
 
-    document.getElementById("languageSelect")
-        .value =
-        localStorage.getItem("language") || "ru";
-}
+    document.getElementById(
+        "profileUsername"
+    ).value =
+        currentUser.username;
 
-function changeLanguage(){
+    document.getElementById(
+        "profileName"
+    ).value =
+        currentUser.display_name ||
+        currentUser.username;
 
-    const language =
-        document.getElementById("languageSelect")
-            .value;
+    document.getElementById(
+        "profileBio"
+    ).value =
+        currentUser.bio || "";
 
-    localStorage.setItem(
-        "language",
-        language
+    setAvatar(
+        currentUser.avatar_url
     );
 
-    if(language === "en"){
-
-        alert(
-            "English selected. Full translation can be expanded in the next version."
-        );
-
-    }else{
-
-        alert(
-            "Русский язык выбран."
-        );
-    }
 }
 
 
-// ========================================================
-// AUTO LOGIN
-// ========================================================
+function setAvatar(url) {
 
-if(token){
+    const image =
+        document.getElementById(
+            "bigAvatar"
+        );
+
+    if (url) {
+
+        image.src =
+            mediaUrl(url);
+
+    } else {
+
+        image.removeAttribute(
+            "src"
+        );
+
+        image.style.background =
+            "#2aabee";
+
+    }
+
+}
+
+
+async function saveProfile() {
+
+    const username =
+        document.getElementById(
+            "profileUsername"
+        ).value.trim();
+
+    const display_name =
+        document.getElementById(
+            "profileName"
+        ).value.trim();
+
+    const bio =
+        document.getElementById(
+            "profileBio"
+        ).value.trim();
+
+    try {
+
+        const response =
+            await request(
+                "/api/profile",
+                {
+                    method: "PUT",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        username,
+                        display_name,
+                        bio
+                    })
+                }
+            );
+
+        if (!response.ok) {
+
+            const data =
+                await response.json();
+
+            throw new Error(
+                data.detail ||
+                "Ошибка"
+            );
+
+        }
+
+        const file =
+            document.getElementById(
+                "avatarFile"
+            ).files[0];
+
+        if (file) {
+
+            const form =
+                new FormData();
+
+            form.append(
+                "file",
+                file
+            );
+
+            const avatarResponse =
+                await request(
+                    "/api/avatar",
+                    {
+                        method: "POST",
+                        body: form
+                    }
+                );
+
+            if (!avatarResponse.ok) {
+
+                const data =
+                    await avatarResponse.json();
+
+                throw new Error(
+                    data.detail ||
+                    "Ошибка аватара"
+                );
+
+            }
+
+        }
+
+        const me =
+            await request(
+                "/api/me"
+            );
+
+        currentUser =
+            await me.json();
+
+        document.getElementById(
+            "avatarFile"
+        ).value = "";
+
+        alert(
+            "Профиль сохранён!"
+        );
+
+        searchUsers();
+
+        showProfile();
+
+    } catch (error) {
+
+        alert(
+            error.message
+        );
+
+    }
+
+}
+
+
+// =========================================================
+// HELPERS
+// =========================================================
+
+function mediaUrl(url) {
+
+    if (!url) return "";
+
+    if (
+        url.startsWith("http")
+    ) {
+
+        return url;
+
+    }
+
+    return API + url;
+
+}
+
+
+function escapeHtml(text) {
+
+    return String(text)
+        .replaceAll(
+            "&",
+            "&amp;"
+        )
+        .replaceAll(
+            "<",
+            "&lt;"
+        )
+        .replaceAll(
+            ">",
+            "&gt;"
+        )
+        .replaceAll(
+            '"',
+            "&quot;"
+        )
+        .replaceAll(
+            "'",
+            "&#039;"
+        );
+
+}
+
+
+function escapeJs(text) {
+
+    return String(text)
+        .replaceAll(
+            "\\",
+            "\\\\"
+        )
+        .replaceAll(
+            "'",
+            "\\'"
+        )
+        .replaceAll(
+            "\n",
+            "\\n"
+        )
+        .replaceAll(
+            "\r",
+            "\\r"
+        );
+
+}
+
+
+// =========================================================
+// AUTO LOGIN
+// =========================================================
+
+if (token) {
 
     startApp();
+
 }
 
 </script>
 
 </body>
+
 </html>
