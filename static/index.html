@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+>
+
+<title>MyMessenger</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #0e1621;
+    color: white;
+}
+
+button,
+input {
+    font: inherit;
+}
+
+.auth {
+    width: 360px;
+    max-width: calc(100% - 30px);
+    margin: 100px auto;
+    background: #17212b;
+    padding: 30px;
+    border-radius: 16px;
+}
+
+.auth h1 {
+    text-align: center;
+    margin-top: 0;
+}
+
+.auth input {
+    width: 100%;
+    padding: 13px;
+    margin: 7px 0;
+    border: 0;
+    border-radius: 9px;
+    background: #242f3a;
+    color: white;
+    outline: none;
+}
+
+.auth button {
+    width: 100%;
+    margin-top: 12px;
+    padding: 13px;
+    border: 0;
+    border-radius: 9px;
+    background: #2aabee;
+    color: white;
+    cursor: pointer;
+}
+
+.switch {
+    margin-top: 15px;
+    text-align: center;
+    color: #8da2b5;
+    cursor: pointer;
+}
+
+#app {
+    display: none;
+    height: 100vh;
+}
+
+.sidebar {
+    width: 330px;
+    background: #17212b;
+    border-right: 1px solid #263746;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
+    padding: 18px;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.search {
+    margin: 0 12px 12px;
+    padding: 12px;
+    border: 0;
+    border-radius: 10px;
+    outline: none;
+    background: #242f3a;
+    color: white;
+}
+
+.users {
+    overflow-y: auto;
+}
+
+.user {
+    padding: 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #1e2a35;
+}
+
+.user:hover {
+    background: #202f3d;
+}
+
+.user-name {
+    font-weight: bold;
+}
+
+.user-status {
+    color: #8da2b5;
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+.chat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-header {
+    padding: 17px 20px;
+    background: #17212b;
+    border-bottom: 1px solid #263746;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.messages {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background:
+        radial-gradient(
+            circle at center,
+            #15212c 0,
+            #0e1621 100%
+        );
+}
+
+.empty {
+    text-align: center;
+    color: #6f8291;
+    margin-top: 30vh;
+}
+
+.message {
+    max-width: 65%;
+    margin: 7px 0;
+    padding: 9px 12px;
+    border-radius: 12px;
+    background: #182533;
+    width: fit-content;
+}
+
+.message.mine {
+    margin-left: auto;
+    background: #2b5278;
+}
+
+.time {
+    color: #a8bac8;
+    font-size: 11px;
+    margin-top: 4px;
+    text-align: right;
+}
+
+.composer {
+    display: flex;
+    gap: 8px;
+    padding: 12px;
+    background: #17212b;
+}
+
+.composer input {
+    flex: 1;
+    border: 0;
+    border-radius: 12px;
+    padding: 13px;
+    background: #242f3a;
+    color: white;
+    outline: none;
+}
+
+.composer button {
+    width: 50px;
+    border: 0;
+    border-radius: 12px;
+    background: #2aabee;
+    color: white;
+    cursor: pointer;
+}
+
+@media (max-width: 700px) {
+
+    .sidebar {
+        width: 90px;
+    }
+
+    .sidebar-header {
+        font-size: 15px;
+        padding: 12px;
+    }
+
+    .user {
+        padding: 12px 5px;
+        text-align: center;
+    }
+
+    .user-status {
+        display: none;
+    }
+
+    .user-name {
+        font-size: 12px;
+        word-break: break-word;
+    }
+
+    .message {
+        max-width: 85%;
+    }
+}
+
+</style>
+
+</head>
+
+<body>
+
+
+<!-- AUTH -->
+
+<div class="auth" id="auth">
+
+    <h1>💬 MyMessenger</h1>
+
+    <input
+        id="username"
+        placeholder="Username"
+        autocomplete="username"
+    >
+
+    <input
+        id="password"
+        type="password"
+        placeholder="Пароль"
+        autocomplete="current-password"
+    >
+
+    <button onclick="login()">
+        Войти
+    </button>
+
+    <button onclick="register()">
+        Создать аккаунт
+    </button>
+
+    <div id="authError"></div>
+
+</div>
+
+
+<!-- APP -->
+
+<div id="app">
+
+    <aside class="sidebar">
+
+        <div class="sidebar-header">
+            💬 MyMessenger
+        </div>
+
+        <input
+            class="search"
+            id="search"
+            placeholder="Поиск пользователей..."
+            oninput="searchUsers()"
+        >
+
+        <div
+            class="users"
+            id="users"
+        ></div>
+
+    </aside>
+
+
+    <main class="chat">
+
+        <div
+            class="chat-header"
+            id="chatHeader"
+        >
+            Выберите пользователя
+        </div>
+
+        <div
+            class="messages"
+            id="messages"
+        >
+
+            <div class="empty">
+                Найдите пользователя и начните общение
+            </div>
+
+        </div>
+
+        <div class="composer">
+
+            <input
+                id="messageInput"
+                placeholder="Написать сообщение..."
+                onkeydown="messageKey(event)"
+            >
+
+            <button onclick="sendMessage()">
+                ➤
+            </button>
+
+        </div>
+
+    </main>
+
+</div>
+
+
+<script>
+
+let token = localStorage.getItem("token");
+
+let currentUser = null;
+
+let selectedUser = null;
+
+let socket = null;
+
+
+// ---------------------------------------------------------
+// AUTH
+// ---------------------------------------------------------
+
+async function register() {
+
+    const username =
+        document.getElementById("username").value.trim();
+
+    const password =
+        document.getElementById("password").value;
+
+    try {
+
+        const response = await fetch("/api/register", {
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                username,
+                password
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail);
+        }
+
+        token = data.token;
+
+        localStorage.setItem("token", token);
+
+        await startApp();
+
+    } catch (error) {
+
+        document.getElementById("authError").innerText =
+            error.message;
+    }
+}
+
+
+async function login() {
+
+    const username =
+        document.getElementById("username").value.trim();
+
+    const password =
+        document.getElementById("password").value;
+
+    try {
+
+        const response = await fetch("/api/login", {
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                username,
+                password
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail);
+        }
+
+        token = data.token;
+
+        localStorage.setItem("token", token);
+
+        await startApp();
+
+    } catch (error) {
+
+        document.getElementById("authError").innerText =
+            error.message;
+    }
+}
+
+
+// ---------------------------------------------------------
+// START
+// ---------------------------------------------------------
+
+async function startApp() {
+
+    const response = await fetch("/api/me", {
+        headers: {
+            "Authorization": "Bearer " + token
+        }
+    });
+
+    if (!response.ok) {
+
+        localStorage.removeItem("token");
+
+        token = null;
+
+        return;
+    }
+
+    currentUser = await response.json();
+
+    document.getElementById("auth").style.display =
+        "none";
+
+    document.getElementById("app").style.display =
+        "flex";
+
+    connectWebSocket();
+
+    searchUsers();
+}
+
+
+// ---------------------------------------------------------
+// WEBSOCKET
+// ---------------------------------------------------------
+
+function connectWebSocket() {
+
+    const protocol =
+        location.protocol === "https:"
+            ? "wss:"
+            : "ws:";
+
+    socket = new WebSocket(
+        protocol +
+        "//" +
+        location.host +
+        "/ws/" +
+        currentUser.id
+    );
+
+    socket.onopen = () => {
+
+        console.log("WebSocket connected");
+
+    };
+
+    socket.onmessage = event => {
+
+        const data = JSON.parse(event.data);
+
+        if (data.type === "message") {
+
+            const message = data.message;
+
+            if (
+                selectedUser &&
+                (
+                    (
+                        message.sender_id === currentUser.id &&
+                        message.receiver_id === selectedUser.id
+                    )
+                    ||
+                    (
+                        message.sender_id === selectedUser.id &&
+                        message.receiver_id === currentUser.id
+                    )
+                )
+            ) {
+
+                addMessage(message);
+
+            }
+        }
+
+    };
+
+    socket.onclose = () => {
+
+        console.log(
+            "Connection lost. Reconnecting..."
+        );
+
+        setTimeout(
+            connectWebSocket,
+            2000
+        );
+    };
+}
+
+
+// ---------------------------------------------------------
+// USERS
+// ---------------------------------------------------------
+
+async function searchUsers() {
+
+    const q =
+        document.getElementById("search").value;
+
+    const response = await fetch(
+        "/api/users?q=" +
+        encodeURIComponent(q)
+    );
+
+    const users = await response.json();
+
+    const container =
+        document.getElementById("users");
+
+    container.innerHTML = "";
+
+    users
+        .filter(user => user.id !== currentUser.id)
+        .forEach(user => {
+
+            const element =
+                document.createElement("div");
+
+            element.className = "user";
+
+            element.innerHTML = `
+                <div class="user-name">
+                    👤 ${escapeHtml(user.username)}
+                </div>
+
+                <div class="user-status">
+                    ${user.last_seen
+                        ? "был(а) недавно"
+                        : ""}
+                </div>
+            `;
+
+            element.onclick = () => {
+                openChat(user);
+            };
+
+            container.appendChild(element);
+        });
+}
+
+
+// ---------------------------------------------------------
+// CHAT
+// ---------------------------------------------------------
+
+async function openChat(user) {
+
+    selectedUser = user;
+
+    document.getElementById("chatHeader")
+        .innerText = "👤 " + user.username;
+
+    const messages =
+        document.getElementById("messages");
+
+    messages.innerHTML = "";
+
+    const response = await fetch(
+        "/api/messages/" + user.id,
+        {
+            headers: {
+                "Authorization":
+                    "Bearer " + token
+            }
+        }
+    );
+
+    const history = await response.json();
+
+    history.forEach(addMessage);
+}
+
+
+function addMessage(message) {
+
+    const container =
+        document.getElementById("messages");
+
+    const element =
+        document.createElement("div");
+
+    const mine =
+        message.sender_id === currentUser.id;
+
+    element.className =
+        "message " +
+        (mine ? "mine" : "");
+
+    const date =
+        new Date(message.created_at);
+
+    element.innerHTML = `
+        <div>
+            ${escapeHtml(message.text)}
+        </div>
+
+        <div class="time">
+            ${date.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit"
+            })}
+            ${mine ? " ✓✓" : ""}
+        </div>
+    `;
+
+    container.appendChild(element);
+
+    container.scrollTop =
+        container.scrollHeight;
+}
+
+
+// ---------------------------------------------------------
+// SEND
+// ---------------------------------------------------------
+
+async function sendMessage() {
+
+    if (!selectedUser) {
+        alert("Сначала выберите пользователя");
+        return;
+    }
+
+    const input =
+        document.getElementById("messageInput");
+
+    const text =
+        input.value.trim();
+
+    if (!text) return;
+
+    input.value = "";
+
+    const response = await fetch(
+        "/api/messages",
+        {
+            method: "POST",
+
+            headers: {
+                "Content-Type":
+                    "application/json",
+
+                "Authorization":
+                    "Bearer " + token
+            },
+
+            body: JSON.stringify({
+                receiver_id:
+                    selectedUser.id,
+
+                text
+            })
+        }
+    );
+
+    if (!response.ok) {
+
+        const data =
+            await response.json();
+
+        alert(data.detail || "Ошибка отправки");
+    }
+}
+
+
+function messageKey(event) {
+
+    if (
+        event.key === "Enter" &&
+        !event.shiftKey
+    ) {
+
+        event.preventDefault();
+
+        sendMessage();
+    }
+}
+
+
+// ---------------------------------------------------------
+// SECURITY
+// ---------------------------------------------------------
+
+function escapeHtml(text) {
+
+    return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+
+// ---------------------------------------------------------
+// AUTO LOGIN
+// ---------------------------------------------------------
+
+if (token) {
+    startApp();
+}
+
+</script>
+
+</body>
+
+</html>
