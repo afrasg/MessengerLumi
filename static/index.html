@@ -1,379 +1,648 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Messenger Lumi</title>
-<style>
-:root {
-    --bg: #101114;
-    --card: #1a1c22;
-    --border: #2a2d36;
-    --text: #f0f2f5;
-    --muted: #9095a3;
-    --accent: #6c5ce7;
-    --danger: #e74c3c;
-    --success: #2ecc71;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    height: 100vh;
-    overflow: hidden;
-}
-.hidden { display: none !important; }
-#app { display: flex; height: 100vh; }
-.auth-screen {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    width: 100%;
-}
-.auth-card {
-    background: var(--card);
-    padding: 32px;
-    border-radius: 16px;
-    width: 100%;
-    max-width: 380px;
-    border: 1px solid var(--border);
-}
-.auth-card h1 { text-align: center; margin-bottom: 24px; font-size: 24px; }
-.auth-card input {
-    width: 100%;
-    padding: 12px 14px;
-    margin-bottom: 12px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: #12141a;
-    color: var(--text);
-    font-size: 15px;
-}
-.auth-card button { width: 100%; margin-top: 8px; }
-.error { color: var(--danger); font-size: 13px; margin-top: 12px; text-align: center; }
-.sidebar {
-    width: 280px;
-    background: var(--card);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-}
-.logo {
-    padding: 18px 16px;
-    font-weight: 700;
-    font-size: 18px;
-    border-bottom: 1px solid var(--border);
-}
-.search {
-    margin: 12px;
-    padding: 10px 12px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: #12141a;
-    color: var(--text);
-    font-size: 14px;
-}
-.users { flex: 1; overflow-y: auto; padding: 0 8px 12px; }
-.user-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: background .15s;
-}
-.user-item:hover { background: #252830; }
-.avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    object-fit: cover;
-    background: #2a2d36;
-    flex-shrink: 0;
-    cursor: pointer;
-}
-.main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 20px;
-    border-bottom: 1px solid var(--border);
-    background: var(--card);
-}
-.top-actions { display: flex; gap: 6px; }
-.icon-button {
-    background: transparent;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    padding: 6px 10px;
-    border-radius: 8px;
-}
-.icon-button:hover { background: #252830; }
-.content { flex: 1; overflow-y: auto; }
-.view { padding: 20px; }
-.feed { max-width: 640px; margin: 0 auto; }
-.post-box {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px;
-    margin-bottom: 20px;
-}
-.post-box textarea {
-    width: 100%;
-    min-height: 80px;
-    background: #12141a;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    color: var(--text);
-    padding: 12px;
-    resize: vertical;
-    font-size: 15px;
-    margin-bottom: 12px;
-}
-.post-tools { display: flex; gap: 10px; flex-wrap: wrap; }
-.post {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px;
-    margin-bottom: 16px;
-}
-.post-head {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
-}
-.post-head .avatar { cursor: pointer; }
-.post-author { cursor: pointer; }
-.post-author:hover strong { text-decoration: underline; }
-.post-text { margin-bottom: 12px; white-space: pre-wrap; line-height: 1.45; }
-.post-media {
-    width: 100%;
-    border-radius: 12px;
-    margin-bottom: 12px;
-    max-height: 420px;
-    object-fit: contain;
-    background: #000;
-}
-.post-actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    align-items: center;
-}
-.post-actions button {
-    background: #252830;
-    border: none;
-    color: var(--text);
-    padding: 7px 12px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 13px;
-}
-.post-actions button:hover { background: #2f333d; }
-.comments-section {
-    margin-top: 14px;
-    border-top: 1px solid var(--border);
-    padding-top: 14px;
-}
-.comment {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 12px;
-    padding: 8px;
-    border-radius: 10px;
-    background: #16181e;
-}
-.comment .avatar { width: 32px; height: 32px; }
-.comment-body { flex: 1; min-width: 0; }
-.comment-meta { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
-.comment-text { font-size: 14px; white-space: pre-wrap; }
-.comment-actions { margin-top: 4px; }
-.comment-actions button {
-    background: none;
-    border: none;
-    color: var(--muted);
-    font-size: 12px;
-    cursor: pointer;
-    margin-right: 10px;
-}
-.comment-actions button:hover { color: var(--text); }
-.comment-form {
-    display: flex;
-    gap: 8px;
-    margin-top: 10px;
-}
-.comment-form input {
-    flex: 1;
-    padding: 10px 12px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: #12141a;
-    color: var(--text);
-    font-size: 14px;
-}
-.primary, .secondary, .send, .danger-button {
-    border: none;
-    border-radius: 10px;
-    padding: 11px 16px;
-    font-size: 14px;
-    cursor: pointer;
-    font-weight: 500;
-}
-.primary { background: var(--accent); color: #fff; }
-.primary:hover { filter: brightness(1.1); }
-.secondary { background: #252830; color: var(--text); }
-.send { background: var(--accent); color: #fff; white-space: nowrap; }
-.danger-button { background: transparent; color: var(--danger); border: 1px solid var(--danger); width: 100%; margin-top: 8px; }
-.chat { display: flex; flex-direction: column; height: 100%; }
-.chat-header {
-    padding: 14px 20px;
-    border-bottom: 1px solid var(--border);
-    background: var(--card);
-    font-weight: 600;
-}
-.messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-.message {
-    max-width: 70%;
-    padding: 10px 14px;
-    border-radius: 14px;
-    line-height: 1.4;
-    position: relative;
-}
-.message.mine {
-    align-self: flex-end;
-    background: var(--accent);
-    color: #fff;
-    border-bottom-right-radius: 4px;
-}
-.message.theirs {
-    align-self: flex-start;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-bottom-left-radius: 4px;
-}
-.message.deleted { opacity: .6; font-style: italic; }
-.composer {
-    display: flex;
-    gap: 10px;
-    padding: 12px 16px;
-    border-top: 1px solid var(--border);
-    background: var(--card);
-}
-.composer input {
-    flex: 1;
-    padding: 12px 14px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    background: #12141a;
-    color: var(--text);
-    font-size: 15px;
-}
-.profile { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
-.card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 20px;
-}
-.card h2, .card h3 { margin-bottom: 16px; }
-.card input, .card textarea, .card select {
-    width: 100%;
-    padding: 11px 12px;
-    margin-bottom: 12px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: #12141a;
-    color: var(--text);
-    font-size: 14px;
-}
-.card textarea { min-height: 90px; resize: vertical; }
-.big-avatar {
-    width: 96px;
-    height: 96px;
-    border-radius: 50%;
-    object-fit: cover;
-    background: #2a2d36;
-    display: block;
-    margin: 0 auto 16px;
-}
-.setting { margin-bottom: 14px; }
-.setting label { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.modal-bg {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,.65);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    padding: 16px;
-}
-.modal {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 24px;
-    width: 100%;
-    max-width: 420px;
-    max-height: 90vh;
-    overflow-y: auto;
-}
-.modal h2 { margin-bottom: 16px; }
-.modal input, .modal textarea {
-    width: 100%;
-    padding: 11px 12px;
-    margin-bottom: 10px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: #12141a;
-    color: var(--text);
-}
-.user-profile-modal .big-avatar { margin-bottom: 12px; }
-.user-profile-modal .bio { color: var(--muted); margin: 12px 0; white-space: pre-wrap; }
-.user-profile-modal .meta { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
-.toast {
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #2ecc71;
-    color: #fff;
-    padding: 10px 20px;
-    border-radius: 10px;
-    font-size: 14px;
-    z-index: 2000;
-    opacity: 0;
-    transition: opacity .25s;
-    pointer-events: none;
-}
-.toast.show { opacity: 1; }
-@media (max-width: 720px) {
-    .sidebar { width: 72px; }
-    .logo { font-size: 0; padding: 14px; }
-    .logo::before { content: "💬"; font-size: 22px; }
-    .search { display: none; }
-    .user-item span, .user-item div:last-child { display: none; }
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Messenger Lumi</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #101114;
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* AUTH */
+        #authView {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 20px;
+        }
+
+        .auth-card {
+            background: #1c1d22;
+            border-radius: 16px;
+            padding: 32px;
+            width: 100%;
+            max-width: 380px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .auth-card h1 {
+            text-align: center;
+            margin-bottom: 8px;
+            font-size: 24px;
+        }
+
+        input, textarea, select {
+            background: #2a2b32;
+            border: 1px solid #3a3b44;
+            border-radius: 10px;
+            color: #fff;
+            padding: 12px 14px;
+            font-size: 15px;
+            width: 100%;
+            outline: none;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            border-color: #5b8def;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        button {
+            border: none;
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 15px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .primary {
+            background: #5b8def;
+            color: #fff;
+        }
+
+        .primary:hover {
+            background: #4a7de0;
+        }
+
+        .secondary {
+            background: #2a2b32;
+            color: #fff;
+        }
+
+        .danger-button {
+            background: #e05b5b;
+            color: #fff;
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .error {
+            color: #e05b5b;
+            font-size: 13px;
+            text-align: center;
+            min-height: 18px;
+        }
+
+        /* LAYOUT */
+        #app {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 320px;
+            background: #1c1d22;
+            border-right: 1px solid #2a2b32;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .logo {
+            padding: 18px 16px;
+            font-size: 18px;
+            font-weight: 600;
+            border-bottom: 1px solid #2a2b32;
+        }
+
+        .search {
+            margin: 12px;
+            width: calc(100% - 24px);
+        }
+
+        .users {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 8px 12px;
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+
+        .user-item:hover, .user-item.active {
+            background: #2a2b32;
+        }
+
+        .avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #3a3b44;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+
+        .avatar:hover {
+            opacity: 0.85;
+        }
+
+        .user-info {
+            overflow: hidden;
+        }
+
+        .user-info strong {
+            display: block;
+            font-size: 15px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-info span {
+            font-size: 12px;
+            color: #9095a3;
+        }
+
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .topbar {
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            border-bottom: 1px solid #2a2b32;
+            background: #1c1d22;
+            flex-shrink: 0;
+        }
+
+        .top-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .icon-button {
+            background: transparent;
+            font-size: 20px;
+            padding: 6px 10px;
+            border-radius: 8px;
+        }
+
+        .icon-button:hover {
+            background: #2a2b32;
+        }
+
+        .content {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .view {
+            height: 100%;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        /* FEED */
+        .feed {
+            max-width: 640px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .post-box {
+            background: #1c1d22;
+            border-radius: 14px;
+            padding: 16px;
+        }
+
+        .post-tools {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .post {
+            background: #1c1d22;
+            border-radius: 14px;
+            padding: 16px;
+        }
+
+        .post-head {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .post-text {
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.45;
+            margin-bottom: 12px;
+        }
+
+        .post-media {
+            width: 100%;
+            max-height: 420px;
+            object-fit: contain;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            background: #0d0e11;
+        }
+
+        .post-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .post-actions button {
+            background: #2a2b32;
+            color: #fff;
+            padding: 8px 12px;
+            font-size: 13px;
+            border-radius: 8px;
+        }
+
+        .post-actions button:hover {
+            background: #3a3b44;
+        }
+
+        /* COMMENTS */
+        .comments-section {
+            margin-top: 14px;
+            border-top: 1px solid #2a2b32;
+            padding-top: 12px;
+        }
+
+        .comments-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 12px;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+
+        .comment {
+            background: #25262c;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 14px;
+        }
+
+        .comment-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .comment-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #3a3b44;
+            cursor: pointer;
+        }
+
+        .comment-meta {
+            font-size: 12px;
+            color: #9095a3;
+        }
+
+        .comment-text {
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin-top: 2px;
+        }
+
+        .comment-actions {
+            margin-top: 6px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .comment-actions button {
+            background: transparent;
+            color: #9095a3;
+            font-size: 12px;
+            padding: 2px 6px;
+        }
+
+        .comment-actions button:hover {
+            color: #fff;
+        }
+
+        .comment-form {
+            display: flex;
+            gap: 8px;
+        }
+
+        .comment-form input {
+            flex: 1;
+        }
+
+        .comment-form button {
+            flex-shrink: 0;
+            padding: 10px 14px;
+        }
+
+        .reply-hint {
+            font-size: 12px;
+            color: #5b8def;
+            margin-bottom: 6px;
+        }
+
+        /* CHAT */
+        .chat {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .chat-header {
+            padding: 14px 16px;
+            border-bottom: 1px solid #2a2b32;
+            background: #1c1d22;
+            font-weight: 600;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .message {
+            max-width: 75%;
+            padding: 10px 14px;
+            border-radius: 14px;
+            position: relative;
+            word-break: break-word;
+        }
+
+        .message.mine {
+            align-self: flex-end;
+            background: #5b8def;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.theirs {
+            align-self: flex-start;
+            background: #2a2b32;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.deleted {
+            opacity: 0.6;
+            font-style: italic;
+        }
+
+        .message-time {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        .message-actions {
+            position: absolute;
+            top: -8px;
+            right: 0;
+            display: none;
+            gap: 4px;
+        }
+
+        .message:hover .message-actions {
+            display: flex;
+        }
+
+        .message-actions button {
+            background: #1c1d22;
+            color: #fff;
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        .composer {
+            display: flex;
+            gap: 8px;
+            padding: 12px 16px;
+            border-top: 1px solid #2a2b32;
+            background: #1c1d22;
+        }
+
+        .composer input {
+            flex: 1;
+        }
+
+        .send {
+            background: #5b8def;
+            color: #fff;
+            white-space: nowrap;
+        }
+
+        /* PROFILE / SETTINGS / FAVORITES */
+        .profile {
+            max-width: 520px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .card {
+            background: #1c1d22;
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .big-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #3a3b44;
+            align-self: center;
+            margin-bottom: 8px;
+        }
+
+        .setting label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+        }
+
+        .setting select {
+            width: auto;
+            min-width: 140px;
+        }
+
+        /* MODAL */
+        #modalBg {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.65);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 16px;
+        }
+
+        #modal {
+            background: #1c1d22;
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 420px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        #modal h2 {
+            margin-bottom: 14px;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: transparent;
+            font-size: 20px;
+            color: #9095a3;
+            padding: 4px 8px;
+        }
+
+        .profile-modal-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #3a3b44;
+            display: block;
+            margin: 0 auto 14px;
+        }
+
+        .profile-modal-info {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .profile-modal-info h3 {
+            font-size: 20px;
+            margin-bottom: 2px;
+        }
+
+        .profile-modal-info .uname {
+            color: #9095a3;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .profile-modal-info .bio {
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.4;
+            margin-bottom: 10px;
+        }
+
+        .profile-modal-meta {
+            font-size: 13px;
+            color: #9095a3;
+            text-align: left;
+            background: #25262c;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 14px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2a2b32;
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 10px;
+            z-index: 2000;
+            font-size: 14px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            opacity: 0;
+            transition: opacity 0.25s;
+            pointer-events: none;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: absolute;
+                z-index: 50;
+                height: 100%;
+            }
+
+            .sidebar.collapsed {
+                display: none;
+            }
+
+            .main {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
-<div id="authScreen" class="auth-screen">
+
+<!-- AUTH -->
+<div id="authView">
     <div class="auth-card">
         <h1>💬 Messenger Lumi</h1>
         <input id="username" placeholder="Username" autocomplete="username">
@@ -384,8 +653,9 @@ body {
     </div>
 </div>
 
+<!-- APP -->
 <div id="app" class="hidden">
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
         <div class="logo">💬 Messenger Lumi</div>
         <input id="search" class="search" placeholder="Поиск..." oninput="searchUsers()">
         <div id="users" class="users"></div>
@@ -410,7 +680,7 @@ body {
                         <textarea id="postText" placeholder="Что нового?"></textarea>
                         <div class="post-tools">
                             <button class="primary" onclick="publishPost()">📝 Опубликовать</button>
-                            <label class="primary" style="cursor:pointer;display:inline-flex;align-items:center;">
+                            <label class="primary">
                                 📷 Фото / видео
                                 <input id="mediaFile" type="file" accept="image/*,video/*" hidden onchange="publishMediaPost()">
                             </label>
@@ -427,7 +697,7 @@ body {
                     <div id="messages" class="messages"></div>
                     <div class="composer">
                         <input id="messageInput" placeholder="Сообщение..." onkeydown="messageKey(event)">
-                        <button class="send" onclick="sendMessage()">Отправить ➤</button>
+                        <button class="send" onclick="sendMessage()">Отправить сообщение ➤</button>
                     </div>
                 </div>
             </section>
@@ -441,10 +711,11 @@ body {
                         <input id="profileUsername" placeholder="Username">
                         <input id="profileName" placeholder="Имя">
                         <textarea id="profileBio" placeholder="О себе"></textarea>
-                        <p style="margin-bottom:8px">🖼️ Аватар</p>
+                        <p>🖼️ Аватар</p>
                         <input id="avatarFile" type="file" accept="image/*">
                         <button class="primary" onclick="saveProfile()">Сохранить</button>
                     </div>
+
                     <div class="card">
                         <h3>👥 Аккаунт</h3>
                         <button class="primary" style="width:100%" onclick="openCreateAccount()">➕ Добавить аккаунт</button>
@@ -500,15 +771,17 @@ body {
                             </label>
                         </div>
                     </div>
+
                     <div class="card">
                         <h3>👥 Группы</h3>
                         <button class="primary" onclick="openCreateGroup()">➕ Создать группу</button>
-                        <div id="groups" style="margin-top:12px"></div>
+                        <div id="groups"></div>
                     </div>
+
                     <div class="card">
                         <h3>📢 Каналы</h3>
                         <button class="primary" onclick="openCreateChannel()">➕ Создать канал</button>
-                        <div id="channels" style="margin-top:12px"></div>
+                        <div id="channels"></div>
                     </div>
                 </div>
             </section>
@@ -526,7 +799,8 @@ body {
     </main>
 </div>
 
-<div id="modalBg" class="modal-bg hidden" onclick="closeModal(event)">
+<!-- MODAL -->
+<div id="modalBg" class="hidden" onclick="closeModal(event)">
     <div id="modal" class="modal" onclick="event.stopPropagation()"></div>
 </div>
 
@@ -539,6 +813,40 @@ let currentUser = null;
 let selectedUserId = null;
 let selectedMessageId = null;
 let ws = null;
+let replyToCommentId = null;
+let openComments = {}; // postId -> true
+
+/* =====================================================
+   REQUEST HELPERS
+===================================================== */
+
+async function request(url, options = {}) {
+    const headers = options.headers || {};
+    if (token) {
+        headers["Authorization"] = "Bearer " + token;
+    }
+    // cookies are sent automatically for same-origin
+    return fetch(API + url, {
+        ...options,
+        headers,
+        credentials: "include"
+    });
+}
+
+async function safeJson(response) {
+    try {
+        return await response.json();
+    } catch {
+        return {};
+    }
+}
+
+function showToast(text) {
+    const el = document.getElementById("toast");
+    el.textContent = text;
+    el.classList.add("show");
+    setTimeout(() => el.classList.remove("show"), 2200);
+}
 
 /* =====================================================
    AUTH
@@ -546,32 +854,42 @@ let ws = null;
 
 async function checkAuth() {
     if (!token) {
+        // try cookie-based session
+        const response = await request("/api/me");
+        if (response.ok) {
+            currentUser = await safeJson(response);
+            token = localStorage.getItem("token") || "cookie";
+            showApp();
+            return;
+        }
         showAuth();
         return;
     }
-    try {
-        const response = await request("/api/me");
-        if (!response.ok) {
-            token = "";
-            localStorage.removeItem("token");
-            showAuth();
-            return;
-        }
-        currentUser = await safeJson(response);
-        document.getElementById("authScreen").classList.add("hidden");
-        document.getElementById("app").classList.remove("hidden");
-        await loadSettings();
-        await searchUsers();
-        showFeed();
-        connectWebSocket();
-    } catch (e) {
+
+    const response = await request("/api/me");
+    if (!response.ok) {
+        token = "";
+        localStorage.removeItem("token");
         showAuth();
+        return;
     }
+
+    currentUser = await safeJson(response);
+    showApp();
 }
 
 function showAuth() {
-    document.getElementById("authScreen").classList.remove("hidden");
+    document.getElementById("authView").classList.remove("hidden");
     document.getElementById("app").classList.add("hidden");
+}
+
+function showApp() {
+    document.getElementById("authView").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    searchUsers();
+    showFeed();
+    connectWebSocket();
+    loadSettings();
 }
 
 async function login() {
@@ -583,17 +901,22 @@ async function login() {
     const response = await fetch(API + "/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ username, password })
     });
+
     const data = await safeJson(response);
+
     if (!response.ok) {
         errorEl.textContent = data.detail || "Ошибка входа";
         return;
     }
-    // cookie-based, но на всякий случай сохраняем флаг
-    token = "cookie";
+
+    // backend sets cookie; we also keep a marker
+    token = localStorage.getItem("token") || "cookie";
     localStorage.setItem("token", token);
-    location.reload();
+
+    await checkAuth();
 }
 
 async function register() {
@@ -605,34 +928,21 @@ async function register() {
     const response = await fetch(API + "/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ username, password })
     });
+
     const data = await safeJson(response);
+
     if (!response.ok) {
         errorEl.textContent = data.detail || "Ошибка регистрации";
         return;
     }
-    token = "cookie";
+
+    token = localStorage.getItem("token") || "cookie";
     localStorage.setItem("token", token);
-    location.reload();
-}
 
-/* =====================================================
-   REQUEST HELPERS
-===================================================== */
-
-async function request(url, options = {}) {
-    const opts = { ...options, credentials: "include" };
-    if (!opts.headers) opts.headers = {};
-    return fetch(API + url, opts);
-}
-
-async function safeJson(response) {
-    try {
-        return await response.json();
-    } catch {
-        return {};
-    }
+    await checkAuth();
 }
 
 /* =====================================================
@@ -641,31 +951,36 @@ async function safeJson(response) {
 
 async function searchUsers() {
     const q = document.getElementById("search").value.trim();
+
     const response = await request("/api/users?q=" + encodeURIComponent(q));
     if (!response.ok) return;
+
     const users = await safeJson(response);
     const container = document.getElementById("users");
     container.innerHTML = "";
 
     users.forEach(user => {
         const div = document.createElement("div");
-        div.className = "user-item";
+        div.className = "user-item" + (selectedUserId === user.id ? " active" : "");
         div.onclick = () => openChat(user);
 
-        const img = document.createElement("img");
-        img.className = "avatar";
-        if (user.avatar_url) img.src = mediaUrl(user.avatar_url);
-        img.onclick = (e) => {
+        const avatar = document.createElement("img");
+        avatar.className = "avatar";
+        if (user.avatar_url) {
+            avatar.src = mediaUrl(user.avatar_url);
+        }
+        avatar.onclick = (e) => {
             e.stopPropagation();
             openUserProfile(user.id);
         };
 
         const info = document.createElement("div");
+        info.className = "user-info";
         info.innerHTML =
             "<strong>" + escapeHtml(user.display_name || user.username) + "</strong>" +
-            "<div style='color:#9095a3;font-size:12px'>@" + escapeHtml(user.username) + "</div>";
+            "<span>@" + escapeHtml(user.username) + "</span>";
 
-        div.appendChild(img);
+        div.appendChild(avatar);
         div.appendChild(info);
         container.appendChild(div);
     });
@@ -677,82 +992,144 @@ async function openChat(user) {
     document.getElementById("pageTitle").textContent = "💬 Чат";
     document.getElementById("chatHeader").textContent =
         (user.display_name || user.username) + " (@" + user.username + ")";
+
+    searchUsers();
     await loadMessages(user.id);
 }
 
-async function loadMessages(otherId) {
-    const response = await request("/api/messages/" + otherId);
+async function loadMessages(otherUserId) {
+    const response = await request("/api/messages/" + otherUserId);
     if (!response.ok) return;
+
     const messages = await safeJson(response);
     const container = document.getElementById("messages");
     container.innerHTML = "";
 
     messages.forEach(msg => {
         const div = document.createElement("div");
-        div.className = "message " + (msg.sender_id === currentUser.id ? "mine" : "theirs");
-        if (msg.deleted) {
-            div.classList.add("deleted");
-            div.textContent = "Сообщение удалено";
-        } else {
-            div.textContent = msg.text;
-            if (msg.sender_id === currentUser.id) {
-                div.oncontextmenu = (e) => {
-                    e.preventDefault();
-                    selectedMessageId = msg.id;
-                    openModal(`
-                        <h2>Сообщение</h2>
-                        <button class="primary" style="width:100%;margin-bottom:8px" onclick="editSelectedMessage()">✏️ Изменить</button>
-                        <button class="danger-button" onclick="deleteSelectedMessage()">🗑️ Удалить</button>
-                    `);
-                };
-            }
+        const isMine = Number(msg.sender_id) === Number(currentUser.id);
+        div.className = "message " + (isMine ? "mine" : "theirs");
+        if (msg.deleted) div.classList.add("deleted");
+
+        const text = document.createElement("div");
+        text.textContent = msg.deleted ? "Сообщение удалено" : msg.text;
+        div.appendChild(text);
+
+        const time = document.createElement("div");
+        time.className = "message-time";
+        time.textContent = formatTime(msg.created_at) + (msg.edited_at ? " (изм.)" : "");
+        div.appendChild(time);
+
+        if (isMine && !msg.deleted) {
+            const actions = document.createElement("div");
+            actions.className = "message-actions";
+
+            const editBtn = document.createElement("button");
+            editBtn.textContent = "✏️";
+            editBtn.onclick = (e) => {
+                e.stopPropagation();
+                selectedMessageId = msg.id;
+                openEditMessage(msg.text);
+            };
+
+            const delBtn = document.createElement("button");
+            delBtn.textContent = "🗑️";
+            delBtn.onclick = (e) => {
+                e.stopPropagation();
+                selectedMessageId = msg.id;
+                deleteSelectedMessage();
+            };
+
+            const favBtn = document.createElement("button");
+            favBtn.textContent = "⭐";
+            favBtn.onclick = async (e) => {
+                e.stopPropagation();
+                await request("/api/messages/" + msg.id + "/favorite", { method: "POST" });
+                showToast("Избранное обновлено");
+            };
+
+            actions.appendChild(editBtn);
+            actions.appendChild(delBtn);
+            actions.appendChild(favBtn);
+            div.appendChild(actions);
+        } else if (!msg.deleted) {
+            const actions = document.createElement("div");
+            actions.className = "message-actions";
+            const favBtn = document.createElement("button");
+            favBtn.textContent = "⭐";
+            favBtn.onclick = async (e) => {
+                e.stopPropagation();
+                await request("/api/messages/" + msg.id + "/favorite", { method: "POST" });
+                showToast("Избранное обновлено");
+            };
+            actions.appendChild(favBtn);
+            div.appendChild(actions);
         }
+
         container.appendChild(div);
     });
+
     scrollMessages();
 }
 
-function messageKey(e) {
-    if (e.key === "Enter") sendMessage();
+function messageKey(event) {
+    if (event.key === "Enter") {
+        sendMessage();
+    }
 }
 
 async function sendMessage() {
+    if (!selectedUserId) return;
+
     const input = document.getElementById("messageInput");
     const text = input.value.trim();
-    if (!text || !selectedUserId) return;
+    if (!text) return;
 
     const response = await request("/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ receiver_id: selectedUserId, text })
+        body: JSON.stringify({
+            receiver_id: selectedUserId,
+            text
+        })
     });
-    if (response.ok) {
-        input.value = "";
-        await loadMessages(selectedUserId);
+
+    const data = await safeJson(response);
+    if (!response.ok) {
+        alert(data.detail || "Ошибка");
+        return;
     }
+
+    input.value = "";
+    await loadMessages(selectedUserId);
 }
 
-function editSelectedMessage() {
+function openEditMessage(text) {
     openModal(`
-        <h2>Изменить сообщение</h2>
-        <textarea id="editText" style="width:100%;min-height:100px;padding:10px;border-radius:10px;border:1px solid #2a2d36;background:#12141a;color:#fff"></textarea>
-        <button class="primary" style="margin-top:10px;width:100%" onclick="saveEditedMessage()">Сохранить</button>
+        <h2>✏️ Редактировать</h2>
+        <textarea id="editText">${escapeHtml(text)}</textarea>
+        <button class="primary" style="margin-top:10px;width:100%" onclick="saveEditedMessage()">
+            Сохранить
+        </button>
     `);
 }
 
 async function saveEditedMessage() {
     const text = document.getElementById("editText").value.trim();
     if (!text) return;
+
     const response = await request("/api/messages/" + selectedMessageId, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text })
     });
+
     const data = await safeJson(response);
     if (!response.ok) {
         alert(data.detail || "Ошибка");
         return;
     }
+
     closeModal();
     await loadMessages(selectedUserId);
 }
@@ -760,27 +1137,33 @@ async function saveEditedMessage() {
 async function deleteSelectedMessage() {
     if (!selectedMessageId) return;
     if (!confirm("Удалить сообщение?")) return;
-    const response = await request("/api/messages/" + selectedMessageId, { method: "DELETE" });
+
+    const response = await request("/api/messages/" + selectedMessageId, {
+        method: "DELETE"
+    });
+
+    const data = await safeJson(response);
     if (!response.ok) {
-        const data = await safeJson(response);
         alert(data.detail || "Ошибка");
         return;
     }
+
     selectedMessageId = null;
-    closeModal();
     await loadMessages(selectedUserId);
 }
 
 /* =====================================================
-   FEED + POSTS + COMMENTS + SHARE
+   FEED + COMMENTS + SHARE + PROFILE CLICK
 ===================================================== */
 
 async function loadFeed() {
     const response = await request("/api/feed");
     if (!response.ok) return;
+
     const posts = await safeJson(response);
     const container = document.getElementById("feed");
     container.innerHTML = "";
+
     posts.forEach(renderPost);
 }
 
@@ -796,12 +1179,14 @@ function renderPost(post) {
 
     const avatar = document.createElement("img");
     avatar.className = "avatar";
-    if (post.avatar_url) avatar.src = mediaUrl(post.avatar_url);
+    if (post.avatar_url) {
+        avatar.src = mediaUrl(post.avatar_url);
+    }
     avatar.title = "Открыть профиль";
     avatar.onclick = () => openUserProfile(post.author_id);
 
     const author = document.createElement("div");
-    author.className = "post-author";
+    author.style.cursor = "pointer";
     author.onclick = () => openUserProfile(post.author_id);
     author.innerHTML =
         "<strong>" + escapeHtml(post.display_name || post.username) + "</strong>" +
@@ -845,19 +1230,21 @@ function renderPost(post) {
     like.onclick = async () => {
         const response = await request("/api/posts/" + post.id + "/like", { method: "POST" });
         const data = await safeJson(response);
-        if (response.ok) like.textContent = "❤️ " + data.likes;
+        if (response.ok) {
+            like.textContent = "❤️ " + data.likes;
+        }
     };
     actions.appendChild(like);
 
     // Comments toggle
     const commentsBtn = document.createElement("button");
     commentsBtn.textContent = "💬 " + (post.comments || 0);
-    commentsBtn.onclick = () => toggleComments(article, post.id, commentsBtn);
+    commentsBtn.onclick = () => toggleComments(post.id, article, commentsBtn);
     actions.appendChild(commentsBtn);
 
     // Copy link
     const copyBtn = document.createElement("button");
-    copyBtn.textContent = "🔗 Копировать";
+    copyBtn.textContent = "🔗 Ссылка";
     copyBtn.onclick = () => copyPostLink(post.id);
     actions.appendChild(copyBtn);
 
@@ -867,110 +1254,109 @@ function renderPost(post) {
     shareBtn.onclick = () => sharePost(post);
     actions.appendChild(shareBtn);
 
-    // Delete (own)
+    // Delete own
     if (Number(post.author_id) === Number(currentUser.id)) {
         const del = document.createElement("button");
         del.textContent = "🗑️";
         del.onclick = async () => {
             if (!confirm("Удалить пост?")) return;
             const response = await request("/api/posts/" + post.id, { method: "DELETE" });
-            if (response.ok) article.remove();
+            if (response.ok) {
+                article.remove();
+            }
         };
         actions.appendChild(del);
     }
 
     article.appendChild(actions);
 
-    // Comments container (hidden by default)
+    // Comments section (hidden by default)
     const commentsSection = document.createElement("div");
     commentsSection.className = "comments-section hidden";
     commentsSection.id = "comments-" + post.id;
+
+    const commentsList = document.createElement("div");
+    commentsList.className = "comments-list";
+    commentsList.id = "comments-list-" + post.id;
+
+    const formWrap = document.createElement("div");
+    formWrap.innerHTML = `
+        <div class="reply-hint hidden" id="reply-hint-${post.id}"></div>
+        <div class="comment-form">
+            <input id="comment-input-${post.id}" placeholder="Написать комментарий...">
+            <button class="primary" onclick="submitComment(${post.id})">➤</button>
+        </div>
+    `;
+
+    commentsSection.appendChild(commentsList);
+    commentsSection.appendChild(formWrap);
     article.appendChild(commentsSection);
 
     container.appendChild(article);
-}
 
-function getPostLink(postId) {
-    return location.origin + location.pathname + "#post/" + postId;
-}
-
-function copyPostLink(postId) {
-    const link = getPostLink(postId);
-    navigator.clipboard.writeText(link).then(() => {
-        showToast("Ссылка скопирована");
-    }).catch(() => {
-        prompt("Скопируй ссылку:", link);
-    });
-}
-
-async function sharePost(post) {
-    const link = getPostLink(post.id);
-    const text = (post.text || "").slice(0, 100) + (post.text && post.text.length > 100 ? "…" : "");
-    if (navigator.share) {
-        try {
-            await navigator.share({
-                title: "Пост в Messenger Lumi",
-                text: text || "Смотри пост",
-                url: link
-            });
-        } catch (e) {
-            if (e.name !== "AbortError") copyPostLink(post.id);
-        }
-    } else {
-        copyPostLink(post.id);
+    // restore open state
+    if (openComments[post.id]) {
+        commentsSection.classList.remove("hidden");
+        loadComments(post.id);
     }
 }
 
-async function toggleComments(article, postId, btn) {
-    const section = article.querySelector("#comments-" + postId);
+function toggleComments(postId, article, btn) {
+    const section = document.getElementById("comments-" + postId);
     if (!section) return;
 
-    if (!section.classList.contains("hidden")) {
+    if (section.classList.contains("hidden")) {
+        section.classList.remove("hidden");
+        openComments[postId] = true;
+        loadComments(postId);
+    } else {
         section.classList.add("hidden");
-        return;
+        openComments[postId] = false;
+        replyToCommentId = null;
+        const hint = document.getElementById("reply-hint-" + postId);
+        if (hint) {
+            hint.classList.add("hidden");
+            hint.textContent = "";
+        }
     }
-
-    section.classList.remove("hidden");
-    section.innerHTML = "<div style='color:#9095a3;font-size:13px'>Загрузка…</div>";
-
-    const response = await request("/api/posts/" + postId + "/comments");
-    if (!response.ok) {
-        section.innerHTML = "<div style='color:#e74c3c'>Не удалось загрузить комментарии</div>";
-        return;
-    }
-    const comments = await safeJson(response);
-    renderComments(section, postId, comments, btn);
 }
 
-function renderComments(section, postId, comments, countBtn) {
-    section.innerHTML = "";
+async function loadComments(postId) {
+    const response = await request("/api/posts/" + postId + "/comments");
+    if (!response.ok) return;
 
-    const list = document.createElement("div");
+    const comments = await safeJson(response);
+    const list = document.getElementById("comments-list-" + postId);
+    if (!list) return;
+
+    list.innerHTML = "";
+
     comments.forEach(c => {
         const div = document.createElement("div");
         div.className = "comment";
 
+        const head = document.createElement("div");
+        head.className = "comment-head";
+
         const av = document.createElement("img");
-        av.className = "avatar";
+        av.className = "comment-avatar";
         if (c.avatar_url) av.src = mediaUrl(c.avatar_url);
         av.onclick = () => openUserProfile(c.user_id);
 
-        const body = document.createElement("div");
-        body.className = "comment-body";
-
-        let replyInfo = "";
-        if (c.parent_id && c.reply_to_username) {
-            replyInfo = " → @" + escapeHtml(c.reply_to_username);
+        const meta = document.createElement("div");
+        meta.className = "comment-meta";
+        let metaText = "<strong style='color:#fff'>" + escapeHtml(c.display_name || c.username) + "</strong> · " + formatTime(c.created_at);
+        if (c.reply_to_username) {
+            metaText += " · ответ @" + escapeHtml(c.reply_to_username);
         }
+        meta.innerHTML = metaText;
 
-        body.innerHTML =
-            "<div class='comment-meta'>" +
-            "<strong style='cursor:pointer' onclick='openUserProfile(" + c.user_id + ")'>" +
-            escapeHtml(c.display_name || c.username) + "</strong> " +
-            "<span style='color:#9095a3'>@" + escapeHtml(c.username) + replyInfo + "</span> · " +
-            formatTime(c.created_at) +
-            "</div>" +
-            "<div class='comment-text'>" + escapeHtml(c.text) + "</div>";
+        head.appendChild(av);
+        head.appendChild(meta);
+
+        const text = document.createElement("div");
+        text.className = "comment-text";
+        text.textContent = c.text;
 
         const actions = document.createElement("div");
         actions.className = "comment-actions";
@@ -978,12 +1364,18 @@ function renderComments(section, postId, comments, countBtn) {
         const replyBtn = document.createElement("button");
         replyBtn.textContent = "Ответить";
         replyBtn.onclick = () => {
-            const input = section.querySelector(".comment-input");
-            if (input) {
-                input.dataset.parentId = c.id;
-                input.placeholder = "Ответ @" + c.username + "…";
-                input.focus();
+            replyToCommentId = c.id;
+            const hint = document.getElementById("reply-hint-" + postId);
+            if (hint) {
+                hint.classList.remove("hidden");
+                hint.textContent = "Ответ пользователю @" + (c.username || "") + " (нажмите ✕ чтобы отменить)";
+                hint.onclick = () => {
+                    replyToCommentId = null;
+                    hint.classList.add("hidden");
+                    hint.textContent = "";
+                };
             }
+            document.getElementById("comment-input-" + postId).focus();
         };
         actions.appendChild(replyBtn);
 
@@ -992,75 +1384,205 @@ function renderComments(section, postId, comments, countBtn) {
             delBtn.textContent = "Удалить";
             delBtn.onclick = async () => {
                 if (!confirm("Удалить комментарий?")) return;
-                const res = await request("/api/comments/" + c.id, { method: "DELETE" });
-                if (res.ok) {
-                    // перезагружаем комментарии
-                    const r2 = await request("/api/posts/" + postId + "/comments");
-                    if (r2.ok) {
-                        const fresh = await safeJson(r2);
-                        renderComments(section, postId, fresh, countBtn);
-                        if (countBtn) countBtn.textContent = "💬 " + fresh.length;
+                const r = await request("/api/comments/" + c.id, { method: "DELETE" });
+                if (r.ok) {
+                    loadComments(postId);
+                    // update counter roughly
+                    const postEl = document.querySelector(`[data-post-id="${postId}"]`);
+                    if (postEl) {
+                        const btns = postEl.querySelectorAll(".post-actions button");
+                        btns.forEach(b => {
+                            if (b.textContent.startsWith("💬")) {
+                                const m = b.textContent.match(/\d+/);
+                                if (m) {
+                                    const n = Math.max(0, parseInt(m[0], 10) - 1);
+                                    b.textContent = "💬 " + n;
+                                }
+                            }
+                        });
                     }
                 }
             };
             actions.appendChild(delBtn);
         }
 
-        body.appendChild(actions);
-        div.appendChild(av);
-        div.appendChild(body);
+        div.appendChild(head);
+        div.appendChild(text);
+        div.appendChild(actions);
         list.appendChild(div);
     });
-
-    section.appendChild(list);
-
-    // form
-    const form = document.createElement("div");
-    form.className = "comment-form";
-
-    const input = document.createElement("input");
-    input.className = "comment-input";
-    input.placeholder = "Написать комментарий…";
-    input.dataset.parentId = "";
-
-    const sendBtn = document.createElement("button");
-    sendBtn.className = "primary";
-    sendBtn.textContent = "➤";
-    sendBtn.onclick = async () => {
-        const text = input.value.trim();
-        if (!text) return;
-        const parentId = input.dataset.parentId ? Number(input.dataset.parentId) : null;
-
-        const response = await request("/api/posts/" + postId + "/comments", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text, parent_id: parentId })
-        });
-        if (!response.ok) {
-            const data = await safeJson(response);
-            alert(data.detail || "Ошибка");
-            return;
-        }
-        input.value = "";
-        input.dataset.parentId = "";
-        input.placeholder = "Написать комментарий…";
-
-        const r2 = await request("/api/posts/" + postId + "/comments");
-        if (r2.ok) {
-            const fresh = await safeJson(r2);
-            renderComments(section, postId, fresh, countBtn);
-            if (countBtn) countBtn.textContent = "💬 " + fresh.length;
-        }
-    };
-
-    input.onkeydown = (e) => {
-        if (e.key === "Enter") sendBtn.onclick();
-    };
-
-    form.appendChild(input);
-    form.appendChild(sendBtn);
-    section.appendChild(form);
 }
+
+async function submitComment(postId) {
+    const input = document.getElementById("comment-input-" + postId);
+    if (!input) return;
+
+    const text = input.value.trim();
+    if (!text) return;
+
+    const body = { text };
+    if (replyToCommentId) {
+        body.parent_id = replyToCommentId;
+    }
+
+    const response = await request("/api/posts/" + postId + "/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+    });
+
+    const data = await safeJson(response);
+    if (!response.ok) {
+        alert(data.detail || "Ошибка");
+        return;
+    }
+
+    input.value = "";
+    replyToCommentId = null;
+    const hint = document.getElementById("reply-hint-" + postId);
+    if (hint) {
+        hint.classList.add("hidden");
+        hint.textContent = "";
+    }
+
+    await loadComments(postId);
+
+    // bump counter
+    const postEl = document.querySelector(`[data-post-id="${postId}"]`);
+    if (postEl) {
+        const btns = postEl.querySelectorAll(".post-actions button");
+        btns.forEach(b => {
+            if (b.textContent.startsWith("💬")) {
+                const m = b.textContent.match(/\d+/);
+                if (m) {
+                    b.textContent = "💬 " + (parseInt(m[0], 10) + 1);
+                }
+            }
+        });
+    }
+}
+
+function copyPostLink(postId) {
+    const link = location.origin + location.pathname + "?post=" + postId;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link).then(() => {
+            showToast("Ссылка скопирована");
+        }).catch(() => {
+            fallbackCopy(link);
+        });
+    } else {
+        fallbackCopy(link);
+    }
+}
+
+function fallbackCopy(text) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+        document.execCommand("copy");
+        showToast("Ссылка скопирована");
+    } catch {
+        prompt("Скопируйте ссылку:", text);
+    }
+    document.body.removeChild(ta);
+}
+
+async function sharePost(post) {
+    const link = location.origin + location.pathname + "?post=" + post.id;
+    const shareData = {
+        title: "Пост от @" + (post.username || ""),
+        text: (post.text || "").slice(0, 120) + (post.text && post.text.length > 120 ? "…" : ""),
+        url: link
+    };
+
+    if (navigator.share) {
+        try {
+            await navigator.share(shareData);
+            return;
+        } catch (e) {
+            // user cancelled or error → fallback
+        }
+    }
+
+    // fallback: copy
+    copyPostLink(post.id);
+}
+
+/* =====================================================
+   USER PROFILE MODAL (по клику на аву)
+===================================================== */
+
+async function openUserProfile(userId) {
+    const response = await request("/api/users/" + userId);
+    if (!response.ok) {
+        alert("Не удалось загрузить профиль");
+        return;
+    }
+
+    const user = await safeJson(response);
+
+    const avatarHtml = user.avatar_url
+        ? `<img class="profile-modal-avatar" src="${mediaUrl(user.avatar_url)}" alt="">`
+        : `<div class="profile-modal-avatar" style="display:flex;align-items:center;justify-content:center;font-size:40px;background:#3a3b44">👤</div>`;
+
+    const created = user.created_at ? formatDate(user.created_at) : "—";
+    const lastSeen = user.last_seen ? formatDate(user.last_seen) : "—";
+
+    openModal(`
+        ${avatarHtml}
+        <div class="profile-modal-info">
+            <h3>${escapeHtml(user.display_name || user.username)}</h3>
+            <div class="uname">@${escapeHtml(user.username)}</div>
+            ${user.bio ? `<div class="bio">${escapeHtml(user.bio)}</div>` : ""}
+        </div>
+        <div class="profile-modal-meta">
+            <div>📅 Регистрация: ${escapeHtml(created)}</div>
+            <div style="margin-top:6px">🕒 Был(а): ${escapeHtml(lastSeen)}</div>
+        </div>
+        ${Number(user.id) !== Number(currentUser.id) ? `
+            <button class="primary" style="width:100%" onclick="startChatFromProfile(${user.id}, '${escapeHtml(user.display_name || user.username)}', '${escapeHtml(user.username)}')">
+                💬 Написать
+            </button>
+        ` : `
+            <button class="primary" style="width:100%" onclick="closeModal(); showProfile();">
+                ✏️ Редактировать свой профиль
+            </button>
+        `}
+    `);
+}
+
+function startChatFromProfile(userId, displayName, username) {
+    closeModal();
+    openChat({
+        id: userId,
+        display_name: displayName,
+        username: username
+    });
+}
+
+function formatDate(value) {
+    if (!value) return "";
+    let date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        date = new Date(value + "Z");
+    }
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleString([], {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+    });
+}
+
+/* =====================================================
+   PUBLISH
+===================================================== */
 
 async function publishPost() {
     const textarea = document.getElementById("postText");
@@ -1072,11 +1594,13 @@ async function publishPost() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text })
     });
+
     const data = await safeJson(response);
     if (!response.ok) {
         alert(data.detail || "Ошибка");
         return;
     }
+
     textarea.value = "";
     await loadFeed();
 }
@@ -1095,65 +1619,20 @@ async function publishMediaPost() {
         method: "POST",
         body: form
     });
+
     const data = await safeJson(response);
     if (!response.ok) {
         alert(data.detail || "Ошибка загрузки");
         return;
     }
+
     document.getElementById("postText").value = "";
     fileInput.value = "";
     await loadFeed();
 }
 
 /* =====================================================
-   USER PROFILE (по клику на аву)
-===================================================== */
-
-async function openUserProfile(userId) {
-    const response = await request("/api/users/" + userId);
-    if (!response.ok) {
-        alert("Пользователь не найден");
-        return;
-    }
-    const user = await safeJson(response);
-
-    const avatarHtml = user.avatar_url
-        ? `<img class="big-avatar" src="${mediaUrl(user.avatar_url)}" alt="">`
-        : `<div class="big-avatar" style="display:flex;align-items:center;justify-content:center;font-size:36px;background:#2a2d36">👤</div>`;
-
-    const created = user.created_at ? formatDate(user.created_at) : "—";
-    const lastSeen = user.last_seen ? formatDate(user.last_seen) : "—";
-
-    openModal(`
-        <div class="user-profile-modal">
-            ${avatarHtml}
-            <h2 style="text-align:center;margin-bottom:4px">${escapeHtml(user.display_name || user.username)}</h2>
-            <div style="text-align:center;color:#9095a3;margin-bottom:12px">@${escapeHtml(user.username)}</div>
-            ${user.bio ? `<div class="bio">${escapeHtml(user.bio)}</div>` : ""}
-            <div class="meta">
-                📅 Регистрация: ${created}<br>
-                🕒 Был(а): ${lastSeen}
-            </div>
-            ${Number(user.id) !== Number(currentUser.id) ? `
-                <button class="primary" style="width:100%" onclick="startChatFromProfile(${user.id}, '${escapeHtml(user.display_name || user.username)}', '${escapeHtml(user.username)}')">
-                    💬 Написать сообщение
-                </button>
-            ` : `
-                <button class="secondary" style="width:100%" onclick="closeModal(); showProfile()">
-                    Редактировать свой профиль
-                </button>
-            `}
-        </div>
-    `);
-}
-
-function startChatFromProfile(id, displayName, username) {
-    closeModal();
-    openChat({ id, display_name: displayName, username });
-}
-
-/* =====================================================
-   PROFILE (свой)
+   PROFILE
 ===================================================== */
 
 async function showProfile() {
@@ -1162,6 +1641,7 @@ async function showProfile() {
 
     const response = await request("/api/me");
     if (!response.ok) return;
+
     const user = await safeJson(response);
 
     document.getElementById("profileUsername").value = user.username || "";
@@ -1186,6 +1666,7 @@ async function saveProfile() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, display_name, bio })
     });
+
     const data = await safeJson(response);
     if (!response.ok) {
         alert(data.detail || "Ошибка");
@@ -1196,7 +1677,12 @@ async function saveProfile() {
     if (file) {
         const form = new FormData();
         form.append("file", file);
-        const avatarResponse = await request("/api/avatar", { method: "POST", body: form });
+
+        const avatarResponse = await request("/api/avatar", {
+            method: "POST",
+            body: form
+        });
+
         if (!avatarResponse.ok) {
             const avatarData = await safeJson(avatarResponse);
             alert(avatarData.detail || "Ошибка аватара");
@@ -1223,6 +1709,7 @@ async function showSettings() {
 async function loadSettings() {
     const response = await request("/api/settings");
     if (!response.ok) return;
+
     const data = await safeJson(response);
 
     document.getElementById("language").value = data.language || "ru";
@@ -1230,6 +1717,7 @@ async function loadSettings() {
     document.getElementById("notifications").checked = Boolean(data.notifications);
     document.getElementById("showOnline").checked = Boolean(data.show_online);
     document.getElementById("showLastSeen").checked = Boolean(data.show_last_seen);
+
     applyTheme(data.theme || "dark");
 }
 
@@ -1241,7 +1729,9 @@ async function saveSettings() {
         show_online: document.getElementById("showOnline").checked,
         show_last_seen: document.getElementById("showLastSeen").checked
     };
+
     applyTheme(data.theme);
+
     await request("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -1263,7 +1753,7 @@ function applyTheme(theme) {
 }
 
 /* =====================================================
-   GROUPS / CHANNELS
+   GROUPS
 ===================================================== */
 
 function openCreateGroup() {
@@ -1271,23 +1761,28 @@ function openCreateGroup() {
         <h2>👥 Новая группа</h2>
         <input id="newGroupName" placeholder="Название">
         <textarea id="newGroupDescription" placeholder="Описание"></textarea>
-        <button class="primary" style="margin-top:10px;width:100%" onclick="createGroup()">Создать</button>
+        <button class="primary" style="margin-top:10px;width:100%" onclick="createGroup()">
+            Создать
+        </button>
     `);
 }
 
 async function createGroup() {
     const name = document.getElementById("newGroupName").value.trim();
     const description = document.getElementById("newGroupDescription").value.trim();
+
     const response = await request("/api/groups", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, description })
     });
+
     const data = await safeJson(response);
     if (!response.ok) {
         alert(data.detail || "Ошибка");
         return;
     }
+
     closeModal();
     loadGroups();
 }
@@ -1295,9 +1790,11 @@ async function createGroup() {
 async function loadGroups() {
     const response = await request("/api/groups");
     if (!response.ok) return;
+
     const groups = await safeJson(response);
     const container = document.getElementById("groups");
     container.innerHTML = "";
+
     groups.forEach(group => {
         const div = document.createElement("div");
         div.className = "comment";
@@ -1308,13 +1805,19 @@ async function loadGroups() {
     });
 }
 
+/* =====================================================
+   CHANNELS
+===================================================== */
+
 function openCreateChannel() {
     openModal(`
         <h2>📢 Новый канал</h2>
         <input id="newChannelName" placeholder="Название">
         <input id="newChannelUsername" placeholder="username канала">
         <textarea id="newChannelDescription" placeholder="Описание"></textarea>
-        <button class="primary" style="margin-top:10px;width:100%" onclick="createChannel()">Создать</button>
+        <button class="primary" style="margin-top:10px;width:100%" onclick="createChannel()">
+            Создать
+        </button>
     `);
 }
 
@@ -1322,16 +1825,19 @@ async function createChannel() {
     const name = document.getElementById("newChannelName").value.trim();
     const username = document.getElementById("newChannelUsername").value.trim();
     const description = document.getElementById("newChannelDescription").value.trim();
+
     const response = await request("/api/channels", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, username, description })
     });
+
     const data = await safeJson(response);
     if (!response.ok) {
         alert(data.detail || "Ошибка");
         return;
     }
+
     closeModal();
     loadChannels();
 }
@@ -1339,9 +1845,11 @@ async function createChannel() {
 async function loadChannels() {
     const response = await request("/api/channels");
     if (!response.ok) return;
+
     const channels = await safeJson(response);
     const container = document.getElementById("channels");
     container.innerHTML = "";
+
     channels.forEach(channel => {
         const div = document.createElement("div");
         div.className = "comment";
@@ -1362,42 +1870,73 @@ function openCreateAccount() {
         <h2>➕ Новый аккаунт</h2>
         <input id="secondUsername" placeholder="Username">
         <input id="secondPassword" type="password" placeholder="Пароль">
-        <button class="primary" style="width:100%" onclick="createSecondAccount()">Создать</button>
+        <button class="primary" style="width:100%" onclick="createSecondAccount()">
+            Создать
+        </button>
     `);
 }
 
 async function createSecondAccount() {
     const username = document.getElementById("secondUsername").value.trim();
     const password = document.getElementById("secondPassword").value;
+
     const response = await fetch(API + "/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ username, password })
     });
+
     const data = await safeJson(response);
     if (!response.ok) {
         alert(data.detail || "Ошибка");
         return;
     }
-    alert("Аккаунт создан (войди через переключение или заново)");
+
+    const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
+    accounts.push({ username, token: data.token || "cookie" });
+    localStorage.setItem("accounts", JSON.stringify(accounts));
+
+    alert("Аккаунт создан");
     closeModal();
 }
 
 function switchAccount() {
+    const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
+    if (!accounts.length) {
+        alert("Дополнительных аккаунтов пока нет");
+        return;
+    }
+
     openModal(`
         <h2>🔄 Переключение аккаунта</h2>
-        <p style="color:#9095a3;margin-bottom:12px">Используй кнопку «Добавить аккаунт» и потом войди под другим логином. Сессии привязаны к браузеру.</p>
-        <button class="primary" style="width:100%" onclick="logout()">Выйти и войти в другой аккаунт</button>
+        <div id="accountList"></div>
     `);
+
+    const list = document.getElementById("accountList");
+    accounts.forEach(account => {
+        const button = document.createElement("button");
+        button.className = "primary";
+        button.style.width = "100%";
+        button.style.margin = "5px 0";
+        button.textContent = "@" + account.username;
+        button.onclick = () => {
+            token = account.token;
+            localStorage.setItem("token", token);
+            location.reload();
+        };
+        list.appendChild(button);
+    });
 }
 
 /* =====================================================
-   DELETE ACCOUNT / LOGOUT
+   DELETE ACCOUNT
 ===================================================== */
 
 async function deleteAccount() {
     if (!confirm("Удалить этот аккаунт навсегда?")) return;
-    const password = prompt("Введи пароль для подтверждения:");
+
+    const password = prompt("Введите пароль для подтверждения:");
     if (!password) return;
 
     const response = await request("/api/account", {
@@ -1405,23 +1944,38 @@ async function deleteAccount() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password })
     });
+
     const data = await safeJson(response);
     if (!response.ok) {
         alert(data.detail || "Не удалось удалить аккаунт");
         return;
     }
+
+    const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
+    const filtered = accounts.filter(account => account.token !== token);
+    localStorage.setItem("accounts", JSON.stringify(filtered));
     localStorage.removeItem("token");
     token = "";
     location.reload();
 }
 
-function logout() {
-    request("/api/logout", { method: "POST" }).finally(() => {
-        token = "";
-        localStorage.removeItem("token");
-        if (ws) try { ws.close(); } catch {}
-        location.reload();
-    });
+/* =====================================================
+   LOGOUT
+===================================================== */
+
+async function logout() {
+    try {
+        await request("/api/logout", { method: "POST" });
+    } catch {}
+
+    token = "";
+    localStorage.removeItem("token");
+
+    if (ws) {
+        try { ws.close(); } catch {}
+    }
+
+    location.reload();
 }
 
 /* =====================================================
@@ -1430,8 +1984,8 @@ function logout() {
 
 function showOnly(id) {
     ["feedView", "chatView", "profileView", "settingsView", "favoritesView"].forEach(viewId => {
-        const el = document.getElementById(viewId);
-        if (el) el.classList.add("hidden");
+        const element = document.getElementById(viewId);
+        if (element) element.classList.add("hidden");
     });
     document.getElementById(id).classList.remove("hidden");
 }
@@ -1445,15 +1999,19 @@ function showFeed() {
 async function showFavorites() {
     showOnly("favoritesView");
     document.getElementById("pageTitle").textContent = "⭐ Избранное";
+
     const response = await request("/api/favorites");
     if (!response.ok) return;
+
     const data = await safeJson(response);
     const container = document.getElementById("favorites");
     container.innerHTML = "";
+
     if (!data.length) {
         container.textContent = "Избранных сообщений пока нет.";
         return;
     }
+
     data.forEach(message => {
         const div = document.createElement("div");
         div.className = "post";
@@ -1465,26 +2023,23 @@ async function showFavorites() {
 }
 
 /* =====================================================
-   MODALS / TOAST
+   MODALS
 ===================================================== */
 
 function openModal(html) {
-    document.getElementById("modal").innerHTML = html;
+    document.getElementById("modal").innerHTML =
+        `<button class="modal-close" onclick="closeModal()">✕</button>` + html;
     document.getElementById("modalBg").classList.remove("hidden");
 }
 
 function closeModal(event) {
-    if (event && event.target !== document.getElementById("modalBg")) return;
+    if (event && event.target !== document.getElementById("modalBg")) {
+        return;
+    }
     document.getElementById("modalBg").classList.add("hidden");
     document.getElementById("modal").innerHTML = "";
     selectedMessageId = null;
-}
-
-function showToast(text) {
-    const el = document.getElementById("toast");
-    el.textContent = text;
-    el.classList.add("show");
-    setTimeout(() => el.classList.remove("show"), 2200);
+    replyToCommentId = null;
 }
 
 /* =====================================================
@@ -1492,9 +2047,34 @@ function showToast(text) {
 ===================================================== */
 
 function connectWebSocket() {
-    // cookie-based auth — websocket использует query token если есть,
-    // но в текущей реализации сервера token берётся из query.
-    // Если нужно — можно доработать сервер. Пока просто пинг-поддержка.
+    if (!currentUser) return;
+
+    try {
+        const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+        // backend expects /ws?token=...
+        // if you use cookie auth, token may be empty — adjust if needed
+        const tokenParam = token && token !== "cookie" ? "?token=" + encodeURIComponent(token) : "";
+        ws = new WebSocket(protocol + "//" + location.host + "/ws" + tokenParam);
+
+        ws.onmessage = async (event) => {
+            let data;
+            try {
+                data = JSON.parse(event.data);
+            } catch {
+                return;
+            }
+
+            if (selectedUserId) {
+                await loadMessages(selectedUserId);
+            }
+        };
+
+        ws.onclose = () => {
+            if (token) {
+                setTimeout(connectWebSocket, 3000);
+            }
+        };
+    } catch {}
 }
 
 /* =====================================================
@@ -1508,7 +2088,9 @@ function scrollMessages() {
 
 function mediaUrl(url) {
     if (!url) return "";
-    if (url.startsWith("http://") || url.startsWith("https://")) return url;
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+        return url;
+    }
     return API + url;
 }
 
@@ -1524,27 +2106,44 @@ function escapeHtml(text) {
 function formatTime(value) {
     if (!value) return "";
     let date = new Date(value);
-    if (Number.isNaN(date.getTime())) date = new Date(value + "Z");
+    if (Number.isNaN(date.getTime())) {
+        date = new Date(value + "Z");
+    }
     if (Number.isNaN(date.getTime())) return "";
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit"
+    });
 }
 
-function formatDate(value) {
-    if (!value) return "";
-    let date = new Date(value);
-    if (Number.isNaN(date.getTime())) date = new Date(value + "Z");
-    if (Number.isNaN(date.getTime())) return "";
-    return date.toLocaleString([], {
-        day: "2-digit", month: "2-digit", year: "numeric",
-        hour: "2-digit", minute: "2-digit"
-    });
+/* =====================================================
+   DEEP LINK ?post=ID (optional)
+===================================================== */
+
+function handleDeepLink() {
+    const params = new URLSearchParams(location.search);
+    const postId = params.get("post");
+    if (postId) {
+        showFeed();
+        // scroll to post after load if present
+        setTimeout(() => {
+            const el = document.querySelector(`[data-post-id="${postId}"]`);
+            if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "center" });
+                el.style.outline = "2px solid #5b8def";
+                setTimeout(() => el.style.outline = "", 2500);
+            }
+        }, 800);
+    }
 }
 
 /* =====================================================
    INITIAL
 ===================================================== */
 
-checkAuth();
+checkAuth().then(() => {
+    handleDeepLink();
+});
 </script>
 </body>
 </html>
