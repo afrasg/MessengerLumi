@@ -1,61 +1,80 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+>
 
 <title>MyMessenger</title>
 
 <style>
-:root {
-    --bg: #080d14;
-    --sidebar: #0d141d;
-    --panel: #111b27;
-    --panel2: #172333;
-    --input: #1b2939;
-    --border: rgba(255,255,255,.07);
-    --text: #f3f7fb;
-    --muted: #8190a1;
-    --blue: #229ed9;
-    --blue2: #168ac0;
-    --green: #35c759;
-    --red: #ff4d5e;
-    --shadow: 0 15px 50px rgba(0,0,0,.28);
-}
 
 * {
     box-sizing: border-box;
 }
 
-html,
-body {
-    margin: 0;
-    width: 100%;
-    height: 100%;
+:root {
+    --bg: #07111d;
+    --panel: rgba(15, 28, 43, .92);
+    --panel2: #122235;
+    --border: rgba(255,255,255,.08);
+    --text: #f4f8fc;
+    --muted: #8294a8;
+    --blue: #2998f5;
+    --blue2: #1676d2;
+    --danger: #e84d5b;
+    --green: #35d07f;
+    --shadow: 0 20px 60px rgba(0,0,0,.35);
+}
+
+body.light {
+    --bg: #eef3f8;
+    --panel: rgba(255,255,255,.94);
+    --panel2: #f5f7fa;
+    --border: rgba(0,0,0,.08);
+    --text: #18202a;
+    --muted: #6e7c8c;
+}
+
+body.blue {
+    --bg: #071827;
+    --panel: #0b2740;
+    --panel2: #103451;
+}
+
+body.midnight {
+    --bg: #020307;
+    --panel: #080b12;
+    --panel2: #10141e;
 }
 
 body {
-    font-family:
-        Inter,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        Arial,
-        sans-serif;
-
+    margin: 0;
     background:
         radial-gradient(
-            circle at top left,
-            #17283a 0,
-            var(--bg) 35%
-        );
-
+            circle at 20% 10%,
+            rgba(42,145,240,.12),
+            transparent 35%
+        ),
+        var(--bg);
     color: var(--text);
+    font-family:
+        Inter,
+        Arial,
+        sans-serif;
+    height: 100vh;
+    overflow: hidden;
 }
 
 button,
 input,
-textarea {
+textarea,
+select {
     font: inherit;
 }
 
@@ -67,235 +86,110 @@ button {
     display: none !important;
 }
 
-/* =====================================================
-AUTH
-===================================================== */
 
-.auth {
-    width: 420px;
+/* AUTH */
+
+#auth {
+    width: 400px;
     max-width: calc(100% - 30px);
-
-    margin: 8vh auto;
-
+    margin: 90px auto;
     padding: 32px;
-
+    background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 26px;
-
-    background:
-        linear-gradient(
-            145deg,
-            rgba(23,34,49,.96),
-            rgba(10,17,25,.96)
-        );
-
+    border-radius: 24px;
     box-shadow: var(--shadow);
+    backdrop-filter: blur(20px);
 }
 
-.auth-logo {
-    width: 74px;
-    height: 74px;
-
-    margin: 0 auto 18px;
-
-    border-radius: 22px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    font-size: 36px;
-
-    background:
-        linear-gradient(
-            135deg,
-            var(--blue),
-            #4bc5ff
-        );
-
-    box-shadow:
-        0 10px 35px rgba(34,158,217,.3);
-}
-
-.auth h1 {
+#auth h1 {
     text-align: center;
-    margin: 0;
+    margin-top: 0;
 }
 
-.auth-subtitle {
-    text-align: center;
-    color: var(--muted);
-    margin: 8px 0 24px;
-}
-
-.auth input {
+#auth input {
     width: 100%;
-
-    padding: 14px 15px;
-    margin: 6px 0;
-
-    color: white;
-    background: var(--input);
-
-    border: 1px solid transparent;
+    margin: 7px 0;
+    padding: 14px;
+    border: 1px solid var(--border);
     border-radius: 13px;
-
     outline: none;
-
-    transition: .2s;
+    background: var(--panel2);
+    color: var(--text);
 }
 
-.auth input:focus {
-    border-color: rgba(34,158,217,.7);
-    box-shadow: 0 0 0 3px rgba(34,158,217,.1);
-}
-
-.auth button {
+.auth-button {
     width: 100%;
-
-    padding: 13px;
-
-    margin-top: 9px;
-
     border: 0;
+    padding: 14px;
+    margin-top: 8px;
     border-radius: 13px;
-
     color: white;
-    background: var(--blue);
-
-    transition: .2s;
+    background: linear-gradient(
+        135deg,
+        var(--blue),
+        var(--blue2)
+    );
 }
 
-.auth button:hover {
-    background: var(--blue2);
-    transform: translateY(-1px);
-}
 
-/* =====================================================
-APP
-===================================================== */
+/* APP */
 
 #app {
     display: none;
-
-    width: 100%;
     height: 100vh;
 }
 
 .sidebar {
-    width: 330px;
+    width: 320px;
     flex-shrink: 0;
-
+    background: var(--panel);
+    border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-
-    background:
-        linear-gradient(
-            180deg,
-            #101a25,
-            #0b121b
-        );
-
-    border-right: 1px solid var(--border);
+    backdrop-filter: blur(20px);
 }
 
 .logo {
-    padding: 20px;
-
+    padding: 22px;
     font-size: 21px;
     font-weight: 800;
-
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.logo-icon {
-    width: 38px;
-    height: 38px;
-
-    border-radius: 12px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    background: var(--blue);
-}
-
-.search-wrap {
-    padding: 0 14px 14px;
 }
 
 .search {
-    width: 100%;
-
-    padding: 12px 15px;
-
-    color: white;
-    background: var(--input);
-
-    border: 1px solid transparent;
-    border-radius: 13px;
-
+    margin: 0 14px 14px;
+    padding: 13px 15px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
     outline: none;
-}
-
-.search:focus {
-    border-color: rgba(34,158,217,.5);
+    background: var(--panel2);
+    color: var(--text);
 }
 
 .users {
     overflow-y: auto;
-    padding-bottom: 15px;
 }
 
 .user {
-    margin: 3px 8px;
-    padding: 11px;
-
+    padding: 13px 15px;
     display: flex;
-    align-items: center;
     gap: 12px;
-
-    border-radius: 14px;
-
+    align-items: center;
     cursor: pointer;
-
-    transition: .18s;
+    transition: .15s;
 }
 
 .user:hover {
-    background: rgba(255,255,255,.055);
-}
-
-.user.active {
-    background: rgba(34,158,217,.16);
+    background: rgba(255,255,255,.06);
 }
 
 .avatar {
-    width: 47px;
-    height: 47px;
-
-    border-radius: 50%;
-
-    object-fit: cover;
-
-    background:
-        linear-gradient(
-            135deg,
-            #1e9bd7,
-            #17638d
-        );
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
+    width: 46px;
+    height: 46px;
     flex-shrink: 0;
-
-    color: white;
-    font-weight: 700;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--blue);
+    border: 2px solid rgba(255,255,255,.1);
 }
 
 .user-name {
@@ -308,157 +202,99 @@ APP
     margin-top: 3px;
 }
 
-/* =====================================================
-MAIN
-===================================================== */
+
+/* MAIN */
 
 .main {
     flex: 1;
-
     min-width: 0;
-
     display: flex;
     flex-direction: column;
 }
 
 .topbar {
     height: 68px;
-
     padding: 0 20px;
-
     display: flex;
-    align-items: center;
     justify-content: space-between;
-
-    background: rgba(13,20,29,.86);
-
-    backdrop-filter: blur(15px);
-
-    border-bottom: 1px solid var(--border);
-}
-
-.page-title {
-    display: flex;
     align-items: center;
-    gap: 9px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(20px);
 }
 
 .top-actions {
     display: flex;
-    gap: 7px;
+    gap: 8px;
 }
 
 .icon-button {
-    width: 42px;
-    height: 42px;
-
     border: 1px solid var(--border);
-    border-radius: 12px;
-
-    color: white;
     background: var(--panel2);
-
-    transition: .2s;
-}
-
-.icon-button:hover {
-    background: #21354a;
-    transform: translateY(-1px);
+    color: var(--text);
+    border-radius: 11px;
+    padding: 9px 12px;
 }
 
 .content {
     flex: 1;
     min-height: 0;
-
-    position: relative;
 }
 
 .view {
     height: 100%;
     overflow-y: auto;
-    padding: 25px;
+    padding: 20px;
 }
 
-/* =====================================================
-CHAT
-===================================================== */
+
+/* CHAT */
 
 .chat {
     height: 100%;
-
     display: flex;
     flex-direction: column;
-
-    background:
-        radial-gradient(
-            circle at center,
-            rgba(26,51,73,.15),
-            transparent 55%
-        );
 }
 
 .chat-header {
-    padding: 14px 20px;
-
-    background: rgba(17,27,39,.9);
-
+    padding: 16px 20px;
+    background: var(--panel);
     border-bottom: 1px solid var(--border);
-
-    font-weight: 700;
 }
 
 .messages {
     flex: 1;
-
     padding: 24px;
-
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.message-row {
+    display: flex;
+    margin: 5px 0;
+}
+
+.message-row.mine {
+    justify-content: flex-end;
 }
 
 .message {
     position: relative;
-
-    width: fit-content;
-    max-width: min(600px, 70%);
-
-    margin: 8px 0;
-
+    max-width: min(70%, 650px);
     padding: 10px 13px;
-
-    background: #172333;
-
-    border-radius: 15px 15px 15px 5px;
-
-    box-shadow: 0 4px 15px rgba(0,0,0,.12);
-
-    animation: messageIn .18s ease;
+    background: var(--panel2);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    box-shadow: 0 5px 20px rgba(0,0,0,.08);
 }
 
-@keyframes messageIn {
-    from {
-        opacity: 0;
-        transform: translateY(4px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Свои сообщения справа */
-.message.mine {
-    margin-left: auto;
-    margin-right: 0;
-
-    background:
-        linear-gradient(
-            135deg,
-            #197bb1,
-            #176b9c
-        );
-
-    border-radius: 15px 15px 5px 15px;
+.message.mine .message {
+    background: linear-gradient(
+        135deg,
+        #237fc7,
+        #1767aa
+    );
 }
 
 .message-text {
@@ -466,35 +302,28 @@ CHAT
     word-break: break-word;
 }
 
-.time {
-    color: rgba(255,255,255,.58);
+.message.deleted {
+    opacity: .55;
+    font-style: italic;
+}
 
-    font-size: 11px;
-
+.message-time {
+    font-size: 10px;
+    color: rgba(255,255,255,.6);
     text-align: right;
-
     margin-top: 5px;
 }
 
 .message-actions {
-    display: none;
-
     position: absolute;
-
-    right: 6px;
+    right: 4px;
     top: -35px;
-
-    background: #101a25;
-
+    display: none;
+    background: var(--panel);
     border: 1px solid var(--border);
-
     border-radius: 10px;
-
-    padding: 4px;
-
+    padding: 3px;
     box-shadow: var(--shadow);
-
-    gap: 3px;
 }
 
 .message:hover .message-actions {
@@ -504,67 +333,39 @@ CHAT
 .message-actions button {
     border: 0;
     background: transparent;
-    color: white;
-
-    padding: 6px 8px;
-
-    border-radius: 7px;
-}
-
-.message-actions button:hover {
-    background: rgba(255,255,255,.1);
+    color: var(--text);
+    padding: 5px 7px;
 }
 
 .composer {
-    padding: 14px;
-
     display: flex;
     gap: 9px;
-
-    background: rgba(13,20,29,.94);
-
+    padding: 13px;
+    background: var(--panel);
     border-top: 1px solid var(--border);
 }
 
 .composer input {
     flex: 1;
-
     min-width: 0;
-
-    padding: 13px 16px;
-
-    border: 1px solid transparent;
-    border-radius: 14px;
-
+    padding: 14px;
+    border-radius: 15px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    color: var(--text);
     outline: none;
-
-    color: white;
-    background: var(--input);
-}
-
-.composer input:focus {
-    border-color: rgba(34,158,217,.5);
 }
 
 .send {
-    width: 51px;
-
+    width: 52px;
     border: 0;
     border-radius: 14px;
-
     color: white;
     background: var(--blue);
-
-    font-size: 19px;
 }
 
-.send:hover {
-    background: var(--blue2);
-}
 
-/* =====================================================
-FEED
-===================================================== */
+/* FEED */
 
 .feed {
     max-width: 760px;
@@ -572,357 +373,284 @@ FEED
 }
 
 .post-box,
-.post {
-    background:
-        linear-gradient(
-            145deg,
-            rgba(22,34,48,.96),
-            rgba(15,24,35,.96)
-        );
-
+.post,
+.settings-card,
+.profile-card,
+.modal-card {
+    background: var(--panel);
     border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,.12);
+}
 
-    border-radius: 19px;
-
-    padding: 17px;
-
+.post-box {
+    padding: 16px;
     margin-bottom: 16px;
-
-    box-shadow: 0 7px 30px rgba(0,0,0,.12);
 }
 
 .post-box textarea {
     width: 100%;
-
     min-height: 90px;
-
     resize: vertical;
-
+    border: 1px solid var(--border);
+    border-radius: 14px;
     padding: 13px;
-
-    color: white;
-    background: var(--input);
-
-    border: 1px solid transparent;
-    border-radius: 13px;
-
+    background: var(--panel2);
+    color: var(--text);
     outline: none;
-}
-
-.post-box textarea:focus {
-    border-color: rgba(34,158,217,.5);
 }
 
 .post-tools {
     display: flex;
     gap: 8px;
-    margin-top: 11px;
+    margin-top: 10px;
 }
 
-.post-tools button,
-.post-tools label {
+.primary {
     border: 0;
-
     padding: 10px 14px;
-
     border-radius: 11px;
-
     color: white;
     background: var(--blue);
-
-    cursor: pointer;
-
-    transition: .2s;
 }
 
-.post-tools button:hover,
-.post-tools label:hover {
-    background: var(--blue2);
+.post {
+    padding: 17px;
+    margin-bottom: 16px;
 }
 
 .post-header {
     display: flex;
+    gap: 10px;
     align-items: center;
-    gap: 11px;
-
-    cursor: pointer;
 }
 
 .post-author {
-    font-weight: 750;
+    font-weight: 800;
 }
 
 .post-username {
     color: var(--muted);
     font-size: 12px;
-    margin-top: 3px;
 }
 
 .post-text {
     white-space: pre-wrap;
-
-    line-height: 1.55;
-
     margin: 15px 0;
 }
 
 .post-media {
     width: 100%;
     max-height: 600px;
-
     object-fit: contain;
-
-    border-radius: 14px;
-
-    background: #070b10;
+    border-radius: 15px;
+    background: #000;
 }
 
 .post-actions {
     display: flex;
-    flex-wrap: wrap;
     gap: 7px;
-
     margin-top: 12px;
 }
 
 .post-actions button {
-    border: 0;
-
-    color: #dbe9f5;
-    background: #1c2b3b;
-
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    color: var(--text);
     padding: 8px 12px;
-
     border-radius: 10px;
-
-    transition: .15s;
-}
-
-.post-actions button:hover {
-    background: #263c51;
 }
 
 .comments {
-    margin-top: 13px;
-
-    border-top: 1px solid var(--border);
-
-    padding-top: 10px;
+    margin-top: 14px;
 }
 
 .comment {
     padding: 10px;
-
-    margin-top: 7px;
-
     border-radius: 11px;
-
-    background: rgba(255,255,255,.045);
-
-    line-height: 1.4;
+    background: var(--panel2);
+    margin-top: 7px;
 }
 
-.comment small {
+.comment-reply {
+    margin-left: 25px;
+    border-left: 2px solid var(--blue);
+}
+
+.comment-meta {
     color: var(--muted);
+    font-size: 12px;
+}
+
+.comment-actions {
+    display: flex;
+    gap: 5px;
+    margin-top: 5px;
+}
+
+.comment-actions button {
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 12px;
 }
 
 .comment-input {
     display: flex;
     gap: 7px;
-
     margin-top: 9px;
 }
 
 .comment-input input {
     flex: 1;
-
     min-width: 0;
-
-    border: 0;
-
-    padding: 10px 12px;
-
+    padding: 10px;
     border-radius: 10px;
-
-    color: white;
-    background: var(--input);
-
-    outline: none;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    color: var(--text);
 }
 
-.comment-input button {
-    border: 0;
 
-    padding: 0 14px;
+/* SETTINGS */
 
-    border-radius: 10px;
-
-    color: white;
-    background: var(--blue);
+.settings {
+    max-width: 800px;
+    margin: auto;
 }
 
-/* =====================================================
-PROFILE
-===================================================== */
+.settings-card {
+    padding: 22px;
+    margin-bottom: 14px;
+}
+
+.settings-card h2 {
+    margin-top: 0;
+}
+
+.setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.setting-row:last-child {
+    border-bottom: 0;
+}
+
+.setting-row select,
+.setting-row input {
+    padding: 9px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    color: var(--text);
+}
+
+.danger {
+    border: 0;
+    color: white;
+    background: var(--danger);
+    padding: 11px 15px;
+    border-radius: 11px;
+}
+
+
+/* PROFILE */
 
 .profile {
-    max-width: 620px;
+    max-width: 600px;
     margin: auto;
 }
 
 .profile-card {
-    background:
-        linear-gradient(
-            145deg,
-            #172638,
-            #101a26
-        );
-
-    border: 1px solid var(--border);
-
-    border-radius: 23px;
-
-    padding: 30px;
-
+    padding: 25px;
     text-align: center;
-
-    box-shadow: var(--shadow);
 }
 
 .big-avatar {
     width: 120px;
     height: 120px;
-
     border-radius: 50%;
-
     object-fit: cover;
-
-    margin: 0 auto 18px;
-
-    display: block;
-
-    border: 4px solid rgba(255,255,255,.08);
-
-    background:
-        url("https://i.imgur.com/7NFHga3.png")
-        center/cover;
+    margin-bottom: 15px;
 }
 
 .profile input,
 .profile textarea {
     width: 100%;
-
-    margin: 7px 0;
-
-    padding: 13px;
-
-    border: 1px solid transparent;
-    border-radius: 12px;
-
-    color: white;
-    background: var(--input);
-
+    margin: 6px 0;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: var(--panel2);
+    color: var(--text);
     outline: none;
 }
 
-.profile textarea {
-    min-height: 100px;
-    resize: vertical;
+
+/* MODAL */
+
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 100;
 }
 
-.profile input:focus,
-.profile textarea:focus {
-    border-color: rgba(34,158,217,.5);
+.modal-card {
+    width: 430px;
+    max-width: 100%;
+    padding: 25px;
 }
 
-.primary {
-    background: var(--blue);
-
-    border: 0;
-
-    color: white;
-
-    padding: 11px 16px;
-
-    border-radius: 11px;
-
-    margin-top: 8px;
+.modal-card input,
+.modal-card textarea {
+    width: 100%;
+    margin: 6px 0;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    color: var(--text);
 }
 
-.primary:hover {
-    background: var(--blue2);
-}
-
-.danger {
-    background: #b93242;
-
-    border: 0;
-
-    color: white;
-
-    padding: 11px 16px;
-
-    border-radius: 11px;
-
+.modal-buttons {
+    display: flex;
+    gap: 8px;
     margin-top: 10px;
 }
 
-/* =====================================================
-SCROLLBAR
-===================================================== */
-
-::-webkit-scrollbar {
-    width: 7px;
-}
-
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #263747;
-    border-radius: 20px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #355069;
-}
-
-/* =====================================================
-MOBILE
-===================================================== */
-
-@media(max-width: 800px) {
+@media(max-width:750px) {
 
     .sidebar {
         width: 78px;
     }
 
     .logo {
-        justify-content: center;
-        padding: 15px 5px;
-    }
-
-    .logo-text {
-        display: none;
-    }
-
-    .search-wrap {
-        padding: 5px;
+        font-size: 11px;
+        padding: 12px 4px;
+        text-align: center;
     }
 
     .search {
-        font-size: 0;
-        padding: 12px 5px;
+        margin: 5px;
+        width: calc(100% - 10px);
     }
 
     .user {
         justify-content: center;
-        margin: 3px;
         padding: 9px 4px;
     }
 
-    .user-info {
+    .user > div:last-child {
         display: none;
     }
 
@@ -931,78 +659,45 @@ MOBILE
     }
 
     .message {
-        max-width: 85%;
-    }
-
-    .topbar {
-        padding: 0 10px;
-    }
-
-    .profile-card {
-        padding: 20px;
+        max-width: 86%;
     }
 }
 
-@media(max-width: 500px) {
-
-    .top-actions {
-        gap: 3px;
-    }
-
-    .icon-button {
-        width: 38px;
-        height: 38px;
-    }
-
-    .messages {
-        padding: 14px;
-    }
-
-    .post-box,
-    .post {
-        border-radius: 15px;
-        padding: 13px;
-    }
-}
 </style>
+
 </head>
 
 <body>
 
-<!-- =====================================================
-AUTH
-===================================================== -->
 
-<div class="auth" id="auth">
+<!-- AUTH -->
 
-    <div class="auth-logo">
-        💬
-    </div>
+<div id="auth">
 
-    <h1>MyMessenger</h1>
-
-    <div class="auth-subtitle">
-        Общайся с друзьями по всему миру
-    </div>
+    <h1>💬 MyMessenger</h1>
 
     <input
         id="username"
         placeholder="Username"
-        autocomplete="username"
     >
 
     <input
         id="password"
         type="password"
         placeholder="Пароль"
-        autocomplete="current-password"
     >
 
-    <button onclick="login()">
+    <button
+        class="auth-button"
+        onclick="login()"
+    >
         Войти
     </button>
 
-    <button onclick="register()">
+    <button
+        class="auth-button"
+        onclick="register()"
+    >
         Создать аккаунт
     </button>
 
@@ -1011,36 +706,22 @@ AUTH
 </div>
 
 
-<!-- =====================================================
-APP
-===================================================== -->
+<!-- APP -->
 
 <div id="app">
 
     <aside class="sidebar">
 
         <div class="logo">
-
-            <div class="logo-icon">
-                💬
-            </div>
-
-            <span class="logo-text">
-                MyMessenger
-            </span>
-
+            💬 MyMessenger
         </div>
 
-        <div class="search-wrap">
-
-            <input
-                class="search"
-                id="search"
-                placeholder="🔎 Поиск пользователей..."
-                oninput="searchUsers()"
-            >
-
-        </div>
+        <input
+            class="search"
+            id="search"
+            placeholder="Поиск..."
+            oninput="searchUsers()"
+        >
 
         <div
             class="users"
@@ -1054,10 +735,7 @@ APP
 
         <div class="topbar">
 
-            <strong
-                class="page-title"
-                id="pageTitle"
-            >
+            <strong id="pageTitle">
                 📰 Лента
             </strong>
 
@@ -1066,25 +744,29 @@ APP
                 <button
                     class="icon-button"
                     onclick="showFeed()"
-                    title="Лента"
                 >
                     📰
                 </button>
 
                 <button
                     class="icon-button"
+                    onclick="showFavorites()"
+                >
+                    📌
+                </button>
+
+                <button
+                    class="icon-button"
                     onclick="showProfile()"
-                    title="Профиль"
                 >
                     👤
                 </button>
 
                 <button
                     class="icon-button"
-                    onclick="logout()"
-                    title="Выйти"
+                    onclick="showSettings()"
                 >
-                    🚪
+                    ⚙️
                 </button>
 
             </div>
@@ -1094,9 +776,8 @@ APP
 
         <div class="content">
 
-            <!-- =================================================
-            FEED
-            ================================================= -->
+
+            <!-- FEED -->
 
             <section
                 class="view"
@@ -1115,12 +796,13 @@ APP
                         <div class="post-tools">
 
                             <button
+                                class="primary"
                                 onclick="publishPost()"
                             >
                                 📝 Опубликовать
                             </button>
 
-                            <label>
+                            <label class="primary">
 
                                 📷 Фото / видео
 
@@ -1144,14 +826,12 @@ APP
             </section>
 
 
-            <!-- =================================================
-            CHAT
-            ================================================= -->
+            <!-- CHAT -->
 
             <section
-                class="view"
+                class="view hidden"
                 id="chatView"
-                style="display:none;padding:0"
+                style="padding:0"
             >
 
                 <div class="chat">
@@ -1172,7 +852,7 @@ APP
 
                         <input
                             id="messageInput"
-                            placeholder="Написать сообщение..."
+                            placeholder="Сообщение..."
                             onkeydown="messageKey(event)"
                         >
 
@@ -1190,14 +870,11 @@ APP
             </section>
 
 
-            <!-- =================================================
-            PROFILE
-            ================================================= -->
+            <!-- PROFILE -->
 
             <section
-                class="view"
+                class="view hidden"
                 id="profileView"
-                style="display:none"
             >
 
                 <div class="profile">
@@ -1207,13 +884,10 @@ APP
                         <img
                             id="bigAvatar"
                             class="big-avatar"
-                            src="https://i.imgur.com/7NFHga3.png"
-                            alt="Avatar"
+                            src=""
                         >
 
-                        <h2>
-                            ⚙️ Профиль
-                        </h2>
+                        <h2>👤 Профиль</h2>
 
                         <input
                             id="profileUsername"
@@ -1230,9 +904,7 @@ APP
                             placeholder="О себе"
                         ></textarea>
 
-                        <p>
-                            🖼️ Новый аватар
-                        </p>
+                        <p>🖼️ Новый аватар</p>
 
                         <input
                             id="avatarFile"
@@ -1244,10 +916,128 @@ APP
                             class="primary"
                             onclick="saveProfile()"
                         >
-                            Сохранить профиль
+                            Сохранить
                         </button>
 
-                        <br>
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- SETTINGS -->
+
+            <section
+                class="view hidden"
+                id="settingsView"
+            >
+
+                <div class="settings">
+
+                    <div class="settings-card">
+
+                        <h2>⚙️ Расширенные настройки</h2>
+
+                        <div class="setting-row">
+
+                            <span>🌐 Язык</span>
+
+                            <select
+                                id="language"
+                                onchange="saveSettings()"
+                            >
+                                <option value="ru">
+                                    Русский
+                                </option>
+
+                                <option value="en">
+                                    English
+                                </option>
+                            </select>
+
+                        </div>
+
+                        <div class="setting-row">
+
+                            <span>🎨 Тема</span>
+
+                            <select
+                                id="theme"
+                                onchange="saveSettings()"
+                            >
+                                <option value="dark">
+                                    Тёмная
+                                </option>
+
+                                <option value="light">
+                                    Светлая
+                                </option>
+
+                                <option value="blue">
+                                    Синяя
+                                </option>
+
+                                <option value="midnight">
+                                    Midnight
+                                </option>
+
+                            </select>
+
+                        </div>
+
+                        <div class="setting-row">
+
+                            <span>🔔 Уведомления</span>
+
+                            <input
+                                type="checkbox"
+                                id="notifications"
+                                onchange="saveSettings()"
+                            >
+
+                        </div>
+
+                        <div class="setting-row">
+
+                            <span>👁️ Последний визит</span>
+
+                            <select
+                                id="privacy"
+                                onchange="saveSettings()"
+                            >
+
+                                <option value="everyone">
+                                    Все
+                                </option>
+
+                                <option value="nobody">
+                                    Никто
+                                </option>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="settings-card">
+
+                        <h2>👥 Аккаунты</h2>
+
+                        <div
+                            id="accounts"
+                        ></div>
+
+                        <button
+                            class="primary"
+                            onclick="addAccount()"
+                        >
+                            ➕ Добавить аккаунт
+                        </button>
+
+                        <br><br>
 
                         <button
                             class="danger"
@@ -1255,6 +1045,60 @@ APP
                         >
                             🚪 Выйти из аккаунта
                         </button>
+
+                    </div>
+
+
+                    <div class="settings-card">
+
+                        <h2>👥 Группы</h2>
+
+                        <button
+                            class="primary"
+                            onclick="createGroup()"
+                        >
+                            ➕ Создать группу
+                        </button>
+
+                        <div id="groups"></div>
+
+                    </div>
+
+
+                    <div class="settings-card">
+
+                        <h2>📢 Каналы</h2>
+
+                        <button
+                            class="primary"
+                            onclick="createChannel()"
+                        >
+                            ➕ Создать канал
+                        </button>
+
+                        <div id="channels"></div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- FAVORITES -->
+
+            <section
+                class="view hidden"
+                id="favoritesView"
+            >
+
+                <div class="feed">
+
+                    <div class="settings-card">
+
+                        <h2>📌 Избранные сообщения</h2>
+
+                        <div id="favorites"></div>
 
                     </div>
 
@@ -1269,32 +1113,46 @@ APP
 </div>
 
 
+<!-- PROFILE MODAL -->
+
+<div
+    class="modal hidden"
+    id="profileModal"
+    onclick="closeModal(event)"
+>
+
+    <div
+        class="modal-card"
+        id="profileModalContent"
+    ></div>
+
+</div>
+
+
 <script>
 
-/* =====================================================
-CONFIG
-===================================================== */
+
+// =========================================================
+// CONFIG
+// =========================================================
 
 const API = "";
 
-
-/* =====================================================
-STATE
-===================================================== */
+const DEFAULT_AVATAR =
+    "https://i.imgur.com/7NFHga3.png";
 
 let token =
     localStorage.getItem("token");
 
 let currentUser = null;
-
 let selectedUser = null;
-
 let socket = null;
+let replyCommentId = null;
 
 
-/* =====================================================
-API
-===================================================== */
+// =========================================================
+// REQUEST
+// =========================================================
 
 function api(path) {
     return API + path;
@@ -1320,13 +1178,12 @@ async function request(
         api(path),
         options
     );
-
 }
 
 
-/* =====================================================
-AUTH
-===================================================== */
+// =========================================================
+// AUTH
+// =========================================================
 
 async function register() {
 
@@ -1363,14 +1220,8 @@ async function register() {
         const data =
             await response.json();
 
-        if (!response.ok) {
-
-            throw new Error(
-                data.detail ||
-                "Ошибка регистрации"
-            );
-
-        }
+        if (!response.ok)
+            throw new Error(data.detail);
 
         token = data.token;
 
@@ -1379,17 +1230,20 @@ async function register() {
             token
         );
 
+        saveAccountToken(
+            username,
+            token
+        );
+
         await startApp();
 
-    } catch (error) {
+    } catch (e) {
 
         document.getElementById(
             "authError"
-        ).innerText =
-            error.message;
+        ).innerText = e.message;
 
     }
-
 }
 
 
@@ -1428,14 +1282,8 @@ async function login() {
         const data =
             await response.json();
 
-        if (!response.ok) {
-
-            throw new Error(
-                data.detail ||
-                "Ошибка входа"
-            );
-
-        }
+        if (!response.ok)
+            throw new Error(data.detail);
 
         token = data.token;
 
@@ -1444,70 +1292,203 @@ async function login() {
             token
         );
 
+        saveAccountToken(
+            username,
+            token
+        );
+
         await startApp();
 
-    } catch (error) {
+    } catch (e) {
 
         document.getElementById(
             "authError"
-        ).innerText =
-            error.message;
+        ).innerText = e.message;
 
     }
-
 }
 
 
-/* =====================================================
-START
-===================================================== */
+// =========================================================
+// START
+// =========================================================
 
 async function startApp() {
 
-    const response =
-        await request(
-            "/api/me"
-        );
+    try {
 
-    if (!response.ok) {
+        const response =
+            await request("/api/me");
+
+        if (!response.ok) {
+
+            localStorage.removeItem(
+                "token"
+            );
+
+            token = null;
+
+            document.getElementById(
+                "auth"
+            ).style.display = "block";
+
+            return;
+        }
+
+        currentUser =
+            await response.json();
+
+        document.getElementById(
+            "auth"
+        ).style.display = "none";
+
+        document.getElementById(
+            "app"
+        ).style.display = "flex";
+
+        applySettings();
+
+        connectWebSocket();
+
+        searchUsers();
+
+        showFeed();
+
+    } catch {
 
         logout();
 
-        return;
+    }
+}
+
+
+// =========================================================
+// ACCOUNTS
+// =========================================================
+
+function getAccounts() {
+
+    try {
+
+        return JSON.parse(
+            localStorage.getItem(
+                "accounts"
+            ) || "[]"
+        );
+
+    } catch {
+
+        return [];
+
+    }
+}
+
+
+function saveAccountToken(
+    username,
+    tokenValue
+) {
+
+    const accounts =
+        getAccounts();
+
+    const existing =
+        accounts.find(
+            x => x.username === username
+        );
+
+    if (existing) {
+
+        existing.token = tokenValue;
+
+    } else {
+
+        accounts.push({
+            username,
+            token: tokenValue
+        });
 
     }
 
-    currentUser =
-        await response.json();
-
-    document.getElementById(
-        "auth"
-    ).style.display = "none";
-
-    document.getElementById(
-        "app"
-    ).style.display = "flex";
-
-    connectWebSocket();
-
-    searchUsers();
-
-    showFeed();
+    localStorage.setItem(
+        "accounts",
+        JSON.stringify(accounts)
+    );
 
 }
 
 
-/* =====================================================
-LOGOUT
-===================================================== */
+function renderAccounts() {
 
-function logout() {
+    const container =
+        document.getElementById(
+            "accounts"
+        );
 
-    localStorage.removeItem(
-        "token"
+    if (!container) return;
+
+    container.innerHTML = "";
+
+    getAccounts().forEach(
+        account => {
+
+            const button =
+                document.createElement(
+                    "button"
+                );
+
+            button.className =
+                "icon-button";
+
+            button.style.margin =
+                "4px";
+
+            button.innerText =
+                "🔄 @" +
+                account.username;
+
+            button.onclick =
+                () => switchAccount(
+                    account
+                );
+
+            container.appendChild(
+                button
+            );
+
+        }
     );
 
-    token = null;
+}
+
+
+async function addAccount() {
+
+    localStorage.setItem(
+        "pendingAccount",
+        "1"
+    );
+
+    logout(false);
+
+}
+
+
+async function switchAccount(account) {
+
+    token = account.token;
+
+    localStorage.setItem(
+        "token",
+        token
+    );
+
+    await startApp();
+
+}
+
+
+function logout(reload = true) {
 
     if (socket) {
 
@@ -1517,14 +1498,22 @@ function logout() {
 
     }
 
-    location.reload();
+    localStorage.removeItem(
+        "token"
+    );
+
+    token = null;
+    currentUser = null;
+
+    if (reload)
+        location.reload();
 
 }
 
 
-/* =====================================================
-WEBSOCKET
-===================================================== */
+// =========================================================
+// WEBSOCKET
+// =========================================================
 
 function connectWebSocket() {
 
@@ -1540,25 +1529,19 @@ function connectWebSocket() {
 
         base =
             location.protocol === "https:"
-                ? "https://" + location.host
-                : "http://" + location.host;
+            ? "https://" + location.host
+            : "http://" + location.host;
 
     }
 
-    const wsBase =
+    const ws =
         base
-            .replace(
-                "https://",
-                "wss://"
-            )
-            .replace(
-                "http://",
-                "ws://"
-            );
+        .replace("https://", "wss://")
+        .replace("http://", "ws://");
 
     socket =
         new WebSocket(
-            wsBase +
+            ws +
             "/ws/" +
             currentUser.id
         );
@@ -1575,31 +1558,58 @@ function connectWebSocket() {
                 data.type === "message"
             ) {
 
-                const message =
-                    data.message;
-
                 if (
                     selectedUser &&
                     (
                         (
-                            message.sender_id ===
+                            data.message.sender_id ===
                             currentUser.id &&
-                            message.receiver_id ===
+                            data.message.receiver_id ===
                             selectedUser.id
                         )
                         ||
                         (
-                            message.sender_id ===
+                            data.message.sender_id ===
                             selectedUser.id &&
-                            message.receiver_id ===
+                            data.message.receiver_id ===
                             currentUser.id
                         )
                     )
                 ) {
 
-                    addMessage(
-                        message
+                    renderMessage(
+                        data.message
                     );
+
+                }
+
+            }
+
+            if (
+                data.type ===
+                "message_edited"
+            ) {
+
+                if (
+                    selectedUser
+                ) {
+
+                    loadMessages();
+
+                }
+
+            }
+
+            if (
+                data.type ===
+                "message_deleted"
+            ) {
+
+                if (
+                    selectedUser
+                ) {
+
+                    loadMessages();
 
                 }
 
@@ -1620,9 +1630,9 @@ function connectWebSocket() {
 }
 
 
-/* =====================================================
-USERS
-===================================================== */
+// =========================================================
+// USERS
+// =========================================================
 
 async function searchUsers() {
 
@@ -1637,7 +1647,8 @@ async function searchUsers() {
             encodeURIComponent(q)
         );
 
-    if (!response.ok) return;
+    if (!response.ok)
+        return;
 
     const users =
         await response.json();
@@ -1662,23 +1673,15 @@ async function searchUsers() {
 
             element.innerHTML = `
 
-                ${
-                    user.avatar_url
-                    ?
-                    `<img
-                        class="avatar"
-                        src="${mediaUrl(
-                            user.avatar_url
-                        )}"
-                    >`
-                    :
-                    `<img
-                        class="avatar"
-                        src="https://i.imgur.com/7NFHga3.png"
-                    >`
-                }
+                <img
+                    class="avatar"
+                    src="${escapeAttr(
+                        user.avatar_url ||
+                        DEFAULT_AVATAR
+                    )}"
+                >
 
-                <div class="user-info">
+                <div>
 
                     <div class="user-name">
                         ${escapeHtml(
@@ -1699,6 +1702,19 @@ async function searchUsers() {
             element.onclick =
                 () => openChat(user);
 
+            element
+                .querySelector(".avatar")
+                .onclick =
+                event => {
+
+                    event.stopPropagation();
+
+                    showUserProfile(
+                        user.id
+                    );
+
+                };
+
             container.appendChild(
                 element
             );
@@ -1709,25 +1725,21 @@ async function searchUsers() {
 }
 
 
-/* =====================================================
-CHAT
-===================================================== */
+// =========================================================
+// CHAT
+// =========================================================
 
 async function openChat(user) {
 
     selectedUser = user;
 
-    document.getElementById(
-        "feedView"
-    ).style.display = "none";
-
-    document.getElementById(
-        "profileView"
-    ).style.display = "none";
+    hideViews();
 
     document.getElementById(
         "chatView"
-    ).style.display = "block";
+    ).classList.remove(
+        "hidden"
+    );
 
     document.getElementById(
         "pageTitle"
@@ -1740,46 +1752,76 @@ async function openChat(user) {
 
     document.getElementById(
         "chatHeader"
-    ).innerText =
-        "👤 " +
-        (
-            user.display_name ||
-            user.username
-        );
+    ).innerHTML = `
 
-    const response =
-        await request(
-            "/api/messages/" +
-            user.id
-        );
+        <img
+            src="${escapeAttr(
+                user.avatar_url ||
+                DEFAULT_AVATAR
+            )}"
+            class="avatar"
+            style="width:38px;height:38px;vertical-align:middle"
+            onclick="showUserProfile(${user.id})"
+        >
 
-    if (!response.ok) return;
+        <b style="margin-left:8px">
+            ${escapeHtml(
+                user.display_name ||
+                user.username
+            )}
+        </b>
 
-    const history =
-        await response.json();
+        <span
+            style="color:var(--muted);font-size:12px"
+        >
+            @${escapeHtml(user.username)}
+        </span>
+    `;
 
-    const messages =
-        document.getElementById(
-            "messages"
-        );
-
-    messages.innerHTML = "";
-
-    history.forEach(
-        addMessage
-    );
+    await loadMessages();
 
 }
 
 
-function addMessage(message) {
+async function loadMessages() {
+
+    if (!selectedUser)
+        return;
+
+    const response =
+        await request(
+            "/api/messages/" +
+            selectedUser.id
+        );
+
+    if (!response.ok)
+        return;
+
+    const messages =
+        await response.json();
 
     const container =
         document.getElementById(
             "messages"
         );
 
-    const element =
+    container.innerHTML = "";
+
+    messages.forEach(
+        renderMessage
+    );
+
+}
+
+
+function renderMessage(message) {
+
+    const container =
+        document.getElementById(
+            "messages"
+        );
+
+    const row =
         document.createElement(
             "div"
         );
@@ -1788,20 +1830,93 @@ function addMessage(message) {
         message.sender_id ===
         currentUser.id;
 
-    element.className =
-        "message " +
+    row.className =
+        "message-row " +
         (
             mine
             ? "mine"
             : ""
         );
 
+    const bubble =
+        document.createElement(
+            "div"
+        );
+
+    bubble.className =
+        "message";
+
+    if (message.is_deleted)
+        bubble.classList.add(
+            "deleted"
+        );
+
+    let actions = "";
+
+    if (mine && !message.is_deleted) {
+
+        actions = `
+
+            <div class="message-actions">
+
+                <button
+                    onclick="editMessage(${message.id}, '${escapeJs(message.text)}')"
+                >
+                    ✏️
+                </button>
+
+                <button
+                    onclick="deleteMessage(${message.id})"
+                >
+                    🗑️
+                </button>
+
+                <button
+                    onclick="copyText('${escapeJs(message.text)}')"
+                >
+                    📋
+                </button>
+
+                <button
+                    onclick="favoriteMessage(${message.id})"
+                >
+                    📌
+                </button>
+
+            </div>
+        `;
+
+    } else if (!message.is_deleted) {
+
+        actions = `
+
+            <div class="message-actions">
+
+                <button
+                    onclick="copyText('${escapeJs(message.text)}')"
+                >
+                    📋
+                </button>
+
+                <button
+                    onclick="favoriteMessage(${message.id})"
+                >
+                    📌
+                </button>
+
+            </div>
+        `;
+
+    }
+
     const date =
         new Date(
             message.created_at
         );
 
-    element.innerHTML = `
+    bubble.innerHTML = `
+
+        ${actions}
 
         <div class="message-text">
             ${escapeHtml(
@@ -1809,7 +1924,7 @@ function addMessage(message) {
             )}
         </div>
 
-        <div class="time">
+        <div class="message-time">
 
             ${date.toLocaleTimeString(
                 [],
@@ -1819,13 +1934,28 @@ function addMessage(message) {
                 }
             )}
 
-            ${mine ? " ✓✓" : ""}
+            ${
+                message.edited_at &&
+                !message.is_deleted
+                ? " · изменено"
+                : ""
+            }
+
+            ${
+                mine
+                ? " ✓✓"
+                : ""
+            }
 
         </div>
     `;
 
+    row.appendChild(
+        bubble
+    );
+
     container.appendChild(
-        element
+        row
     );
 
     container.scrollTop =
@@ -1836,15 +1966,8 @@ function addMessage(message) {
 
 async function sendMessage() {
 
-    if (!selectedUser) {
-
-        alert(
-            "Выбери пользователя"
-        );
-
+    if (!selectedUser)
         return;
-
-    }
 
     const input =
         document.getElementById(
@@ -1854,7 +1977,8 @@ async function sendMessage() {
     const text =
         input.value.trim();
 
-    if (!text) return;
+    if (!text)
+        return;
 
     input.value = "";
 
@@ -1872,7 +1996,6 @@ async function sendMessage() {
                 body: JSON.stringify({
                     receiver_id:
                         selectedUser.id,
-
                     text
                 })
             }
@@ -1880,23 +2003,13 @@ async function sendMessage() {
 
     if (!response.ok) {
 
-        try {
+        const data =
+            await response.json();
 
-            const data =
-                await response.json();
-
-            alert(
-                data.detail ||
-                "Ошибка"
-            );
-
-        } catch {
-
-            alert(
-                "Ошибка отправки"
-            );
-
-        }
+        alert(
+            data.detail ||
+            "Ошибка"
+        );
 
     }
 
@@ -1919,23 +2032,181 @@ function messageKey(event) {
 }
 
 
-/* =====================================================
-FEED
-===================================================== */
+async function editMessage(
+    id,
+    oldText
+) {
+
+    const text =
+        prompt(
+            "Изменить сообщение:",
+            oldText
+        );
+
+    if (
+        text === null ||
+        !text.trim()
+    )
+        return;
+
+    await request(
+        "/api/messages/" +
+        id,
+        {
+            method: "PUT",
+
+            headers: {
+                "Content-Type":
+                    "application/json"
+            },
+
+            body: JSON.stringify({
+                text
+            })
+        }
+    );
+
+    loadMessages();
+
+}
+
+
+async function deleteMessage(id) {
+
+    if (
+        !confirm(
+            "Удалить сообщение?"
+        )
+    )
+        return;
+
+    await request(
+        "/api/messages/" +
+        id,
+        {
+            method: "DELETE"
+        }
+    );
+
+    loadMessages();
+
+}
+
+
+async function favoriteMessage(id) {
+
+    await request(
+        "/api/messages/" +
+        id +
+        "/favorite",
+        {
+            method: "POST"
+        }
+    );
+
+}
+
+
+// =========================================================
+// FAVORITES
+// =========================================================
+
+async function showFavorites() {
+
+    hideViews();
+
+    document.getElementById(
+        "favoritesView"
+    ).classList.remove(
+        "hidden"
+    );
+
+    document.getElementById(
+        "pageTitle"
+    ).innerText =
+        "📌 Избранное";
+
+    const response =
+        await request(
+            "/api/favorites"
+        );
+
+    if (!response.ok)
+        return;
+
+    const rows =
+        await response.json();
+
+    const container =
+        document.getElementById(
+            "favorites"
+        );
+
+    container.innerHTML = "";
+
+    if (!rows.length) {
+
+        container.innerHTML =
+            "<p>Избранных сообщений пока нет.</p>";
+
+        return;
+
+    }
+
+    rows.forEach(
+        message => {
+
+            const div =
+                document.createElement(
+                    "div"
+                );
+
+            div.className =
+                "comment";
+
+            div.innerHTML = `
+
+                <div>
+                    ${escapeHtml(
+                        message.text
+                    )}
+                </div>
+
+                <small>
+                    📌 Сообщение
+                </small>
+
+                <button
+                    class="icon-button"
+                    onclick="copyText('${escapeJs(message.text)}')"
+                >
+                    📋
+                </button>
+            `;
+
+            container.appendChild(
+                div
+            );
+
+        }
+    );
+
+}
+
+
+// =========================================================
+// FEED
+// =========================================================
 
 function showFeed() {
 
+    hideViews();
+
     document.getElementById(
         "feedView"
-    ).style.display = "block";
-
-    document.getElementById(
-        "chatView"
-    ).style.display = "none";
-
-    document.getElementById(
-        "profileView"
-    ).style.display = "none";
+    ).classList.remove(
+        "hidden"
+    );
 
     document.getElementById(
         "pageTitle"
@@ -1954,7 +2225,8 @@ async function loadFeed() {
             "/api/feed"
         );
 
-    if (!response.ok) return;
+    if (!response.ok)
+        return;
 
     const posts =
         await response.json();
@@ -1980,28 +2252,13 @@ function renderPost(post) {
             "feed"
         );
 
-    const element =
+    const article =
         document.createElement(
             "article"
         );
 
-    element.className =
+    article.className =
         "post";
-
-    const avatar =
-        post.avatar_url
-        ?
-        `<img
-            class="avatar"
-            src="${mediaUrl(
-                post.avatar_url
-            )}"
-        >`
-        :
-        `<img
-            class="avatar"
-            src="https://i.imgur.com/7NFHga3.png"
-        >`;
 
     let media = "";
 
@@ -2013,8 +2270,8 @@ function renderPost(post) {
         media = `
             <img
                 class="post-media"
-                src="${mediaUrl(
-                    post.media_url
+                src="${escapeAttr(
+                    mediaUrl(post.media_url)
                 )}"
             >
         `;
@@ -2030,19 +2287,26 @@ function renderPost(post) {
             <video
                 class="post-media"
                 controls
-                src="${mediaUrl(
-                    post.media_url
+                src="${escapeAttr(
+                    mediaUrl(post.media_url)
                 )}"
             ></video>
         `;
 
     }
 
-    element.innerHTML = `
+    article.innerHTML = `
 
         <div class="post-header">
 
-            ${avatar}
+            <img
+                class="avatar"
+                src="${escapeAttr(
+                    post.avatar_url ||
+                    DEFAULT_AVATAR
+                )}"
+                onclick="showUserProfile(${post.author_id})"
+            >
 
             <div>
 
@@ -2065,14 +2329,12 @@ function renderPost(post) {
 
         ${
             post.text
-            ?
-            `<div class="post-text">
-                ${escapeHtml(
-                    post.text
-                )}
-            </div>`
-            :
-            ""
+            ? `
+                <div class="post-text">
+                    ${escapeHtml(post.text)}
+                </div>
+            `
+            : ""
         }
 
         ${media}
@@ -2100,14 +2362,14 @@ function renderPost(post) {
             ${
                 post.author_id ===
                 currentUser.id
-                ?
-                `<button
-                    onclick="deletePost(${post.id})"
-                >
-                    🗑️
-                </button>`
-                :
-                ""
+                ? `
+                    <button
+                        onclick="deletePost(${post.id})"
+                    >
+                        🗑️
+                    </button>
+                `
+                : ""
             }
 
         </div>
@@ -2116,59 +2378,14 @@ function renderPost(post) {
             class="comments"
             id="comments-${post.id}"
         ></div>
-
     `;
 
     container.appendChild(
-        element
+        article
     );
 
 }
 
-
-/* =====================================================
-SHARE
-===================================================== */
-
-async function sharePost(postId) {
-
-    const url =
-        location.origin +
-        "/?post=" +
-        postId;
-
-    try {
-
-        if (
-            navigator.share
-        ) {
-
-            await navigator.share({
-                title: "MyMessenger",
-                text: "Посмотри этот пост",
-                url
-            });
-
-        } else {
-
-            await navigator.clipboard.writeText(
-                url
-            );
-
-            alert(
-                "Ссылка скопирована!"
-            );
-
-        }
-
-    } catch {}
-
-}
-
-
-/* =====================================================
-PUBLISH
-===================================================== */
 
 async function publishPost() {
 
@@ -2185,230 +2402,40 @@ async function publishPost() {
     if (!text && !file) {
 
         alert(
-            "Добавь текст, фото или видео"
+            "Добавь текст или файл"
         );
 
         return;
 
     }
 
-    try {
+    if (file) {
 
-        if (file) {
+        const form =
+            new FormData();
 
-            const form =
-                new FormData();
-
-            form.append(
-                "file",
-                file
-            );
-
-            form.append(
-                "text",
-                text
-            );
-
-            const response =
-                await request(
-                    "/api/posts/media",
-                    {
-                        method: "POST",
-                        body: form
-                    }
-                );
-
-            if (!response.ok) {
-
-                const data =
-                    await response.json();
-
-                throw new Error(
-                    data.detail
-                );
-
-            }
-
-        } else {
-
-            const response =
-                await request(
-                    "/api/posts",
-                    {
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body: JSON.stringify({
-                            text
-                        })
-                    }
-                );
-
-            if (!response.ok) {
-
-                const data =
-                    await response.json();
-
-                throw new Error(
-                    data.detail
-                );
-
-            }
-
-        }
-
-        document.getElementById(
-            "postText"
-        ).value = "";
-
-        document.getElementById(
-            "mediaFile"
-        ).value = "";
-
-        await loadFeed();
-
-    } catch (error) {
-
-        alert(
-            error.message
+        form.append(
+            "file",
+            file
         );
 
-    }
-
-}
-
-
-/* =====================================================
-LIKES
-===================================================== */
-
-async function likePost(postId) {
-
-    await request(
-        "/api/posts/" +
-        postId +
-        "/like",
-        {
-            method: "POST"
-        }
-    );
-
-    loadFeed();
-
-}
-
-
-/* =====================================================
-COMMENTS
-===================================================== */
-
-async function showComments(postId) {
-
-    const container =
-        document.getElementById(
-            "comments-" +
-            postId
+        form.append(
+            "text",
+            text
         );
 
-    if (
-        container.innerHTML
-    ) {
-
-        container.innerHTML = "";
-
-        return;
-
-    }
-
-    const response =
         await request(
-            "/api/posts/" +
-            postId +
-            "/comments"
+            "/api/posts/media",
+            {
+                method: "POST",
+                body: form
+            }
         );
 
-    if (!response.ok) return;
+    } else {
 
-    const comments =
-        await response.json();
-
-    container.innerHTML = `
-
-        <div class="comment-input">
-
-            <input
-                id="comment-${postId}"
-                placeholder="Написать комментарий..."
-            >
-
-            <button
-                onclick="sendComment(${postId})"
-            >
-                ➤
-            </button>
-
-        </div>
-
-    `;
-
-    comments.forEach(
-        comment => {
-
-            const div =
-                document.createElement(
-                    "div"
-                );
-
-            div.className =
-                "comment";
-
-            div.innerHTML = `
-                <b>
-                    ${escapeHtml(
-                        comment.display_name ||
-                        comment.username
-                    )}
-                </b>
-
-                <br>
-
-                ${escapeHtml(
-                    comment.text
-                )}
-            `;
-
-            container.appendChild(
-                div
-            );
-
-        }
-    );
-
-}
-
-
-async function sendComment(postId) {
-
-    const input =
-        document.getElementById(
-            "comment-" +
-            postId
-        );
-
-    const text =
-        input.value.trim();
-
-    if (!text) return;
-
-    const response =
         await request(
-            "/api/posts/" +
-            postId +
-            "/comments",
+            "/api/posts",
             {
                 method: "POST",
 
@@ -2423,30 +2450,49 @@ async function sendComment(postId) {
             }
         );
 
-    if (!response.ok) return;
+    }
 
-    await showComments(
-        postId
-    );
+    document.getElementById(
+        "postText"
+    ).value = "";
+
+    document.getElementById(
+        "mediaFile"
+    ).value = "";
+
+    loadFeed();
 
 }
 
 
-/* =====================================================
-DELETE POST
-===================================================== */
-
-async function deletePost(postId) {
-
-    if (
-        !confirm(
-            "Удалить этот пост?"
-        )
-    ) return;
+async function likePost(id) {
 
     await request(
         "/api/posts/" +
-        postId,
+        id +
+        "/like",
+        {
+            method: "POST"
+        }
+    );
+
+    loadFeed();
+
+}
+
+
+async function deletePost(id) {
+
+    if (
+        !confirm(
+            "Удалить пост?"
+        )
+    )
+        return;
+
+    await request(
+        "/api/posts/" +
+        id,
         {
             method: "DELETE"
         }
@@ -2457,28 +2503,403 @@ async function deletePost(postId) {
 }
 
 
-/* =====================================================
-PROFILE
-===================================================== */
+async function sharePost(id) {
+
+    const url =
+        location.origin +
+        "/?post=" +
+        id;
+
+    await copyText(
+        url
+    );
+
+}
+
+
+// =========================================================
+// COMMENTS
+// =========================================================
+
+async function showComments(
+    postId
+) {
+
+    const container =
+        document.getElementById(
+            "comments-" +
+            postId
+        );
+
+    const response =
+        await request(
+            "/api/posts/" +
+            postId +
+            "/comments"
+        );
+
+    if (!response.ok)
+        return;
+
+    const comments =
+        await response.json();
+
+    container.innerHTML = `
+
+        <div class="comment-input">
+
+            <input
+                id="comment-input-${postId}"
+                placeholder="${
+                    replyCommentId
+                    ? "Ответить..."
+                    : "Комментарий..."
+                }"
+            >
+
+            <button
+                class="primary"
+                onclick="sendComment(${postId})"
+            >
+                ➤
+            </button>
+
+        </div>
+    `;
+
+    comments.forEach(
+        comment => {
+
+            const div =
+                document.createElement(
+                    "div"
+                );
+
+            div.className =
+                "comment";
+
+            if (comment.parent_id)
+                div.classList.add(
+                    "comment-reply"
+                );
+
+            let reply =
+                "";
+
+            if (
+                comment.reply_to_username
+            ) {
+
+                reply = `
+                    <div class="comment-meta">
+                        @${escapeHtml(
+                            comment.username
+                        )}
+                        →
+                        @${escapeHtml(
+                            comment.reply_to_username
+                        )}
+                    </div>
+                `;
+
+            }
+
+            div.innerHTML = `
+
+                <b>
+                    @${escapeHtml(
+                        comment.username
+                    )}
+                </b>
+
+                ${reply}
+
+                <div>
+                    ${escapeHtml(
+                        comment.text
+                    )}
+                </div>
+
+                <div class="comment-actions">
+
+                    <button
+                        onclick="replyComment(
+                            ${postId},
+                            ${comment.id}
+                        )"
+                    >
+                        ↩️ Ответить
+                    </button>
+
+                    <button
+                        onclick="copyText(
+                            '${escapeJs(comment.text)}'
+                        )"
+                    >
+                        📋 Копировать
+                    </button>
+
+                    ${
+                        comment.user_id ===
+                        currentUser.id
+                        ? `
+                            <button
+                                onclick="deleteComment(
+                                    ${comment.id},
+                                    ${postId}
+                                )"
+                            >
+                                🗑️ Удалить
+                            </button>
+                        `
+                        : ""
+                    }
+
+                </div>
+            `;
+
+            container.appendChild(
+                div
+            );
+
+        }
+    );
+
+}
+
+
+function replyComment(
+    postId,
+    commentId
+) {
+
+    replyCommentId =
+        commentId;
+
+    const input =
+        document.getElementById(
+            "comment-input-" +
+            postId
+        );
+
+    if (input) {
+
+        input.placeholder =
+            "Ответить на комментарий...";
+
+        input.focus();
+
+    }
+
+}
+
+
+async function sendComment(
+    postId
+) {
+
+    const input =
+        document.getElementById(
+            "comment-input-" +
+            postId
+        );
+
+    const text =
+        input.value.trim();
+
+    if (!text)
+        return;
+
+    await request(
+        "/api/posts/" +
+        postId +
+        "/comments",
+        {
+            method: "POST",
+
+            headers: {
+                "Content-Type":
+                    "application/json"
+            },
+
+            body: JSON.stringify({
+                text,
+                parent_id:
+                    replyCommentId
+            })
+        }
+    );
+
+    replyCommentId = null;
+
+    showComments(
+        postId
+    );
+
+}
+
+
+async function deleteComment(
+    commentId,
+    postId
+) {
+
+    if (
+        !confirm(
+            "Удалить комментарий?"
+        )
+    )
+        return;
+
+    await request(
+        "/api/comments/" +
+        commentId,
+        {
+            method: "DELETE"
+        }
+    );
+
+    showComments(
+        postId
+    );
+
+}
+
+
+// =========================================================
+// PROFILE
+// =========================================================
+
+async function showUserProfile(
+    userId
+) {
+
+    const response =
+        await request(
+            "/api/users/" +
+            userId
+        );
+
+    if (!response.ok)
+        return;
+
+    const user =
+        await response.json();
+
+    const modal =
+        document.getElementById(
+            "profileModal"
+        );
+
+    const content =
+        document.getElementById(
+            "profileModalContent"
+        );
+
+    content.innerHTML = `
+
+        <div style="text-align:center">
+
+            <img
+                class="big-avatar"
+                src="${escapeAttr(
+                    user.avatar_url ||
+                    DEFAULT_AVATAR
+                )}"
+            >
+
+            <h2>
+                ${escapeHtml(
+                    user.display_name ||
+                    user.username
+                )}
+            </h2>
+
+            <p>
+                @${escapeHtml(
+                    user.username
+                )}
+            </p>
+
+            <p>
+                ${escapeHtml(
+                    user.bio || ""
+                )}
+            </p>
+
+            <button
+                class="primary"
+                onclick="openChatFromProfile(${user.id})"
+            >
+                💬 Написать
+            </button>
+
+        </div>
+    `;
+
+    modal.classList.remove(
+        "hidden"
+    );
+
+}
+
+
+async function openChatFromProfile(
+    userId
+) {
+
+    closeModal();
+
+    const response =
+        await request(
+            "/api/users/" +
+            userId
+        );
+
+    if (!response.ok)
+        return;
+
+    const user =
+        await response.json();
+
+    openChat(user);
+
+}
+
+
+function closeModal(event) {
+
+    if (
+        !event ||
+        event.target.id ===
+        "profileModal"
+    ) {
+
+        document.getElementById(
+            "profileModal"
+        ).classList.add(
+            "hidden"
+        );
+
+    }
+
+}
+
 
 function showProfile() {
 
-    document.getElementById(
-        "feedView"
-    ).style.display = "none";
-
-    document.getElementById(
-        "chatView"
-    ).style.display = "none";
+    hideViews();
 
     document.getElementById(
         "profileView"
-    ).style.display = "block";
+    ).classList.remove(
+        "hidden"
+    );
 
     document.getElementById(
         "pageTitle"
     ).innerText =
-        "⚙️ Профиль";
+        "👤 Профиль";
 
     document.getElementById(
         "profileUsername"
@@ -2496,34 +2917,18 @@ function showProfile() {
     ).value =
         currentUser.bio || "";
 
-    setAvatar(
-        currentUser.avatar_url
-    );
+    document.getElementById(
+        "bigAvatar"
+    ).src =
+        currentUser.avatar_url ||
+        DEFAULT_AVATAR;
 
 }
 
 
-function setAvatar(url) {
-
-    const image =
-        document.getElementById(
-            "bigAvatar"
-        );
-
-    if (url) {
-
-        image.src =
-            mediaUrl(url);
-
-    } else {
-
-        image.src =
-            "https://i.imgur.com/7NFHga3.png";
-
-    }
-
-}
-
+// =========================================================
+// PROFILE SAVE
+// =========================================================
 
 async function saveProfile() {
 
@@ -2542,117 +2947,530 @@ async function saveProfile() {
             "profileBio"
         ).value.trim();
 
-    try {
+    const response =
+        await request(
+            "/api/profile",
+            {
+                method: "PUT",
 
-        const response =
-            await request(
-                "/api/profile",
-                {
-                    method: "PUT",
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
 
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body: JSON.stringify({
-                        username,
-                        display_name,
-                        bio
-                    })
-                }
-            );
-
-        if (!response.ok) {
-
-            const data =
-                await response.json();
-
-            throw new Error(
-                data.detail
-            );
-
-        }
-
-        const file =
-            document.getElementById(
-                "avatarFile"
-            ).files[0];
-
-        if (file) {
-
-            const form =
-                new FormData();
-
-            form.append(
-                "file",
-                file
-            );
-
-            const avatarResponse =
-                await request(
-                    "/api/avatar",
-                    {
-                        method: "POST",
-                        body: form
-                    }
-                );
-
-            if (!avatarResponse.ok) {
-
-                const data =
-                    await avatarResponse.json();
-
-                throw new Error(
-                    data.detail
-                );
-
+                body: JSON.stringify({
+                    username,
+                    display_name,
+                    bio
+                })
             }
-
-        }
-
-        const me =
-            await request(
-                "/api/me"
-            );
-
-        currentUser =
-            await me.json();
-
-        alert(
-            "Профиль сохранён!"
         );
 
-        searchUsers();
+    if (!response.ok) {
 
-        showProfile();
-
-    } catch (error) {
+        const data =
+            await response.json();
 
         alert(
-            error.message
+            data.detail
         );
+
+        return;
+
+    }
+
+    const file =
+        document.getElementById(
+            "avatarFile"
+        ).files[0];
+
+    if (file) {
+
+        const form =
+            new FormData();
+
+        form.append(
+            "file",
+            file
+        );
+
+        await request(
+            "/api/avatar",
+            {
+                method: "POST",
+                body: form
+            }
+        );
+
+    }
+
+    const me =
+        await request(
+            "/api/me"
+        );
+
+    currentUser =
+        await me.json();
+
+    alert(
+        "Профиль сохранён!"
+    );
+
+    searchUsers();
+    showProfile();
+
+}
+
+
+// =========================================================
+// SETTINGS
+// =========================================================
+
+function showSettings() {
+
+    hideViews();
+
+    document.getElementById(
+        "settingsView"
+    ).classList.remove(
+        "hidden"
+    );
+
+    document.getElementById(
+        "pageTitle"
+    ).innerText =
+        "⚙️ Настройки";
+
+    document.getElementById(
+        "language"
+    ).value =
+        currentUser.language || "ru";
+
+    document.getElementById(
+        "theme"
+    ).value =
+        currentUser.theme || "dark";
+
+    document.getElementById(
+        "notifications"
+    ).checked =
+        !!currentUser.notifications;
+
+    document.getElementById(
+        "privacy"
+    ).value =
+        currentUser.privacy_last_seen ||
+        "everyone";
+
+    renderAccounts();
+    loadGroups();
+    loadChannels();
+
+}
+
+
+async function saveSettings() {
+
+    const data = {
+
+        language:
+            document.getElementById(
+                "language"
+            ).value,
+
+        theme:
+            document.getElementById(
+                "theme"
+            ).value,
+
+        notifications:
+            document.getElementById(
+                "notifications"
+            ).checked,
+
+        privacy_last_seen:
+            document.getElementById(
+                "privacy"
+            ).value
+    };
+
+    const response =
+        await request(
+            "/api/settings",
+            {
+                method: "PUT",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body: JSON.stringify(data)
+            }
+        );
+
+    if (response.ok) {
+
+        Object.assign(
+            currentUser,
+            data
+        );
+
+        applySettings();
 
     }
 
 }
 
 
-/* =====================================================
-HELPERS
-===================================================== */
+function applySettings() {
+
+    document.body.classList.remove(
+        "light",
+        "blue",
+        "midnight"
+    );
+
+    if (
+        currentUser &&
+        currentUser.theme !==
+        "dark"
+    ) {
+
+        document.body.classList.add(
+            currentUser.theme
+        );
+
+    }
+
+    if (
+        currentUser &&
+        currentUser.language ===
+        "en"
+    ) {
+
+        document.documentElement.lang =
+            "en";
+
+    } else {
+
+        document.documentElement.lang =
+            "ru";
+
+    }
+
+}
+
+
+// =========================================================
+// GROUPS
+// =========================================================
+
+async function createGroup() {
+
+    const title =
+        prompt(
+            "Название группы:"
+        );
+
+    if (!title)
+        return;
+
+    const description =
+        prompt(
+            "Описание группы:"
+        ) || "";
+
+    const response =
+        await request(
+            "/api/groups",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body: JSON.stringify({
+                    title,
+                    description
+                })
+            }
+        );
+
+    if (!response.ok) {
+
+        const data =
+            await response.json();
+
+        alert(data.detail);
+
+        return;
+
+    }
+
+    loadGroups();
+
+}
+
+
+async function loadGroups() {
+
+    const response =
+        await request(
+            "/api/groups"
+        );
+
+    if (!response.ok)
+        return;
+
+    const groups =
+        await response.json();
+
+    const container =
+        document.getElementById(
+            "groups"
+        );
+
+    container.innerHTML = "";
+
+    groups.forEach(
+        group => {
+
+            const div =
+                document.createElement(
+                    "div"
+                );
+
+            div.className =
+                "comment";
+
+            div.innerHTML = `
+                👥 <b>
+                    ${escapeHtml(
+                        group.title
+                    )}
+                </b>
+                <br>
+                <small>
+                    ${escapeHtml(
+                        group.description || ""
+                    )}
+                </small>
+            `;
+
+            container.appendChild(
+                div
+            );
+
+        }
+    );
+
+}
+
+
+// =========================================================
+// CHANNELS
+// =========================================================
+
+async function createChannel() {
+
+    const title =
+        prompt(
+            "Название канала:"
+        );
+
+    if (!title)
+        return;
+
+    const username =
+        prompt(
+            "Username канала без @:"
+        );
+
+    if (!username)
+        return;
+
+    const description =
+        prompt(
+            "Описание:"
+        ) || "";
+
+    const response =
+        await request(
+            "/api/channels",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body: JSON.stringify({
+                    title,
+                    username,
+                    description
+                })
+            }
+        );
+
+    if (!response.ok) {
+
+        const data =
+            await response.json();
+
+        alert(data.detail);
+
+        return;
+
+    }
+
+    loadChannels();
+
+}
+
+
+async function loadChannels() {
+
+    const response =
+        await request(
+            "/api/channels"
+        );
+
+    if (!response.ok)
+        return;
+
+    const channels =
+        await response.json();
+
+    const container =
+        document.getElementById(
+            "channels"
+        );
+
+    container.innerHTML = "";
+
+    channels.forEach(
+        channel => {
+
+            const div =
+                document.createElement(
+                    "div"
+                );
+
+            div.className =
+                "comment";
+
+            div.innerHTML = `
+                📢 <b>
+                    ${escapeHtml(
+                        channel.title
+                    )}
+                </b>
+
+                <br>
+
+                <small>
+                    @${escapeHtml(
+                        channel.username
+                    )}
+                </small>
+
+                <br>
+
+                <small>
+                    ${escapeHtml(
+                        channel.description || ""
+                    )}
+                </small>
+            `;
+
+            container.appendChild(
+                div
+            );
+
+        }
+    );
+
+}
+
+
+// =========================================================
+// NAVIGATION
+// =========================================================
+
+function hideViews() {
+
+    document
+        .querySelectorAll(".view")
+        .forEach(
+            view =>
+                view.classList.add(
+                    "hidden"
+                )
+        );
+
+}
+
+
+// =========================================================
+// CLIPBOARD
+// =========================================================
+
+async function copyText(text) {
+
+    try {
+
+        await navigator.clipboard.writeText(
+            text
+        );
+
+        alert(
+            "Скопировано!"
+        );
+
+    } catch {
+
+        const textarea =
+            document.createElement(
+                "textarea"
+            );
+
+        textarea.value =
+            text;
+
+        document.body.appendChild(
+            textarea
+        );
+
+        textarea.select();
+
+        document.execCommand(
+            "copy"
+        );
+
+        textarea.remove();
+
+    }
+
+}
+
+
+// =========================================================
+// HELPERS
+// =========================================================
 
 function mediaUrl(url) {
 
-    if (!url) return "";
+    if (!url)
+        return "";
 
     if (
         url.startsWith("http")
-    ) {
-
+    )
         return url;
-
-    }
 
     return API + url;
 
@@ -2686,9 +3504,43 @@ function escapeHtml(text) {
 }
 
 
-/* =====================================================
-AUTO LOGIN
-===================================================== */
+function escapeAttr(text) {
+
+    return escapeHtml(text)
+        .replaceAll(
+            "`",
+            "&#096;"
+        );
+
+}
+
+
+function escapeJs(text) {
+
+    return String(text ?? "")
+        .replaceAll(
+            "\\",
+            "\\\\"
+        )
+        .replaceAll(
+            "'",
+            "\\'"
+        )
+        .replaceAll(
+            "\n",
+            "\\n"
+        )
+        .replaceAll(
+            "\r",
+            "\\r"
+        );
+
+}
+
+
+// =========================================================
+// AUTO LOGIN
+// =========================================================
 
 if (token) {
 
@@ -2699,4 +3551,5 @@ if (token) {
 </script>
 
 </body>
+
 </html>
