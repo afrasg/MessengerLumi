@@ -257,6 +257,63 @@ def init_db():
             created_at TEXT NOT NULL,
             deleted INTEGER DEFAULT 0
         );
+
+        CREATE TABLE IF NOT EXISTS blocks (
+            user_id INTEGER NOT NULL,
+            blocked_id INTEGER NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE(user_id, blocked_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS contact_aliases (
+            user_id INTEGER NOT NULL,
+            contact_id INTEGER NOT NULL,
+            alias TEXT NOT NULL,
+            UNIQUE(user_id, contact_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS chat_settings (
+            user_id INTEGER NOT NULL,
+            peer_id INTEGER NOT NULL,
+            wallpaper_url TEXT,
+            wallpaper_blur INTEGER DEFAULT 0,
+            deleted_for_me INTEGER DEFAULT 0,
+            UNIQUE(user_id, peer_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS login_codes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            code TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            used INTEGER DEFAULT 0
+        );
+
+        CREATE TABLE IF NOT EXISTS invites (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            type TEXT NOT NULL,
+            target_id INTEGER NOT NULL,
+            from_user_id INTEGER NOT NULL,
+            to_user_id INTEGER NOT NULL,
+            message_id INTEGER,
+            status TEXT DEFAULT 'pending',
+            created_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS channel_mutes (
+            channel_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            muted INTEGER DEFAULT 1,
+            UNIQUE(channel_id, user_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS group_mutes (
+            group_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            muted INTEGER DEFAULT 1,
+            UNIQUE(group_id, user_id)
+        );
         """
     )
 
@@ -302,6 +359,63 @@ def init_db():
         "INTEGER",
     )
 
+
+    add_column_if_missing(
+        connection,
+        "messages",
+        "media_url",
+        "TEXT",
+    )
+
+    add_column_if_missing(
+        connection,
+        "messages",
+        "media_type",
+        "TEXT",
+    )
+
+    add_column_if_missing(
+        connection,
+        "users",
+        "is_bot",
+        "INTEGER DEFAULT 0",
+    )
+
+    add_column_if_missing(
+        connection,
+        "users",
+        "is_verified",
+        "INTEGER DEFAULT 0",
+    )
+
+    add_column_if_missing(
+        connection,
+        "groups",
+        "avatar_url",
+        "TEXT",
+    )
+
+    add_column_if_missing(
+        connection,
+        "channels",
+        "avatar_url",
+        "TEXT",
+    )
+
+    add_column_if_missing(
+        connection,
+        "messages",
+        "invite_id",
+        "INTEGER",
+    )
+
+    add_column_if_missing(
+        connection,
+        "messages",
+        "invite_status",
+        "TEXT",
+    )
+
     connection.execute(
         """
         UPDATE users
@@ -310,6 +424,28 @@ def init_db():
            OR display_name = ''
         """
     )
+
+    # Ensure Lumi bot exists
+    import hashlib as _hl
+    from datetime import datetime as _dt
+    _ts = _dt.utcnow().isoformat()
+    _ph = _hl.sha256(b'__lumi_bot_internal__').hexdigest()
+    bot = connection.execute(
+        "SELECT id FROM users WHERE username = 'lumi'"
+    ).fetchone()
+    if not bot:
+        connection.execute(
+            """
+            INSERT INTO users
+            (username, password_hash, created_at, last_seen, display_name, bio, is_bot, is_verified)
+            VALUES ('lumi', ?, ?, ?, 'Lumi', 'Официальный бот Messenger Lumi', 1, 1)
+            """,
+            (_ph, _ts, _ts),
+        )
+    else:
+        connection.execute(
+            "UPDATE users SET is_bot = 1, is_verified = 1, display_name = 'Lumi' WHERE username = 'lumi'"
+        )
 
     connection.commit()
     connection.close()
@@ -688,6 +824,38 @@ class DeleteAccountRequest(BaseModel):
     password: str
 
 
+class CodeLoginRequest(BaseModel):
+    username: str
+    code: str
+
+
+class RequestCodeRequest(BaseModel):
+    username: str
+
+
+class AliasRequest(BaseModel):
+    alias: str
+
+
+class WallpaperRequest(BaseModel):
+    wallpaper_url: str = ""
+    wallpaper_blur: bool = False
+
+
+class RenameEntityRequest(BaseModel):
+    name: str
+
+
+class InviteActionRequest(BaseModel):
+    action: str  # accept | decline
+
+
+class CallSignalRequest(BaseModel):
+    target_id: int
+    signal_type: str
+    payload: dict = {}
+
+
 # =========================================================
 # AUTH
 # =========================================================
@@ -914,7 +1082,9 @@ def me(request: Request):
             bio,
             avatar_url,
             created_at,
-            last_seen
+            last_seen,
+            is_bot,
+            is_verified
         FROM users
         WHERE id = ?
         """,
@@ -1491,7 +1661,9 @@ def search_users(
             username,
             display_name,
             avatar_url,
-            last_seen
+            last_seen,
+            is_bot,
+            is_verified
         FROM users
         WHERE
             (
@@ -1535,7 +1707,9 @@ def get_user_profile(
             bio,
             avatar_url,
             created_at,
-            last_seen
+            last_seen,
+            is_bot,
+            is_verified
         FROM users
         WHERE id = ?
         """,
@@ -1580,7 +1754,11 @@ def get_messages(
             created_at,
             edited_at,
             deleted,
-            is_read
+            is_read,
+            media_url,
+            media_type,
+            invite_id,
+            invite_status
         FROM messages
         WHERE
             (
@@ -1659,7 +1837,7 @@ async def send_message(
 
     receiver = connection.execute(
         """
-        SELECT id
+        SELECT id, username, is_bot
         FROM users
         WHERE id = ?
         """,
@@ -1673,6 +1851,22 @@ async def send_message(
             404,
             "Пользователь не найден",
         )
+
+    if receiver["is_bot"] or receiver["username"] == "lumi":
+        connection.close()
+        raise HTTPException(403, "Боту нельзя писать")
+
+    blocked = connection.execute(
+        """
+        SELECT 1 FROM blocks
+        WHERE (user_id = ? AND blocked_id = ?)
+           OR (user_id = ? AND blocked_id = ?)
+        """,
+        (sender_id, data.receiver_id, data.receiver_id, sender_id),
+    ).fetchone()
+    if blocked:
+        connection.close()
+        raise HTTPException(403, "Пользователь заблокирован")
 
     created = now()
 
@@ -3443,7 +3637,7 @@ def global_search(
 
     users = connection.execute(
         """
-        SELECT id, username, display_name, avatar_url, last_seen
+        SELECT id, username, display_name, avatar_url, last_seen, is_bot, is_verified
         FROM users
         WHERE (username LIKE ? OR display_name LIKE ?)
           AND id != ?
@@ -3870,6 +4064,706 @@ async def send_community_chat_message(
         await send_ws(row["user_id"], payload)
 
     return {"ok": True, "message": message}
+
+
+
+# =========================================================
+# LUMI BOT / CODE LOGIN
+# =========================================================
+
+def get_lumi_id(connection=None):
+    own = connection is None
+    if own:
+        connection = db()
+    row = connection.execute(
+        "SELECT id FROM users WHERE username = 'lumi'"
+    ).fetchone()
+    if own:
+        connection.close()
+    if not row:
+        return None
+    return row["id"]
+
+
+def bot_send_message(to_user_id, text, invite_id=None, invite_status=None):
+    lumi_id = get_lumi_id()
+    if not lumi_id:
+        return None
+    connection = db()
+    created = now()
+    cursor = connection.execute(
+        """
+        INSERT INTO messages
+        (sender_id, receiver_id, text, created_at, invite_id, invite_status)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (lumi_id, to_user_id, text, created, invite_id, invite_status),
+    )
+    mid = cursor.lastrowid
+    connection.commit()
+    connection.close()
+    return {
+        "id": mid,
+        "sender_id": lumi_id,
+        "receiver_id": to_user_id,
+        "text": text,
+        "created_at": created,
+        "edited_at": None,
+        "deleted": 0,
+        "is_read": 0,
+        "media_url": None,
+        "media_type": None,
+        "invite_id": invite_id,
+        "invite_status": invite_status,
+    }
+
+
+@app.post("/api/auth/request-code")
+async def request_login_code(data: RequestCodeRequest, request: Request):
+    username = data.username.strip().lower()
+    connection = db()
+    user = connection.execute(
+        "SELECT id, username FROM users WHERE username = ?",
+        (username,),
+    ).fetchone()
+    if not user:
+        connection.close()
+        raise HTTPException(404, "Пользователь не найден")
+    if user["username"] == "lumi":
+        connection.close()
+        raise HTTPException(400, "Нельзя")
+
+    import random
+    code = f"{random.randint(100000, 999999)}"
+    created = datetime.utcnow()
+    expires = created + timedelta(minutes=10)
+
+    connection.execute(
+        """
+        INSERT INTO login_codes (user_id, code, created_at, expires_at, used)
+        VALUES (?, ?, ?, ?, 0)
+        """,
+        (user["id"], code, created.isoformat(), expires.isoformat()),
+    )
+    connection.commit()
+    connection.close()
+
+    msg = bot_send_message(
+        user["id"],
+        f"🔐 Ваш код для входа: {code}\nКод действует 10 минут.",
+    )
+    if msg:
+        await send_ws(user["id"], {"type": "message", "message": msg})
+
+    return {"ok": True, "detail": "Код отправлен ботом Lumi в личные сообщения"}
+
+
+@app.post("/api/auth/login-code")
+def login_by_code(data: CodeLoginRequest, request: Request, response: Response):
+    username = data.username.strip().lower()
+    code = data.code.strip()
+
+    connection = db()
+    user = connection.execute(
+        "SELECT * FROM users WHERE username = ?",
+        (username,),
+    ).fetchone()
+    if not user:
+        connection.close()
+        raise HTTPException(401, "Неверный username или код")
+
+    row = connection.execute(
+        """
+        SELECT * FROM login_codes
+        WHERE user_id = ? AND code = ? AND used = 0
+        ORDER BY id DESC LIMIT 1
+        """,
+        (user["id"], code),
+    ).fetchone()
+
+    if not row:
+        connection.close()
+        raise HTTPException(401, "Неверный username или код")
+
+    try:
+        exp = datetime.fromisoformat(row["expires_at"])
+    except Exception:
+        exp = datetime.utcnow()
+
+    if exp < datetime.utcnow():
+        connection.close()
+        raise HTTPException(401, "Код истёк")
+
+    connection.execute(
+        "UPDATE login_codes SET used = 1 WHERE id = ?",
+        (row["id"],),
+    )
+    connection.commit()
+    connection.close()
+
+    browser_id = get_or_create_browser(request, response)
+    token = create_session(user["id"], browser_id)
+    set_auth_cookie(response, token)
+    return {"ok": True, "token": token}
+
+
+# =========================================================
+# BLOCKS / CHAT SETTINGS / ALIAS
+# =========================================================
+
+@app.post("/api/users/{other_id}/block")
+def block_user(other_id: int, request: Request):
+    user_id = get_auth_user(request)
+    if other_id == user_id:
+        raise HTTPException(400, "Нельзя заблокировать себя")
+    connection = db()
+    connection.execute(
+        """
+        INSERT OR IGNORE INTO blocks (user_id, blocked_id, created_at)
+        VALUES (?, ?, ?)
+        """,
+        (user_id, other_id, now()),
+    )
+    connection.commit()
+    connection.close()
+    return {"ok": True}
+
+
+@app.delete("/api/users/{other_id}/block")
+def unblock_user(other_id: int, request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    connection.execute(
+        "DELETE FROM blocks WHERE user_id = ? AND blocked_id = ?",
+        (user_id, other_id),
+    )
+    connection.commit()
+    connection.close()
+    return {"ok": True}
+
+
+@app.get("/api/blocks")
+def list_blocks(request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    rows = connection.execute(
+        "SELECT blocked_id FROM blocks WHERE user_id = ?",
+        (user_id,),
+    ).fetchall()
+    connection.close()
+    return [r["blocked_id"] for r in rows]
+
+
+@app.put("/api/contacts/{contact_id}/alias")
+def set_alias(contact_id: int, data: AliasRequest, request: Request):
+    user_id = get_auth_user(request)
+    alias = data.alias.strip()
+    connection = db()
+    if not alias:
+        connection.execute(
+            "DELETE FROM contact_aliases WHERE user_id = ? AND contact_id = ?",
+            (user_id, contact_id),
+        )
+    else:
+        connection.execute(
+            """
+            INSERT INTO contact_aliases (user_id, contact_id, alias)
+            VALUES (?, ?, ?)
+            ON CONFLICT(user_id, contact_id) DO UPDATE SET alias = excluded.alias
+            """,
+            (user_id, contact_id, alias),
+        )
+    connection.commit()
+    connection.close()
+    return {"ok": True, "alias": alias}
+
+
+@app.get("/api/chats/{peer_id}/settings")
+def get_chat_settings(peer_id: int, request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    row = connection.execute(
+        """
+        SELECT wallpaper_url, wallpaper_blur, deleted_for_me
+        FROM chat_settings
+        WHERE user_id = ? AND peer_id = ?
+        """,
+        (user_id, peer_id),
+    ).fetchone()
+    alias = connection.execute(
+        "SELECT alias FROM contact_aliases WHERE user_id = ? AND contact_id = ?",
+        (user_id, peer_id),
+    ).fetchone()
+    blocked = connection.execute(
+        "SELECT 1 FROM blocks WHERE user_id = ? AND blocked_id = ?",
+        (user_id, peer_id),
+    ).fetchone()
+    connection.close()
+    return {
+        "wallpaper_url": row["wallpaper_url"] if row else None,
+        "wallpaper_blur": bool(row["wallpaper_blur"]) if row else False,
+        "deleted_for_me": bool(row["deleted_for_me"]) if row else False,
+        "alias": alias["alias"] if alias else None,
+        "blocked": bool(blocked),
+    }
+
+
+@app.put("/api/chats/{peer_id}/wallpaper")
+def set_wallpaper(peer_id: int, data: WallpaperRequest, request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    connection.execute(
+        """
+        INSERT INTO chat_settings (user_id, peer_id, wallpaper_url, wallpaper_blur)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(user_id, peer_id) DO UPDATE SET
+            wallpaper_url = excluded.wallpaper_url,
+            wallpaper_blur = excluded.wallpaper_blur
+        """,
+        (user_id, peer_id, data.wallpaper_url or None, int(data.wallpaper_blur)),
+    )
+    connection.commit()
+    connection.close()
+    return {"ok": True}
+
+
+@app.delete("/api/chats/{peer_id}")
+def delete_chat(peer_id: int, request: Request, for_both: bool = False):
+    user_id = get_auth_user(request)
+    connection = db()
+    if for_both:
+        connection.execute(
+            """
+            DELETE FROM messages
+            WHERE (sender_id = ? AND receiver_id = ?)
+               OR (sender_id = ? AND receiver_id = ?)
+            """,
+            (user_id, peer_id, peer_id, user_id),
+        )
+        connection.execute(
+            "DELETE FROM chat_settings WHERE (user_id = ? AND peer_id = ?) OR (user_id = ? AND peer_id = ?)",
+            (user_id, peer_id, peer_id, user_id),
+        )
+    else:
+        connection.execute(
+            """
+            INSERT INTO chat_settings (user_id, peer_id, deleted_for_me)
+            VALUES (?, ?, 1)
+            ON CONFLICT(user_id, peer_id) DO UPDATE SET deleted_for_me = 1
+            """,
+            (user_id, peer_id),
+        )
+    connection.commit()
+    connection.close()
+    return {"ok": True}
+
+
+# =========================================================
+# MESSAGE MEDIA / VOICE
+# =========================================================
+
+@app.post("/api/messages/media")
+async def send_message_media(
+    request: Request,
+    receiver_id: int,
+    text: str = "",
+    file: UploadFile = File(...),
+):
+    sender_id = get_auth_user(request)
+
+    # block checks
+    connection = db()
+    blocked = connection.execute(
+        """
+        SELECT 1 FROM blocks
+        WHERE (user_id = ? AND blocked_id = ?)
+           OR (user_id = ? AND blocked_id = ?)
+        """,
+        (sender_id, receiver_id, receiver_id, sender_id),
+    ).fetchone()
+    # cannot write to bot
+    peer = connection.execute(
+        "SELECT is_bot, username FROM users WHERE id = ?",
+        (receiver_id,),
+    ).fetchone()
+    connection.close()
+
+    if blocked:
+        raise HTTPException(403, "Пользователь заблокирован")
+    if peer and (peer["is_bot"] or peer["username"] == "lumi"):
+        raise HTTPException(403, "Боту нельзя писать")
+
+    allowed = {
+        "image/jpeg": (".jpg", "image"),
+        "image/png": (".png", "image"),
+        "image/webp": (".webp", "image"),
+        "image/gif": (".gif", "image"),
+        "audio/webm": (".webm", "voice"),
+        "audio/ogg": (".ogg", "voice"),
+        "audio/mpeg": (".mp3", "voice"),
+        "audio/mp4": (".m4a", "voice"),
+        "audio/wav": (".wav", "voice"),
+        "application/pdf": (".pdf", "file"),
+        "application/zip": (".zip", "file"),
+        "text/plain": (".txt", "file"),
+        "application/octet-stream": (".bin", "file"),
+    }
+
+    ctype = file.content_type or "application/octet-stream"
+    if ctype not in allowed:
+        # allow generic files
+        ext = Path(file.filename or "file.bin").suffix or ".bin"
+        media_type = "file"
+        if ctype.startswith("image/"):
+            media_type = "image"
+        elif ctype.startswith("audio/"):
+            media_type = "voice"
+    else:
+        ext, media_type = allowed[ctype]
+
+    filename = f"msg_{sender_id}_{secrets.token_hex(10)}{ext}"
+    path = UPLOAD_DIR / filename
+    with open(path, "wb") as out:
+        shutil.copyfileobj(file.file, out)
+    url = "/uploads/" + filename
+
+    connection = db()
+    created = now()
+    cursor = connection.execute(
+        """
+        INSERT INTO messages
+        (sender_id, receiver_id, text, created_at, media_url, media_type)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (sender_id, receiver_id, text.strip(), created, url, media_type),
+    )
+    mid = cursor.lastrowid
+    connection.commit()
+    connection.close()
+
+    message = {
+        "id": mid,
+        "sender_id": sender_id,
+        "receiver_id": receiver_id,
+        "text": text.strip(),
+        "created_at": created,
+        "edited_at": None,
+        "deleted": 0,
+        "is_read": 0,
+        "media_url": url,
+        "media_type": media_type,
+    }
+    payload = {"type": "message", "message": message}
+    await send_ws(sender_id, payload)
+    await send_ws(receiver_id, payload)
+    return {"ok": True, "message": message}
+
+
+# Block writing to bot in normal send - patch by wrapping is hard; add check via modifying send is done below through new endpoint usage
+# Intercept existing send_message: we'll add middleware-like check by redefining - actually edit send to check bot
+
+# =========================================================
+# CHANNEL LEAVE / MUTE / RENAME / AVATAR
+# =========================================================
+
+@app.post("/api/channels/{channel_id}/leave")
+def leave_channel(channel_id: int, request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    connection.execute(
+        "DELETE FROM channel_subscribers WHERE channel_id = ? AND user_id = ?",
+        (channel_id, user_id),
+    )
+    connection.execute(
+        "DELETE FROM channel_mutes WHERE channel_id = ? AND user_id = ?",
+        (channel_id, user_id),
+    )
+    connection.commit()
+    connection.close()
+    return {"ok": True}
+
+
+@app.post("/api/channels/{channel_id}/mute")
+def mute_channel(channel_id: int, request: Request, muted: bool = True):
+    user_id = get_auth_user(request)
+    connection = db()
+    connection.execute(
+        """
+        INSERT INTO channel_mutes (channel_id, user_id, muted)
+        VALUES (?, ?, ?)
+        ON CONFLICT(channel_id, user_id) DO UPDATE SET muted = excluded.muted
+        """,
+        (channel_id, user_id, int(muted)),
+    )
+    connection.commit()
+    connection.close()
+    return {"ok": True, "muted": muted}
+
+
+@app.put("/api/channels/{channel_id}")
+def rename_channel(channel_id: int, data: RenameEntityRequest, request: Request):
+    user_id = get_auth_user(request)
+    name = data.name.strip()
+    if not name:
+        raise HTTPException(400, "Название обязательно")
+    connection = db()
+    ch = connection.execute("SELECT * FROM channels WHERE id = ?", (channel_id,)).fetchone()
+    if not ch:
+        connection.close()
+        raise HTTPException(404, "Канал не найден")
+    if ch["owner_id"] != user_id:
+        connection.close()
+        raise HTTPException(403, "Только создатель")
+    connection.execute("UPDATE channels SET name = ? WHERE id = ?", (name, channel_id))
+    connection.commit()
+    connection.close()
+    return {"ok": True}
+
+
+@app.post("/api/channels/{channel_id}/avatar")
+async def channel_avatar(channel_id: int, request: Request, file: UploadFile = File(...)):
+    user_id = get_auth_user(request)
+    connection = db()
+    ch = connection.execute("SELECT * FROM channels WHERE id = ?", (channel_id,)).fetchone()
+    if not ch or ch["owner_id"] != user_id:
+        connection.close()
+        raise HTTPException(403, "Только создатель")
+    connection.close()
+
+    allowed = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+    if file.content_type not in allowed:
+        raise HTTPException(400, "Только изображения")
+    filename = f"ch_{channel_id}_{secrets.token_hex(8)}{allowed[file.content_type]}"
+    path = UPLOAD_DIR / filename
+    with open(path, "wb") as out:
+        shutil.copyfileobj(file.file, out)
+    url = "/uploads/" + filename
+    connection = db()
+    connection.execute("UPDATE channels SET avatar_url = ? WHERE id = ?", (url, channel_id))
+    connection.commit()
+    connection.close()
+    return {"ok": True, "avatar_url": url}
+
+
+@app.post("/api/groups/{group_id}/leave")
+def leave_group(group_id: int, request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    connection.execute(
+        "DELETE FROM group_members WHERE group_id = ? AND user_id = ?",
+        (group_id, user_id),
+    )
+    connection.commit()
+    connection.close()
+    return {"ok": True}
+
+
+@app.put("/api/groups/{group_id}")
+def rename_group(group_id: int, data: RenameEntityRequest, request: Request):
+    user_id = get_auth_user(request)
+    name = data.name.strip()
+    if not name:
+        raise HTTPException(400, "Название обязательно")
+    connection = db()
+    g = connection.execute("SELECT * FROM groups WHERE id = ?", (group_id,)).fetchone()
+    if not g:
+        connection.close()
+        raise HTTPException(404, "Группа не найдена")
+    if g["owner_id"] != user_id:
+        connection.close()
+        raise HTTPException(403, "Только создатель")
+    connection.execute("UPDATE groups SET name = ? WHERE id = ?", (name, group_id))
+    connection.commit()
+    connection.close()
+    return {"ok": True}
+
+
+@app.post("/api/groups/{group_id}/avatar")
+async def group_avatar(group_id: int, request: Request, file: UploadFile = File(...)):
+    user_id = get_auth_user(request)
+    connection = db()
+    g = connection.execute("SELECT * FROM groups WHERE id = ?", (group_id,)).fetchone()
+    if not g or g["owner_id"] != user_id:
+        connection.close()
+        raise HTTPException(403, "Только создатель")
+    connection.close()
+    allowed = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+    if file.content_type not in allowed:
+        raise HTTPException(400, "Только изображения")
+    filename = f"gr_{group_id}_{secrets.token_hex(8)}{allowed[file.content_type]}"
+    path = UPLOAD_DIR / filename
+    with open(path, "wb") as out:
+        shutil.copyfileobj(file.file, out)
+    url = "/uploads/" + filename
+    connection = db()
+    connection.execute("UPDATE groups SET avatar_url = ? WHERE id = ?", (url, group_id))
+    connection.commit()
+    connection.close()
+    return {"ok": True, "avatar_url": url}
+
+
+# =========================================================
+# INVITES via Lumi bot
+# =========================================================
+
+@app.post("/api/invites/{invite_id}/respond")
+async def respond_invite(invite_id: int, data: InviteActionRequest, request: Request):
+    user_id = get_auth_user(request)
+    action = data.action.strip().lower()
+    if action not in ("accept", "decline"):
+        raise HTTPException(400, "action: accept|decline")
+
+    connection = db()
+    inv = connection.execute(
+        "SELECT * FROM invites WHERE id = ? AND to_user_id = ?",
+        (invite_id, user_id),
+    ).fetchone()
+    if not inv:
+        connection.close()
+        raise HTTPException(404, "Приглашение не найдено")
+    if inv["status"] != "pending":
+        connection.close()
+        raise HTTPException(400, "Уже отвечено")
+
+    status = "accepted" if action == "accept" else "declined"
+    connection.execute(
+        "UPDATE invites SET status = ? WHERE id = ?",
+        (status, invite_id),
+    )
+
+    if action == "accept":
+        if inv["type"] == "group":
+            connection.execute(
+                """
+                INSERT OR IGNORE INTO group_members (group_id, user_id, joined_at)
+                VALUES (?, ?, ?)
+                """,
+                (inv["target_id"], user_id, now()),
+            )
+        elif inv["type"] == "community":
+            connection.execute(
+                """
+                INSERT OR IGNORE INTO community_members (community_id, user_id, joined_at)
+                VALUES (?, ?, ?)
+                """,
+                (inv["target_id"], user_id, now()),
+            )
+
+    if inv["message_id"]:
+        connection.execute(
+            "UPDATE messages SET invite_status = ? WHERE id = ?",
+            (status, inv["message_id"]),
+        )
+
+    connection.commit()
+    connection.close()
+
+    reply = bot_send_message(user_id, "Ваш выбор был учтён")
+    if reply:
+        await send_ws(user_id, {"type": "message", "message": reply})
+
+    return {"ok": True, "status": status}
+
+
+# Override group invite to also notify via Lumi - patch existing invite_to_group by adding after it is complex
+# We'll enhance invite endpoints by replacing invite functions - for now add helper used from new path
+
+@app.post("/api/groups/{group_id}/invite-bot")
+async def invite_group_via_bot(group_id: int, data: InviteRequest, request: Request):
+    user_id = get_auth_user(request)
+    username = data.username.strip().lower()
+    connection = db()
+    group = connection.execute("SELECT * FROM groups WHERE id = ?", (group_id,)).fetchone()
+    member = connection.execute(
+        "SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?",
+        (group_id, user_id),
+    ).fetchone()
+    if not group or not member:
+        connection.close()
+        raise HTTPException(403, "Нет доступа")
+    target = connection.execute("SELECT id, username FROM users WHERE username = ?", (username,)).fetchone()
+    inviter = connection.execute("SELECT username, display_name FROM users WHERE id = ?", (user_id,)).fetchone()
+    if not target:
+        connection.close()
+        raise HTTPException(404, "Пользователь не найден")
+    # create invite
+    cursor = connection.execute(
+        """
+        INSERT INTO invites (type, target_id, from_user_id, to_user_id, status, created_at)
+        VALUES ('group', ?, ?, ?, 'pending', ?)
+        """,
+        (group_id, user_id, target["id"], now()),
+    )
+    invite_id = cursor.lastrowid
+    connection.commit()
+    connection.close()
+
+    text = f'Вам пришло приглашение в группу «{group["name"]}» от @{inviter["username"]}'
+    msg = bot_send_message(target["id"], text, invite_id=invite_id, invite_status="pending")
+    if msg:
+        connection = db()
+        connection.execute("UPDATE invites SET message_id = ? WHERE id = ?", (msg["id"], invite_id))
+        connection.commit()
+        connection.close()
+        await send_ws(target["id"], {"type": "message", "message": msg})
+    return {"ok": True}
+
+
+@app.post("/api/communities/{community_id}/invite-bot")
+async def invite_community_via_bot(community_id: int, data: InviteRequest, request: Request):
+    user_id = get_auth_user(request)
+    username = data.username.strip().lower()
+    connection = db()
+    community = connection.execute("SELECT * FROM communities WHERE id = ?", (community_id,)).fetchone()
+    member = connection.execute(
+        "SELECT 1 FROM community_members WHERE community_id = ? AND user_id = ?",
+        (community_id, user_id),
+    ).fetchone()
+    if not community or not member:
+        connection.close()
+        raise HTTPException(403, "Нет доступа")
+    target = connection.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
+    inviter = connection.execute("SELECT username FROM users WHERE id = ?", (user_id,)).fetchone()
+    if not target:
+        connection.close()
+        raise HTTPException(404, "Пользователь не найден")
+    cursor = connection.execute(
+        """
+        INSERT INTO invites (type, target_id, from_user_id, to_user_id, status, created_at)
+        VALUES ('community', ?, ?, ?, 'pending', ?)
+        """,
+        (community_id, user_id, target["id"], now()),
+    )
+    invite_id = cursor.lastrowid
+    connection.commit()
+    connection.close()
+
+    text = f'Вам пришло приглашение в сообщество «{community["name"]}» от @{inviter["username"]}'
+    msg = bot_send_message(target["id"], text, invite_id=invite_id, invite_status="pending")
+    if msg:
+        connection = db()
+        connection.execute("UPDATE invites SET message_id = ? WHERE id = ?", (msg["id"], invite_id))
+        connection.commit()
+        connection.close()
+        await send_ws(target["id"], {"type": "message", "message": msg})
+    return {"ok": True}
+
+
+# =========================================================
+# CALL SIGNALING (WebRTC)
+# =========================================================
+
+@app.post("/api/calls/signal")
+async def call_signal(data: CallSignalRequest, request: Request):
+    user_id = get_auth_user(request)
+    payload = {
+        "type": "call_signal",
+        "from_id": user_id,
+        "signal_type": data.signal_type,
+        "payload": data.payload,
+    }
+    await send_ws(data.target_id, payload)
+    return {"ok": True}
 
 
 # =========================================================
