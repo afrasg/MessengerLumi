@@ -360,7 +360,6 @@ def init_db():
         "INTEGER",
     )
 
-
     add_column_if_missing(
         connection,
         "messages",
