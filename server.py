@@ -17,6 +17,7 @@ from fastapi import (
     Response,
     UploadFile,
     File,
+    Form,
 )
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -739,6 +740,17 @@ async def send_ws(
         connections[user_id].discard(
             socket
         )
+
+
+def user_public(connection, user_id):
+    row = connection.execute(
+        """
+        SELECT id, username, display_name, avatar_url, is_bot, is_verified
+        FROM users WHERE id = ?
+        """,
+        (user_id,),
+    ).fetchone()
+    return dict(row) if row else {}
 
 
 # =========================================================
@@ -1894,6 +1906,10 @@ async def send_message(
     connection.commit()
     connection.close()
 
+    connection = db()
+    sender_info = user_public(connection, sender_id)
+    connection.close()
+
     message = {
         "id": message_id,
         "sender_id": sender_id,
@@ -1903,6 +1919,9 @@ async def send_message(
         "edited_at": None,
         "deleted": 0,
         "is_read": 0,
+        "sender_username": sender_info.get("username"),
+        "sender_name": sender_info.get("display_name") or sender_info.get("username"),
+        "chat_kind": "private",
     }
 
     payload = {
@@ -1910,17 +1929,8 @@ async def send_message(
         "message": message,
     }
 
-    # Отправителю тоже отправляем WS,
-    # но фронтенд проверяет ID и не создаёт дубль.
-    await send_ws(
-        sender_id,
-        payload,
-    )
-
-    await send_ws(
-        data.receiver_id,
-        payload,
-    )
+    await send_ws(sender_id, payload)
+    await send_ws(data.receiver_id, payload)
 
     return {
         "ok": True,
@@ -3238,17 +3248,24 @@ async def send_group_message(
         """,
         (group_id,),
     ).fetchall()
-
+    group_row = connection.execute(
+        "SELECT name FROM groups WHERE id = ?", (group_id,)
+    ).fetchone()
+    sender_info = user_public(connection, user_id)
     connection.commit()
     connection.close()
 
     message = {
         "id": message_id,
         "group_id": group_id,
+        "group_name": group_row["name"] if group_row else "Группа",
         "sender_id": user_id,
         "text": text,
         "created_at": created,
         "deleted": 0,
+        "sender_username": sender_info.get("username"),
+        "sender_name": sender_info.get("display_name") or sender_info.get("username"),
+        "chat_kind": "group",
     }
 
     payload = {
@@ -3368,17 +3385,24 @@ async def send_channel_message(
         """,
         (channel_id,),
     ).fetchall()
-
+    ch_row = connection.execute(
+        "SELECT name FROM channels WHERE id = ?", (channel_id,)
+    ).fetchone()
+    sender_info = user_public(connection, user_id)
     connection.commit()
     connection.close()
 
     message = {
         "id": message_id,
         "channel_id": channel_id,
+        "channel_name": ch_row["name"] if ch_row else "Канал",
         "sender_id": user_id,
         "text": text,
         "created_at": created,
         "deleted": 0,
+        "sender_username": sender_info.get("username"),
+        "sender_name": sender_info.get("display_name") or sender_info.get("username"),
+        "chat_kind": "channel",
     }
 
     payload = {
@@ -4042,17 +4066,31 @@ async def send_community_chat_message(
         """,
         (chat["community_id"],),
     ).fetchall()
-
+    community = connection.execute(
+        "SELECT name FROM communities WHERE id = ?",
+        (chat["community_id"],),
+    ).fetchone()
+    chat_row = connection.execute(
+        "SELECT name FROM community_chats WHERE id = ?",
+        (chat_id,),
+    ).fetchone()
+    sender_info = user_public(connection, user_id)
     connection.commit()
     connection.close()
 
     message = {
         "id": message_id,
         "chat_id": chat_id,
+        "community_id": chat["community_id"],
+        "community_name": community["name"] if community else "Сообщество",
+        "chat_name": chat_row["name"] if chat_row else "Чат",
         "sender_id": user_id,
         "text": text,
         "created_at": created,
         "deleted": 0,
+        "sender_username": sender_info.get("username"),
+        "sender_name": sender_info.get("display_name") or sender_info.get("username"),
+        "chat_kind": "community",
     }
 
     payload = {
@@ -4366,12 +4404,11 @@ def delete_chat(peer_id: int, request: Request, for_both: bool = False):
 async def send_message_media(
     request: Request,
     receiver_id: int,
-    text: str = "",
     file: UploadFile = File(...),
+    text: str = Form(""),
 ):
     sender_id = get_auth_user(request)
 
-    # block checks
     connection = db()
     blocked = connection.execute(
         """
@@ -4381,7 +4418,6 @@ async def send_message_media(
         """,
         (sender_id, receiver_id, receiver_id, sender_id),
     ).fetchone()
-    # cannot write to bot
     peer = connection.execute(
         "SELECT is_bot, username FROM users WHERE id = ?",
         (receiver_id,),
@@ -4393,38 +4429,28 @@ async def send_message_media(
     if peer and (peer["is_bot"] or peer["username"] == "lumi"):
         raise HTTPException(403, "Боту нельзя писать")
 
-    allowed = {
-        "image/jpeg": (".jpg", "image"),
-        "image/png": (".png", "image"),
-        "image/webp": (".webp", "image"),
-        "image/gif": (".gif", "image"),
-        "audio/webm": (".webm", "voice"),
-        "audio/ogg": (".ogg", "voice"),
-        "audio/mpeg": (".mp3", "voice"),
-        "audio/mp4": (".m4a", "voice"),
-        "audio/wav": (".wav", "voice"),
-        "application/pdf": (".pdf", "file"),
-        "application/zip": (".zip", "file"),
-        "text/plain": (".txt", "file"),
-        "application/octet-stream": (".bin", "file"),
-    }
+    ctype = (file.content_type or "application/octet-stream").split(";")[0].strip().lower()
+    name = file.filename or "file.bin"
+    ext = Path(name).suffix.lower() or ".bin"
 
-    ctype = file.content_type or "application/octet-stream"
-    if ctype not in allowed:
-        # allow generic files
-        ext = Path(file.filename or "file.bin").suffix or ".bin"
-        media_type = "file"
-        if ctype.startswith("image/"):
-            media_type = "image"
-        elif ctype.startswith("audio/"):
-            media_type = "voice"
+    if ctype.startswith("image/") or ext in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+        media_type = "image"
+        if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+            ext = ".jpg"
+    elif ctype.startswith("audio/") or ext in {".webm", ".ogg", ".mp3", ".m4a", ".wav", ".opus"}:
+        media_type = "voice"
+        if ext not in {".webm", ".ogg", ".mp3", ".m4a", ".wav", ".opus"}:
+            ext = ".webm"
     else:
-        ext, media_type = allowed[ctype]
+        media_type = "file"
 
     filename = f"msg_{sender_id}_{secrets.token_hex(10)}{ext}"
     path = UPLOAD_DIR / filename
+    data_bytes = await file.read()
+    if not data_bytes:
+        raise HTTPException(400, "Пустой файл")
     with open(path, "wb") as out:
-        shutil.copyfileobj(file.file, out)
+        out.write(data_bytes)
     url = "/uploads/" + filename
 
     connection = db()
@@ -4435,23 +4461,29 @@ async def send_message_media(
         (sender_id, receiver_id, text, created_at, media_url, media_type)
         VALUES (?, ?, ?, ?, ?, ?)
         """,
-        (sender_id, receiver_id, text.strip(), created, url, media_type),
+        (sender_id, receiver_id, (text or "").strip(), created, url, media_type),
     )
     mid = cursor.lastrowid
     connection.commit()
     connection.close()
 
+    connection = db()
+    sender_info = user_public(connection, sender_id)
+    connection.close()
     message = {
         "id": mid,
         "sender_id": sender_id,
         "receiver_id": receiver_id,
-        "text": text.strip(),
+        "text": (text or "").strip(),
         "created_at": created,
         "edited_at": None,
         "deleted": 0,
         "is_read": 0,
         "media_url": url,
         "media_type": media_type,
+        "sender_username": sender_info.get("username"),
+        "sender_name": sender_info.get("display_name") or sender_info.get("username"),
+        "chat_kind": "private",
     }
     payload = {"type": "message", "message": message}
     await send_ws(sender_id, payload)
@@ -4764,6 +4796,71 @@ async def call_signal(data: CallSignalRequest, request: Request):
     }
     await send_ws(data.target_id, payload)
     return {"ok": True}
+
+
+
+@app.get("/api/dialogs")
+def get_dialogs(request: Request):
+    """Recent private chats like Telegram left list."""
+    user_id = get_auth_user(request)
+    connection = db()
+
+    rows = connection.execute(
+        """
+        SELECT
+            CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END AS peer_id,
+            MAX(m.id) AS last_id
+        FROM messages m
+        LEFT JOIN chat_settings cs
+            ON cs.user_id = ?
+           AND cs.peer_id = CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END
+        WHERE (m.sender_id = ? OR m.receiver_id = ?)
+          AND IFNULL(cs.deleted_for_me, 0) = 0
+        GROUP BY peer_id
+        ORDER BY last_id DESC
+        LIMIT 50
+        """,
+        (user_id, user_id, user_id, user_id, user_id),
+    ).fetchall()
+
+    result = []
+    for row in rows:
+        peer_id = row["peer_id"]
+        user = connection.execute(
+            """
+            SELECT id, username, display_name, avatar_url, is_bot, is_verified, last_seen
+            FROM users WHERE id = ?
+            """,
+            (peer_id,),
+        ).fetchone()
+        if not user:
+            continue
+        last = connection.execute(
+            """
+            SELECT id, text, created_at, sender_id, media_type, deleted, is_read
+            FROM messages WHERE id = ?
+            """,
+            (row["last_id"],),
+        ).fetchone()
+        alias = connection.execute(
+            "SELECT alias FROM contact_aliases WHERE user_id = ? AND contact_id = ?",
+            (user_id, peer_id),
+        ).fetchone()
+        unread = connection.execute(
+            """
+            SELECT COUNT(*) AS c FROM messages
+            WHERE sender_id = ? AND receiver_id = ? AND is_read = 0 AND deleted = 0
+            """,
+            (peer_id, user_id),
+        ).fetchone()["c"]
+        item = dict(user)
+        item["alias"] = alias["alias"] if alias else None
+        item["last_message"] = dict(last) if last else None
+        item["unread"] = unread
+        result.append(item)
+
+    connection.close()
+    return result
 
 
 # =========================================================
