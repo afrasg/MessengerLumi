@@ -103,6 +103,17 @@ def add_column_if_missing(
         )
 
 
+def update_last_seen(user_id):
+    """Обновляет время последнего визита пользователя"""
+    connection = db()
+    connection.execute(
+        "UPDATE users SET last_seen = ? WHERE id = ?",
+        (now(), user_id),
+    )
+    connection.commit()
+    connection.close()
+
+
 def init_db():
     connection = db()
 
@@ -616,6 +627,7 @@ def create_session(
 
 def get_auth_user(
     request: Request,
+    update_last_seen: bool = True,
 ):
     token = request.cookies.get(
         SESSION_COOKIE
@@ -696,17 +708,19 @@ def get_auth_user(
         ),
     )
 
-    connection.execute(
-        """
-        UPDATE users
-        SET last_seen = ?
-        WHERE id = ?
-        """,
-        (
-            now(),
-            session["user_id"],
-        ),
-    )
+    # Обновляем last_seen пользователя при каждом запросе
+    if update_last_seen:
+        connection.execute(
+            """
+            UPDATE users
+            SET last_seen = ?
+            WHERE id = ?
+            """,
+            (
+                now(),
+                session["user_id"],
+            ),
+        )
 
     connection.commit()
     connection.close()
@@ -1329,7 +1343,7 @@ def delete_account(
     request: Request,
     response: Response,
 ):
-    user_id = get_auth_user(request)
+    user_id = get_auth_user(request, update_last_seen=False)
 
     connection = db()
 
@@ -1746,7 +1760,7 @@ def get_user_profile(
     user_id: int,
     request: Request,
 ):
-    get_auth_user(request)
+    current_user_id = get_auth_user(request)
 
     connection = db()
 
@@ -1776,7 +1790,48 @@ def get_user_profile(
             "Пользователь не найден",
         )
 
-    return dict(user)
+    result = dict(user)
+
+    # Для ботов и самого себя показываем все данные, для остальных — с учётом приватности
+    if user["is_bot"] or user["username"] == "lumi" or user_id == current_user_id:
+        return result
+
+    # Проверяем настройки приватности
+    connection = db()
+    privacy = connection.execute(
+        """
+        SELECT last_seen_visibility
+        FROM privacy_settings
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    ).fetchone()
+    connection.close()
+
+    # Проверяем, есть ли диалог между пользователями (контакт)
+    connection = db()
+    has_dialog = connection.execute(
+        """
+        SELECT 1 FROM messages
+        WHERE (sender_id = ? AND receiver_id = ?)
+           OR (sender_id = ? AND receiver_id = ?)
+        LIMIT 1
+        """,
+        (current_user_id, user_id, user_id, current_user_id),
+    ).fetchone()
+    connection.close()
+
+    visibility = privacy["last_seen_visibility"] if privacy else "all"
+
+    if visibility == "none":
+        result["last_seen"] = None
+    elif visibility == "contacts" and not has_dialog:
+        result["last_seen"] = None
+
+    # Не показываем created_at для других пользователей
+    result["created_at"] = None
+
+    return result
 
 
 # =========================================================
@@ -3078,7 +3133,6 @@ def clear_all_chats(
 
     connection = db()
 
-    # Удаляем все сообщения пользователя
     connection.execute(
         """
         DELETE FROM messages
@@ -3091,7 +3145,6 @@ def clear_all_chats(
         ),
     )
 
-    # Очищаем настройки чатов
     connection.execute(
         """
         DELETE FROM chat_settings
@@ -3100,7 +3153,6 @@ def clear_all_chats(
         (user_id,),
     )
 
-    # Очищаем избранное
     connection.execute(
         """
         DELETE FROM favorites
