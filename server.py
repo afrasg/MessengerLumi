@@ -46,9 +46,6 @@ SESSION_DAYS = 30
 
 connections = defaultdict(set)
 
-# Аватар для бота Lumi
-LUMI_AVATAR_URL = "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/5c/e5/f3/5ce5f3be-c924-0649-5dba-309206c42ba6/Placeholder.mill/1200x630wa.jpg"
-
 
 # =========================================================
 # CORS
@@ -80,18 +77,34 @@ def column_exists(connection, table, column):
     rows = connection.execute(
         f"PRAGMA table_info({table})"
     ).fetchall()
-    return any(row["name"] == column for row in rows)
+
+    return any(
+        row["name"] == column
+        for row in rows
+    )
 
 
-def add_column_if_missing(connection, table, column, definition):
-    if not column_exists(connection, table, column):
-        connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+def add_column_if_missing(
+    connection,
+    table,
+    column,
+    definition,
+):
+    if not column_exists(
+        connection,
+        table,
+        column,
+    ):
+        connection.execute(
+            f"ALTER TABLE {table} ADD COLUMN {column} {definition}"
+        )
 
 
 def init_db():
     connection = db()
 
-    connection.executescript("""
+    connection.executescript(
+        """
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
@@ -100,9 +113,7 @@ def init_db():
             last_seen TEXT,
             display_name TEXT,
             bio TEXT DEFAULT '',
-            avatar_url TEXT,
-            is_bot INTEGER DEFAULT 0,
-            is_verified INTEGER DEFAULT 0
+            avatar_url TEXT
         );
 
         CREATE TABLE IF NOT EXISTS sessions (
@@ -123,11 +134,7 @@ def init_db():
             created_at TEXT NOT NULL,
             edited_at TEXT,
             deleted INTEGER DEFAULT 0,
-            is_read INTEGER DEFAULT 0,
-            media_url TEXT,
-            media_type TEXT,
-            invite_id INTEGER,
-            invite_status TEXT
+            is_read INTEGER DEFAULT 0
         );
 
         CREATE TABLE IF NOT EXISTS posts (
@@ -176,8 +183,7 @@ def init_db():
             name TEXT NOT NULL,
             description TEXT DEFAULT '',
             owner_id INTEGER NOT NULL,
-            created_at TEXT NOT NULL,
-            avatar_url TEXT
+            created_at TEXT NOT NULL
         );
 
         CREATE TABLE IF NOT EXISTS group_members (
@@ -193,8 +199,7 @@ def init_db():
             username TEXT UNIQUE NOT NULL,
             description TEXT DEFAULT '',
             owner_id INTEGER NOT NULL,
-            created_at TEXT NOT NULL,
-            avatar_url TEXT
+            created_at TEXT NOT NULL
         );
 
         CREATE TABLE IF NOT EXISTS channel_subscribers (
@@ -310,56 +315,138 @@ def init_db():
             muted INTEGER DEFAULT 1,
             UNIQUE(group_id, user_id)
         );
+        """
+    )
 
-        CREATE TABLE IF NOT EXISTS privacy_settings (
-            user_id INTEGER PRIMARY KEY,
-            phone_visibility TEXT DEFAULT 'all',
-            avatar_visibility TEXT DEFAULT 'all',
-            last_seen_visibility TEXT DEFAULT 'all'
-        );
-    """)
+    add_column_if_missing(
+        connection,
+        "users",
+        "display_name",
+        "TEXT",
+    )
 
-    # Добавляем недостающие колонки
-    add_column_if_missing(connection, "users", "display_name", "TEXT")
-    add_column_if_missing(connection, "users", "bio", "TEXT DEFAULT ''")
-    add_column_if_missing(connection, "users", "avatar_url", "TEXT")
-    add_column_if_missing(connection, "users", "is_bot", "INTEGER DEFAULT 0")
-    add_column_if_missing(connection, "users", "is_verified", "INTEGER DEFAULT 0")
-    add_column_if_missing(connection, "messages", "edited_at", "TEXT")
-    add_column_if_missing(connection, "messages", "deleted", "INTEGER DEFAULT 0")
-    add_column_if_missing(connection, "messages", "media_url", "TEXT")
-    add_column_if_missing(connection, "messages", "media_type", "TEXT")
-    add_column_if_missing(connection, "messages", "invite_id", "INTEGER")
-    add_column_if_missing(connection, "messages", "invite_status", "TEXT")
-    add_column_if_missing(connection, "comments", "parent_id", "INTEGER")
-    add_column_if_missing(connection, "groups", "avatar_url", "TEXT")
-    add_column_if_missing(connection, "channels", "avatar_url", "TEXT")
+    add_column_if_missing(
+        connection,
+        "users",
+        "bio",
+        "TEXT DEFAULT ''",
+    )
 
-    # Обновляем display_name
-    connection.execute("""
-        UPDATE users SET display_name = username
-        WHERE display_name IS NULL OR display_name = ''
-    """)
+    add_column_if_missing(
+        connection,
+        "users",
+        "avatar_url",
+        "TEXT",
+    )
 
-    # Создаём бота Lumi
+    add_column_if_missing(
+        connection,
+        "messages",
+        "edited_at",
+        "TEXT",
+    )
+
+    add_column_if_missing(
+        connection,
+        "messages",
+        "deleted",
+        "INTEGER DEFAULT 0",
+    )
+
+    add_column_if_missing(
+        connection,
+        "comments",
+        "parent_id",
+        "INTEGER",
+    )
+
+
+    add_column_if_missing(
+        connection,
+        "messages",
+        "media_url",
+        "TEXT",
+    )
+
+    add_column_if_missing(
+        connection,
+        "messages",
+        "media_type",
+        "TEXT",
+    )
+
+    add_column_if_missing(
+        connection,
+        "users",
+        "is_bot",
+        "INTEGER DEFAULT 0",
+    )
+
+    add_column_if_missing(
+        connection,
+        "users",
+        "is_verified",
+        "INTEGER DEFAULT 0",
+    )
+
+    add_column_if_missing(
+        connection,
+        "groups",
+        "avatar_url",
+        "TEXT",
+    )
+
+    add_column_if_missing(
+        connection,
+        "channels",
+        "avatar_url",
+        "TEXT",
+    )
+
+    add_column_if_missing(
+        connection,
+        "messages",
+        "invite_id",
+        "INTEGER",
+    )
+
+    add_column_if_missing(
+        connection,
+        "messages",
+        "invite_status",
+        "TEXT",
+    )
+
+    connection.execute(
+        """
+        UPDATE users
+        SET display_name = username
+        WHERE display_name IS NULL
+           OR display_name = ''
+        """
+    )
+
+    # Ensure Lumi bot exists
     import hashlib as _hl
     from datetime import datetime as _dt
     _ts = _dt.utcnow().isoformat()
     _ph = _hl.sha256(b'__lumi_bot_internal__').hexdigest()
-
-    bot = connection.execute("SELECT id FROM users WHERE username = 'lumi'").fetchone()
+    bot = connection.execute(
+        "SELECT id FROM users WHERE username = 'lumi'"
+    ).fetchone()
     if not bot:
-        connection.execute("""
+        connection.execute(
+            """
             INSERT INTO users
-            (username, password_hash, created_at, last_seen, display_name, bio, is_bot, is_verified, avatar_url)
-            VALUES ('lumi', ?, ?, ?, 'Lumi', 'Официальный бот Messenger Lumi', 1, 1, ?)
-        """, (_ph, _ts, _ts, LUMI_AVATAR_URL))
+            (username, password_hash, created_at, last_seen, display_name, bio, is_bot, is_verified)
+            VALUES ('lumi', ?, ?, ?, 'Lumi', 'Официальный бот Messenger Lumi', 1, 1)
+            """,
+            (_ph, _ts, _ts),
+        )
     else:
-        connection.execute("""
-            UPDATE users
-            SET is_bot = 1, is_verified = 1, display_name = 'Lumi', avatar_url = ?
-            WHERE username = 'lumi'
-        """, (LUMI_AVATAR_URL,))
+        connection.execute(
+            "UPDATE users SET is_bot = 1, is_verified = 1, display_name = 'Lumi' WHERE username = 'lumi'"
+        )
 
     connection.commit()
     connection.close()
@@ -377,15 +464,21 @@ def now():
 
 
 def hash_password(password):
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+    return hashlib.sha256(
+        password.encode("utf-8")
+    ).hexdigest()
 
 
 def hash_token(token):
-    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+    return hashlib.sha256(
+        token.encode("utf-8")
+    ).hexdigest()
 
 
 def browser_hash(value):
-    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+    return hashlib.sha256(
+        value.encode("utf-8")
+    ).hexdigest()
 
 
 def new_token():
@@ -394,12 +487,22 @@ def new_token():
 
 def valid_username(username):
     return (
-        len(username) >= 3 and len(username) <= 30 and
-        bool(re.fullmatch(r"[a-zA-Z0-9_]+", username))
+        len(username) >= 3
+        and len(username) <= 30
+        and bool(
+            re.fullmatch(
+                r"[a-zA-Z0-9_]+",
+                username,
+            )
+        )
     )
 
 
-def set_auth_cookie(response: Response, token: str, secure: bool = False):
+def set_auth_cookie(
+    response: Response,
+    token: str,
+    secure: bool = False,
+):
     response.set_cookie(
         key=SESSION_COOKIE,
         value=token,
@@ -411,7 +514,11 @@ def set_auth_cookie(response: Response, token: str, secure: bool = False):
     )
 
 
-def set_browser_cookie(response: Response, browser_id: str, secure: bool = False):
+def set_browser_cookie(
+    response: Response,
+    browser_id: str,
+    secure: bool = False,
+):
     response.set_cookie(
         key=BROWSER_COOKIE,
         value=browser_id,
@@ -423,90 +530,205 @@ def set_browser_cookie(response: Response, browser_id: str, secure: bool = False
     )
 
 
-def get_or_create_browser(request: Request, response: Response):
-    value = request.cookies.get(BROWSER_COOKIE)
+def is_https(request: Request) -> bool:
+    # Respect reverse-proxy headers
+    proto = (
+        request.headers.get("x-forwarded-proto")
+        or request.url.scheme
+        or ""
+    ).lower()
+    return proto == "https"
+
+
+def get_or_create_browser(
+    request: Request,
+    response: Response,
+):
+    value = request.cookies.get(
+        BROWSER_COOKIE
+    )
+
     if value:
         return value
+
     value = secrets.token_urlsafe(32)
-    set_browser_cookie(response, value)
+    set_browser_cookie(
+        response,
+        value,
+    )
+
     return value
 
 
-def create_session(user_id, browser_id):
+def create_session(
+    user_id,
+    browser_id,
+):
     token = new_token()
     created = datetime.utcnow()
-    expires = created + timedelta(days=SESSION_DAYS)
+    expires = created + timedelta(
+        days=SESSION_DAYS
+    )
 
     connection = db()
-    connection.execute("""
+
+    connection.execute(
+        """
         INSERT INTO sessions
-        (user_id, token_hash, browser_hash, created_at, last_seen, expires_at)
+        (
+            user_id,
+            token_hash,
+            browser_hash,
+            created_at,
+            last_seen,
+            expires_at
+        )
         VALUES (?, ?, ?, ?, ?, ?)
-    """, (user_id, hash_token(token), browser_hash(browser_id),
-          created.isoformat(), created.isoformat(), expires.isoformat()))
+        """,
+        (
+            user_id,
+            hash_token(token),
+            browser_hash(browser_id),
+            created.isoformat(),
+            created.isoformat(),
+            expires.isoformat(),
+        ),
+    )
+
     connection.commit()
     connection.close()
+
     return token
 
 
-def get_auth_user(request: Request, update_last_seen: bool = True):
-    token = request.cookies.get(SESSION_COOKIE)
+def get_auth_user(
+    request: Request,
+):
+    token = request.cookies.get(
+        SESSION_COOKIE
+    )
+
+    # Also accept Authorization: Bearer <token> (frontend localStorage)
     if not token:
         auth = request.headers.get("Authorization") or ""
         if auth.lower().startswith("bearer "):
             token = auth[7:].strip()
 
     if not token:
-        raise HTTPException(401, "Не авторизован")
+        raise HTTPException(
+            401,
+            "Не авторизован",
+        )
 
     connection = db()
 
-    session = connection.execute("""
-        SELECT s.id AS session_id, s.user_id, s.expires_at, u.username
+    session = connection.execute(
+        """
+        SELECT
+            s.id AS session_id,
+            s.user_id,
+            s.expires_at,
+            u.username
         FROM sessions s
-        JOIN users u ON u.id = s.user_id
+        JOIN users u
+            ON u.id = s.user_id
         WHERE s.token_hash = ?
-    """, (hash_token(token),)).fetchone()
+        """,
+        (
+            hash_token(token),
+        ),
+    ).fetchone()
 
     if not session:
         connection.close()
-        raise HTTPException(401, "Сессия недействительна")
+
+        raise HTTPException(
+            401,
+            "Сессия недействительна",
+        )
 
     try:
-        expires = datetime.fromisoformat(session["expires_at"])
+        expires = datetime.fromisoformat(
+            session["expires_at"]
+        )
     except Exception:
         expires = datetime.utcnow()
 
     if expires < datetime.utcnow():
-        connection.execute("DELETE FROM sessions WHERE id = ?", (session["session_id"],))
+        connection.execute(
+            """
+            DELETE FROM sessions
+            WHERE id = ?
+            """,
+            (
+                session["session_id"],
+            ),
+        )
+
         connection.commit()
         connection.close()
-        raise HTTPException(401, "Сессия истекла")
 
-    # Обновляем last_seen сессии
-    connection.execute("UPDATE sessions SET last_seen = ? WHERE id = ?",
-                       (now(), session["session_id"]))
+        raise HTTPException(
+            401,
+            "Сессия истекла",
+        )
 
-    # Обновляем last_seen пользователя
-    if update_last_seen:
-        connection.execute("UPDATE users SET last_seen = ? WHERE id = ?",
-                           (now(), session["user_id"]))
+    connection.execute(
+        """
+        UPDATE sessions
+        SET last_seen = ?
+        WHERE id = ?
+        """,
+        (
+            now(),
+            session["session_id"],
+        ),
+    )
+
+    connection.execute(
+        """
+        UPDATE users
+        SET last_seen = ?
+        WHERE id = ?
+        """,
+        (
+            now(),
+            session["user_id"],
+        ),
+    )
 
     connection.commit()
     connection.close()
+
     return session["user_id"]
 
 
 def get_browser_id(request):
-    value = request.cookies.get(BROWSER_COOKIE)
+    value = request.cookies.get(
+        BROWSER_COOKIE
+    )
+
     if not value:
-        raise HTTPException(400, "Браузер не определён")
+        raise HTTPException(
+            400,
+            "Браузер не определён",
+        )
+
     return value
 
 
-async def send_ws(user_id, payload):
+async def send_ws(
+    user_id,
+    payload,
+):
+    try:
+        user_id = int(user_id)
+    except Exception:
+        return
+
     dead = []
-    for socket in list(connections.get(user_id, set())):
+    sockets = list(connections.get(user_id, set()))
+    for socket in sockets:
         try:
             await socket.send_json(payload)
         except Exception:
@@ -518,8 +740,11 @@ async def send_ws(user_id, payload):
 
 def user_public(connection, user_id):
     row = connection.execute(
-        "SELECT id, username, display_name, avatar_url, is_bot, is_verified FROM users WHERE id = ?",
-        (user_id,)
+        """
+        SELECT id, username, display_name, avatar_url, is_bot, is_verified
+        FROM users WHERE id = ?
+        """,
+        (user_id,),
     ).fetchone()
     return dict(row) if row else {}
 
@@ -568,12 +793,6 @@ class SettingsRequest(BaseModel):
     notifications: bool = True
     show_online: bool = True
     show_last_seen: bool = True
-
-
-class PrivacySettingsRequest(BaseModel):
-    phone_visibility: str = "all"
-    avatar_visibility: str = "all"
-    last_seen_visibility: str = "all"
 
 
 class GroupRequest(BaseModel):
@@ -636,7 +855,7 @@ class RenameEntityRequest(BaseModel):
 
 
 class InviteActionRequest(BaseModel):
-    action: str
+    action: str  # accept | decline
 
 
 class CallSignalRequest(BaseModel):
@@ -646,85 +865,214 @@ class CallSignalRequest(BaseModel):
 
 
 # =========================================================
-# AUTH ENDPOINTS
+# AUTH
 # =========================================================
 
 @app.post("/api/register")
-def register(data: RegisterRequest, request: Request, response: Response):
+def register(
+    data: RegisterRequest,
+    request: Request,
+    response: Response,
+):
     username = data.username.strip().lower()
 
     if not valid_username(username):
-        raise HTTPException(400, "Username: 3-30 символов, только буквы, цифры и _")
+        raise HTTPException(
+            400,
+            "Username: 3-30 символов, только буквы, цифры и _",
+        )
 
     if len(data.password) < 6:
-        raise HTTPException(400, "Пароль должен содержать минимум 6 символов")
+        raise HTTPException(
+            400,
+            "Пароль должен содержать минимум 6 символов",
+        )
 
     connection = db()
 
-    exists = connection.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
+    exists = connection.execute(
+        """
+        SELECT id
+        FROM users
+        WHERE username = ?
+        """,
+        (username,),
+    ).fetchone()
+
     if exists:
         connection.close()
-        raise HTTPException(400, "Такой username уже занят")
+
+        raise HTTPException(
+            400,
+            "Такой username уже занят",
+        )
 
     created = now()
 
-    cursor = connection.execute("""
-        INSERT INTO users (username, password_hash, created_at, last_seen, display_name)
+    cursor = connection.execute(
+        """
+        INSERT INTO users
+        (
+            username,
+            password_hash,
+            created_at,
+            last_seen,
+            display_name
+        )
         VALUES (?, ?, ?, ?, ?)
-    """, (username, hash_password(data.password), created, created, username))
+        """,
+        (
+            username,
+            hash_password(
+                data.password
+            ),
+            created,
+            created,
+            username,
+        ),
+    )
 
     user_id = cursor.lastrowid
 
-    connection.execute("INSERT OR IGNORE INTO settings (user_id) VALUES (?)", (user_id,))
-    connection.execute("INSERT OR IGNORE INTO privacy_settings (user_id) VALUES (?)", (user_id,))
+    connection.execute(
+        """
+        INSERT OR IGNORE INTO settings
+        (user_id)
+        VALUES (?)
+        """,
+        (user_id,),
+    )
 
     connection.commit()
     connection.close()
 
-    browser_id = get_or_create_browser(request, response)
-    token = create_session(user_id, browser_id)
-    set_auth_cookie(response, token)
+    browser_id = get_or_create_browser(
+        request,
+        response,
+    )
 
-    return {"ok": True, "token": token}
+    token = create_session(
+        user_id,
+        browser_id,
+    )
+
+    set_auth_cookie(
+        response,
+        token,
+    )
+
+    return {
+        "ok": True,
+        "token": token,
+    }
 
 
 @app.post("/api/login")
-def login(data: LoginRequest, request: Request, response: Response):
+def login(
+    data: LoginRequest,
+    request: Request,
+    response: Response,
+):
     username = data.username.strip().lower()
 
     connection = db()
 
-    user = connection.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+    user = connection.execute(
+        """
+        SELECT *
+        FROM users
+        WHERE username = ?
+        """,
+        (username,),
+    ).fetchone()
 
-    if not user or user["password_hash"] != hash_password(data.password):
+    if not user:
         connection.close()
-        raise HTTPException(401, "Неверный логин или пароль")
 
-    connection.execute("INSERT OR IGNORE INTO settings (user_id) VALUES (?)", (user["id"],))
-    connection.execute("INSERT OR IGNORE INTO privacy_settings (user_id) VALUES (?)", (user["id"],))
+        raise HTTPException(
+            401,
+            "Неверный логин или пароль",
+        )
+
+    if user["password_hash"] != hash_password(
+        data.password
+    ):
+        connection.close()
+
+        raise HTTPException(
+            401,
+            "Неверный логин или пароль",
+        )
+
+    connection.execute(
+        """
+        INSERT OR IGNORE INTO settings
+        (user_id)
+        VALUES (?)
+        """,
+        (user["id"],),
+    )
 
     connection.commit()
     connection.close()
 
-    browser_id = get_or_create_browser(request, response)
-    token = create_session(user["id"], browser_id)
-    set_auth_cookie(response, token)
+    browser_id = get_or_create_browser(
+        request,
+        response,
+    )
 
-    return {"ok": True, "token": token}
+    token = create_session(
+        user["id"],
+        browser_id,
+    )
+
+    set_auth_cookie(
+        response,
+        token,
+    )
+
+    return {
+        "ok": True,
+        "token": token,
+    }
 
 
 @app.post("/api/logout")
-def logout(request: Request, response: Response):
-    token = request.cookies.get(SESSION_COOKIE)
+def logout(
+    request: Request,
+    response: Response,
+):
+    token = request.cookies.get(
+        SESSION_COOKIE
+    )
 
     if token:
         connection = db()
-        connection.execute("DELETE FROM sessions WHERE token_hash = ?", (hash_token(token),))
+
+        connection.execute(
+            """
+            DELETE FROM sessions
+            WHERE token_hash = ?
+            """,
+            (
+                hash_token(token),
+            ),
+        )
+
         connection.commit()
         connection.close()
 
-    response.delete_cookie(SESSION_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
-    return {"ok": True}
+    response.delete_cookie(
+        SESSION_COOKIE,
+        path="/",
+        secure=True,
+        httponly=True,
+        samesite="lax",
+    )
+
+    return {
+        "ok": True,
+    }
 
 
 @app.get("/api/me")
@@ -733,56 +1081,434 @@ def me(request: Request):
 
     connection = db()
 
-    user = connection.execute("""
-        SELECT id, username, display_name, bio, avatar_url, created_at, last_seen, is_bot, is_verified
-        FROM users WHERE id = ?
-    """, (user_id,)).fetchone()
+    user = connection.execute(
+        """
+        SELECT
+            id,
+            username,
+            display_name,
+            bio,
+            avatar_url,
+            created_at,
+            last_seen,
+            is_bot,
+            is_verified
+        FROM users
+        WHERE id = ?
+        """,
+        (user_id,),
+    ).fetchone()
 
     connection.close()
 
     if not user:
-        raise HTTPException(404, "Пользователь не найден")
+        raise HTTPException(
+            404,
+            "Пользователь не найден",
+        )
 
     return dict(user)
 
 
-@app.delete("/api/account")
-def delete_account(data: DeleteAccountRequest, request: Request, response: Response):
-    user_id = get_auth_user(request, update_last_seen=False)
+# =========================================================
+# ACCOUNT / SESSIONS
+# =========================================================
+
+@app.get("/api/accounts")
+def accounts(request: Request):
+    user_id = get_auth_user(request)
+    browser_id = get_browser_id(request)
 
     connection = db()
 
-    user = connection.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    rows = connection.execute(
+        """
+        SELECT
+            s.id AS session_id,
+            s.user_id,
+            s.last_seen,
+            u.username,
+            u.display_name,
+            u.avatar_url
+        FROM sessions s
+        JOIN users u
+            ON u.id = s.user_id
+        WHERE s.browser_hash = ?
+        ORDER BY s.last_seen DESC
+        """,
+        (
+            browser_hash(browser_id),
+        ),
+    ).fetchall()
 
-    if not user:
+    current_token = request.cookies.get(
+        SESSION_COOKIE
+    )
+
+    current_hash = (
+        hash_token(current_token)
+        if current_token
+        else ""
+    )
+
+    current = connection.execute(
+        """
+        SELECT id
+        FROM sessions
+        WHERE token_hash = ?
+        """,
+        (current_hash,),
+    ).fetchone()
+
+    connection.close()
+
+    current_session_id = (
+        current["id"]
+        if current
+        else None
+    )
+
+    return [
+        {
+            **dict(row),
+            "current": (
+                row["session_id"]
+                == current_session_id
+            ),
+        }
+        for row in rows
+    ]
+
+
+@app.post("/api/accounts/switch/{session_id}")
+def switch_account(
+    session_id: int,
+    request: Request,
+    response: Response,
+):
+    current_user = get_auth_user(request)
+    browser_id = get_browser_id(request)
+
+    connection = db()
+
+    target = connection.execute(
+        """
+        SELECT
+            id,
+            user_id,
+            token_hash
+        FROM sessions
+        WHERE id = ?
+          AND browser_hash = ?
+        """,
+        (
+            session_id,
+            browser_hash(browser_id),
+        ),
+    ).fetchone()
+
+    if not target:
         connection.close()
-        raise HTTPException(404, "Аккаунт не найден")
 
-    if user["password_hash"] != hash_password(data.password):
-        connection.close()
-        raise HTTPException(403, "Неверный пароль")
+        raise HTTPException(
+            404,
+            "Аккаунт не найден на этом устройстве",
+        )
 
-    # Удаляем всё
-    connection.execute("DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?", (user_id, user_id))
-    connection.execute("DELETE FROM favorites WHERE user_id = ?", (user_id,))
-    connection.execute("DELETE FROM posts WHERE author_id = ?", (user_id,))
-    connection.execute("DELETE FROM comments WHERE user_id = ?", (user_id,))
-    connection.execute("DELETE FROM post_likes WHERE user_id = ?", (user_id,))
-    connection.execute("DELETE FROM group_members WHERE user_id = ?", (user_id,))
-    connection.execute("DELETE FROM channel_subscribers WHERE user_id = ?", (user_id,))
-    connection.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
-    connection.execute("DELETE FROM settings WHERE user_id = ?", (user_id,))
-    connection.execute("DELETE FROM privacy_settings WHERE user_id = ?", (user_id,))
-    connection.execute("DELETE FROM groups WHERE owner_id = ?", (user_id,))
-    connection.execute("DELETE FROM channels WHERE owner_id = ?", (user_id,))
-    connection.execute("DELETE FROM communities WHERE owner_id = ?", (user_id,))
-    connection.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    token = connection.execute(
+        """
+        SELECT token_hash
+        FROM sessions
+        WHERE id = ?
+        """,
+        (
+            target["id"],
+        ),
+    ).fetchone()
+
+    connection.close()
+
+    if not token:
+        raise HTTPException(
+            404,
+            "Сессия не найдена",
+        )
+
+    connection = db()
+
+    # Сам токен не хранится в открытом виде,
+    # поэтому при переключении создаём новую
+    # сессию для этого же аккаунта.
+    new_session_token = new_token()
+
+    created = now()
+    expires = (
+        datetime.utcnow()
+        + timedelta(days=SESSION_DAYS)
+    ).isoformat()
+
+    connection.execute(
+        """
+        INSERT INTO sessions
+        (
+            user_id,
+            token_hash,
+            browser_hash,
+            created_at,
+            last_seen,
+            expires_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            target["user_id"],
+            hash_token(
+                new_session_token
+            ),
+            browser_hash(browser_id),
+            created,
+            created,
+            expires,
+        ),
+    )
 
     connection.commit()
     connection.close()
 
-    response.delete_cookie(SESSION_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
-    return {"ok": True}
+    set_auth_cookie(
+        response,
+        new_session_token,
+    )
+
+    return {
+        "ok": True,
+        "user_id": target["user_id"],
+        "old_user_id": current_user,
+    }
+
+
+# =========================================================
+# DELETE ACCOUNT
+# =========================================================
+
+@app.delete("/api/account")
+def delete_account(
+    data: DeleteAccountRequest,
+    request: Request,
+    response: Response,
+):
+    user_id = get_auth_user(request)
+
+    connection = db()
+
+    user = connection.execute(
+        """
+        SELECT *
+        FROM users
+        WHERE id = ?
+        """,
+        (user_id,),
+    ).fetchone()
+
+    if not user:
+        connection.close()
+
+        raise HTTPException(
+            404,
+            "Аккаунт не найден",
+        )
+
+    if user["password_hash"] != hash_password(
+        data.password
+    ):
+        connection.close()
+
+        raise HTTPException(
+            403,
+            "Неверный пароль",
+        )
+
+    # Удаляем всё, что принадлежит аккаунту.
+    message_ids = connection.execute(
+        """
+        SELECT id
+        FROM messages
+        WHERE sender_id = ?
+           OR receiver_id = ?
+        """,
+        (
+            user_id,
+            user_id,
+        ),
+    ).fetchall()
+
+    ids = [
+        row["id"]
+        for row in message_ids
+    ]
+
+    if ids:
+        placeholders = ",".join(
+            "?" * len(ids)
+        )
+
+        connection.execute(
+            f"""
+            DELETE FROM favorites
+            WHERE message_id IN ({placeholders})
+            """,
+            ids,
+        )
+
+    connection.execute(
+        """
+        DELETE FROM favorites
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM messages
+        WHERE sender_id = ?
+           OR receiver_id = ?
+        """,
+        (
+            user_id,
+            user_id,
+        ),
+    )
+
+    posts = connection.execute(
+        """
+        SELECT id, media_url
+        FROM posts
+        WHERE author_id = ?
+        """,
+        (user_id,),
+    ).fetchall()
+
+    post_ids = [
+        row["id"]
+        for row in posts
+    ]
+
+    if post_ids:
+        placeholders = ",".join(
+            "?" * len(post_ids)
+        )
+
+        connection.execute(
+            f"""
+            DELETE FROM comments
+            WHERE post_id IN ({placeholders})
+            """,
+            post_ids,
+        )
+
+        connection.execute(
+            f"""
+            DELETE FROM post_likes
+            WHERE post_id IN ({placeholders})
+            """,
+            post_ids,
+        )
+
+    connection.execute(
+        """
+        DELETE FROM comments
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM post_likes
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM posts
+        WHERE author_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM group_members
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM channel_subscribers
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM sessions
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM settings
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM groups
+        WHERE owner_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM channels
+        WHERE owner_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM users
+        WHERE id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.commit()
+    connection.close()
+
+    response.delete_cookie(
+        SESSION_COOKIE,
+        path="/",
+        secure=True,
+        httponly=True,
+        samesite="lax",
+    )
+
+    return {
+        "ok": True,
+    }
 
 
 # =========================================================
@@ -790,7 +1516,10 @@ def delete_account(data: DeleteAccountRequest, request: Request, response: Respo
 # =========================================================
 
 @app.put("/api/profile")
-def update_profile(data: ProfileRequest, request: Request):
+def update_profile(
+    data: ProfileRequest,
+    request: Request,
+):
     user_id = get_auth_user(request)
 
     username = data.username.strip().lower()
@@ -798,7 +1527,10 @@ def update_profile(data: ProfileRequest, request: Request):
     bio = data.bio.strip()
 
     if not valid_username(username):
-        raise HTTPException(400, "Некорректный username")
+        raise HTTPException(
+            400,
+            "Некорректный username",
+        )
 
     if not display_name:
         display_name = username
@@ -806,105 +1538,201 @@ def update_profile(data: ProfileRequest, request: Request):
     connection = db()
 
     exists = connection.execute(
-        "SELECT id FROM users WHERE username = ? AND id != ?", (username, user_id)
+        """
+        SELECT id
+        FROM users
+        WHERE username = ?
+          AND id != ?
+        """,
+        (
+            username,
+            user_id,
+        ),
     ).fetchone()
 
     if exists:
         connection.close()
-        raise HTTPException(400, "Этот username уже занят")
 
-    connection.execute("""
-        UPDATE users SET username = ?, display_name = ?, bio = ? WHERE id = ?
-    """, (username, display_name, bio, user_id))
+        raise HTTPException(
+            400,
+            "Этот username уже занят",
+        )
+
+    connection.execute(
+        """
+        UPDATE users
+        SET
+            username = ?,
+            display_name = ?,
+            bio = ?
+        WHERE id = ?
+        """,
+        (
+            username,
+            display_name,
+            bio,
+            user_id,
+        ),
+    )
 
     connection.commit()
     connection.close()
 
-    return {"ok": True}
+    return {
+        "ok": True,
+    }
 
 
 @app.post("/api/avatar")
-async def upload_avatar(request: Request, file: UploadFile = File(...)):
+async def upload_avatar(
+    request: Request,
+    file: UploadFile = File(...),
+):
     user_id = get_auth_user(request)
 
-    allowed = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+    allowed = {
+        "image/jpeg": ".jpg",
+        "image/png": ".png",
+        "image/webp": ".webp",
+    }
 
     if file.content_type not in allowed:
-        raise HTTPException(400, "Разрешены JPG, PNG и WEBP")
+        raise HTTPException(
+            400,
+            "Разрешены JPG, PNG и WEBP",
+        )
 
-    filename = f"avatar_{user_id}_{secrets.token_hex(8)}{allowed[file.content_type]}"
+    filename = (
+        "avatar_"
+        + str(user_id)
+        + "_"
+        + secrets.token_hex(8)
+        + allowed[file.content_type]
+    )
+
     path = UPLOAD_DIR / filename
 
     with open(path, "wb") as output:
-        shutil.copyfileobj(file.file, output)
+        shutil.copyfileobj(
+            file.file,
+            output,
+        )
 
     url = "/uploads/" + filename
 
     connection = db()
-    connection.execute("UPDATE users SET avatar_url = ? WHERE id = ?", (url, user_id))
+
+    connection.execute(
+        """
+        UPDATE users
+        SET avatar_url = ?
+        WHERE id = ?
+        """,
+        (
+            url,
+            user_id,
+        ),
+    )
+
     connection.commit()
     connection.close()
 
-    return {"ok": True, "avatar_url": url}
+    return {
+        "ok": True,
+        "avatar_url": url,
+    }
 
 
 # =========================================================
 # USERS
 # =========================================================
 
-@app.get("/api/users/{user_id}")
-def get_user_profile(user_id: int, request: Request):
-    current_user_id = get_auth_user(request)
+@app.get("/api/users")
+def search_users(
+    request: Request,
+    q: str = "",
+):
+    user_id = get_auth_user(request)
+
+    q = q.strip()
+
+    # Users appear only via search — empty query returns nothing
+    if not q:
+        return []
 
     connection = db()
 
-    user = connection.execute("""
-        SELECT id, username, display_name, bio, avatar_url, created_at, last_seen, is_bot, is_verified
-        FROM users WHERE id = ?
-    """, (user_id,)).fetchone()
+    users = connection.execute(
+        """
+        SELECT
+            id,
+            username,
+            display_name,
+            avatar_url,
+            last_seen,
+            is_bot,
+            is_verified
+        FROM users
+        WHERE
+            (
+                username LIKE ?
+                OR display_name LIKE ?
+            )
+            AND id != ?
+        ORDER BY username
+        LIMIT 50
+        """,
+        (
+            "%" + q + "%",
+            "%" + q + "%",
+            user_id,
+        ),
+    ).fetchall()
+
+    connection.close()
+
+    return [
+        dict(user)
+        for user in users
+    ]
+
+
+@app.get("/api/users/{user_id}")
+def get_user_profile(
+    user_id: int,
+    request: Request,
+):
+    get_auth_user(request)
+
+    connection = db()
+
+    user = connection.execute(
+        """
+        SELECT
+            id,
+            username,
+            display_name,
+            bio,
+            avatar_url,
+            created_at,
+            last_seen,
+            is_bot,
+            is_verified
+        FROM users
+        WHERE id = ?
+        """,
+        (user_id,),
+    ).fetchone()
 
     connection.close()
 
     if not user:
-        raise HTTPException(404, "Пользователь не найден")
+        raise HTTPException(
+            404,
+            "Пользователь не найден",
+        )
 
-    result = dict(user)
-
-    # Для ботов и Lumi НЕ показываем created_at и last_seen
-    if user["is_bot"] or user["username"] == "lumi":
-        result["created_at"] = None
-        result["last_seen"] = None
-        return result
-
-    # Для себя показываем всё
-    if user_id == current_user_id:
-        return result
-
-    # Проверяем настройки приватности
-    connection = db()
-    privacy = connection.execute(
-        "SELECT last_seen_visibility FROM privacy_settings WHERE user_id = ?", (user_id,)
-    ).fetchone()
-
-    has_dialog = connection.execute("""
-        SELECT 1 FROM messages
-        WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
-        LIMIT 1
-    """, (current_user_id, user_id, user_id, current_user_id)).fetchone()
-
-    connection.close()
-
-    visibility = privacy["last_seen_visibility"] if privacy else "all"
-
-    if visibility == "none":
-        result["last_seen"] = None
-    elif visibility == "contacts" and not has_dialog:
-        result["last_seen"] = None
-
-    # Никогда не показываем created_at другим пользователям
-    result["created_at"] = None
-
-    return result
+    return dict(user)
 
 
 # =========================================================
@@ -912,79 +1740,162 @@ def get_user_profile(user_id: int, request: Request):
 # =========================================================
 
 @app.get("/api/messages/{other_user_id}")
-def get_messages(other_user_id: int, request: Request):
+def get_messages(
+    other_user_id: int,
+    request: Request,
+):
     user_id = get_auth_user(request)
 
     connection = db()
 
-    messages = connection.execute("""
+    messages = connection.execute(
+        """
         SELECT
-            id, sender_id, receiver_id,
-            CASE WHEN deleted = 1 THEN '' ELSE text END AS text,
-            created_at, edited_at, deleted, is_read,
-            media_url, media_type, invite_id, invite_status
+            id,
+            sender_id,
+            receiver_id,
+            CASE
+                WHEN deleted = 1
+                THEN ''
+                ELSE text
+            END AS text,
+            created_at,
+            edited_at,
+            deleted,
+            is_read,
+            media_url,
+            media_type,
+            invite_id,
+            invite_status
         FROM messages
-        WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
+        WHERE
+            (
+                sender_id = ?
+                AND receiver_id = ?
+            )
+            OR
+            (
+                sender_id = ?
+                AND receiver_id = ?
+            )
         ORDER BY id ASC
-    """, (user_id, other_user_id, other_user_id, user_id)).fetchall()
+        """,
+        (
+            user_id,
+            other_user_id,
+            other_user_id,
+            user_id,
+        ),
+    ).fetchall()
 
-    # Помечаем сообщения как прочитанные
-    connection.execute("""
-        UPDATE messages SET is_read = 1
-        WHERE sender_id = ? AND receiver_id = ? AND is_read = 0
-    """, (other_user_id, user_id))
+    # При открытии чата сообщения собеседника
+    # становятся прочитанными.
+    connection.execute(
+        """
+        UPDATE messages
+        SET is_read = 1
+        WHERE
+            sender_id = ?
+            AND receiver_id = ?
+            AND is_read = 0
+        """,
+        (
+            other_user_id,
+            user_id,
+        ),
+    )
 
     connection.commit()
     connection.close()
 
-    return [dict(m) for m in messages]
+    return [
+        dict(message)
+        for message in messages
+    ]
 
 
 @app.post("/api/messages")
-async def send_message(data: MessageRequest, request: Request):
+async def send_message(
+    data: MessageRequest,
+    request: Request,
+):
     sender_id = get_auth_user(request)
 
     text = data.text.strip()
 
     if not text:
-        raise HTTPException(400, "Пустое сообщение")
+        raise HTTPException(
+            400,
+            "Пустое сообщение",
+        )
 
     if len(text) > 5000:
-        raise HTTPException(400, "Сообщение слишком длинное")
+        raise HTTPException(
+            400,
+            "Сообщение слишком длинное",
+        )
 
     if sender_id == data.receiver_id:
-        raise HTTPException(400, "Нельзя отправить сообщение самому себе")
+        raise HTTPException(
+            400,
+            "Нельзя отправить сообщение самому себе",
+        )
 
     connection = db()
 
     receiver = connection.execute(
-        "SELECT id, username, is_bot FROM users WHERE id = ?", (data.receiver_id,)
+        """
+        SELECT id, username, is_bot
+        FROM users
+        WHERE id = ?
+        """,
+        (data.receiver_id,),
     ).fetchone()
 
     if not receiver:
         connection.close()
-        raise HTTPException(404, "Пользователь не найден")
+
+        raise HTTPException(
+            404,
+            "Пользователь не найден",
+        )
 
     if receiver["is_bot"] or receiver["username"] == "lumi":
         connection.close()
         raise HTTPException(403, "Боту нельзя писать")
 
-    # Проверка на блокировку
-    blocked = connection.execute("""
+    blocked = connection.execute(
+        """
         SELECT 1 FROM blocks
-        WHERE (user_id = ? AND blocked_id = ?) OR (user_id = ? AND blocked_id = ?)
-    """, (sender_id, data.receiver_id, data.receiver_id, sender_id)).fetchone()
-
+        WHERE (user_id = ? AND blocked_id = ?)
+           OR (user_id = ? AND blocked_id = ?)
+        """,
+        (sender_id, data.receiver_id, data.receiver_id, sender_id),
+    ).fetchone()
     if blocked:
         connection.close()
         raise HTTPException(403, "Пользователь заблокирован")
 
     created = now()
 
-    cursor = connection.execute("""
-        INSERT INTO messages (sender_id, receiver_id, text, created_at)
+    cursor = connection.execute(
+        """
+        INSERT INTO messages
+        (
+            sender_id,
+            receiver_id,
+            text,
+            created_at
+        )
         VALUES (?, ?, ?, ?)
-    """, (sender_id, data.receiver_id, text, created))
+        """,
+        (
+            sender_id,
+            data.receiver_id,
+            text,
+            created,
+        ),
+    )
 
     message_id = cursor.lastrowid
 
@@ -1009,43 +1920,127 @@ async def send_message(data: MessageRequest, request: Request):
         "chat_kind": "private",
     }
 
-    payload = {"type": "message", "message": message}
+    payload = {
+        "type": "message",
+        "message": message,
+    }
 
     await send_ws(sender_id, payload)
     await send_ws(data.receiver_id, payload)
 
-    return {"ok": True, "message": message}
+    return {
+        "ok": True,
+        "message": message,
+    }
+
+
+@app.post("/api/messages/read/{other_user_id}")
+async def mark_messages_read(
+    other_user_id: int,
+    request: Request,
+):
+    user_id = get_auth_user(request)
+
+    connection = db()
+
+    connection.execute(
+        """
+        UPDATE messages
+        SET is_read = 1
+        WHERE
+            sender_id = ?
+            AND receiver_id = ?
+            AND is_read = 0
+        """,
+        (
+            other_user_id,
+            user_id,
+        ),
+    )
+
+    connection.commit()
+    connection.close()
+
+    await send_ws(
+        other_user_id,
+        {
+            "type": "messages_read",
+            "reader_id": user_id,
+        },
+    )
+
+    return {
+        "ok": True,
+    }
 
 
 @app.put("/api/messages/{message_id}")
-async def edit_message(message_id: int, data: EditMessageRequest, request: Request):
+async def edit_message(
+    message_id: int,
+    data: EditMessageRequest,
+    request: Request,
+):
     user_id = get_auth_user(request)
 
     text = data.text.strip()
 
     if not text:
-        raise HTTPException(400, "Пустое сообщение")
+        raise HTTPException(
+            400,
+            "Пустое сообщение",
+        )
 
     connection = db()
 
-    message = connection.execute("SELECT * FROM messages WHERE id = ?", (message_id,)).fetchone()
+    message = connection.execute(
+        """
+        SELECT *
+        FROM messages
+        WHERE id = ?
+        """,
+        (message_id,),
+    ).fetchone()
 
     if not message:
         connection.close()
-        raise HTTPException(404, "Сообщение не найдено")
+
+        raise HTTPException(
+            404,
+            "Сообщение не найдено",
+        )
 
     if message["sender_id"] != user_id:
         connection.close()
-        raise HTTPException(403, "Можно изменять только свои сообщения")
+
+        raise HTTPException(
+            403,
+            "Можно изменять только свои сообщения",
+        )
 
     if message["deleted"]:
         connection.close()
-        raise HTTPException(400, "Сообщение удалено")
+
+        raise HTTPException(
+            400,
+            "Сообщение удалено",
+        )
 
     edited = now()
 
-    connection.execute("UPDATE messages SET text = ?, edited_at = ? WHERE id = ?",
-                       (text, edited, message_id))
+    connection.execute(
+        """
+        UPDATE messages
+        SET
+            text = ?,
+            edited_at = ?
+        WHERE id = ?
+        """,
+        (
+            text,
+            edited,
+            message_id,
+        ),
+    )
 
     connection.commit()
     connection.close()
@@ -1060,31 +2055,71 @@ async def edit_message(message_id: int, data: EditMessageRequest, request: Reque
         "deleted": 0,
     }
 
-    payload = {"type": "message_updated", "message": updated}
+    payload = {
+        "type": "message_updated",
+        "message": updated,
+    }
 
-    await send_ws(message["sender_id"], payload)
-    await send_ws(message["receiver_id"], payload)
+    await send_ws(
+        message["sender_id"],
+        payload,
+    )
 
-    return {"ok": True, "message": updated}
+    await send_ws(
+        message["receiver_id"],
+        payload,
+    )
+
+    return {
+        "ok": True,
+        "message": updated,
+    }
 
 
 @app.delete("/api/messages/{message_id}")
-async def delete_message(message_id: int, request: Request):
+async def delete_message(
+    message_id: int,
+    request: Request,
+):
     user_id = get_auth_user(request)
 
     connection = db()
 
-    message = connection.execute("SELECT * FROM messages WHERE id = ?", (message_id,)).fetchone()
+    message = connection.execute(
+        """
+        SELECT *
+        FROM messages
+        WHERE id = ?
+        """,
+        (message_id,),
+    ).fetchone()
 
     if not message:
         connection.close()
-        raise HTTPException(404, "Сообщение не найдено")
+
+        raise HTTPException(
+            404,
+            "Сообщение не найдено",
+        )
 
     if message["sender_id"] != user_id:
         connection.close()
-        raise HTTPException(403, "Можно удалять только свои сообщения")
 
-    connection.execute("UPDATE messages SET deleted = 1, text = '' WHERE id = ?", (message_id,))
+        raise HTTPException(
+            403,
+            "Можно удалять только свои сообщения",
+        )
+
+    connection.execute(
+        """
+        UPDATE messages
+        SET
+            deleted = 1,
+            text = ''
+        WHERE id = ?
+        """,
+        (message_id,),
+    )
 
     connection.commit()
     connection.close()
@@ -1100,10 +2135,19 @@ async def delete_message(message_id: int, request: Request):
         },
     }
 
-    await send_ws(message["sender_id"], payload)
-    await send_ws(message["receiver_id"], payload)
+    await send_ws(
+        message["sender_id"],
+        payload,
+    )
 
-    return {"ok": True}
+    await send_ws(
+        message["receiver_id"],
+        payload,
+    )
+
+    return {
+        "ok": True,
+    }
 
 
 # =========================================================
@@ -1111,56 +2155,126 @@ async def delete_message(message_id: int, request: Request):
 # =========================================================
 
 @app.post("/api/messages/{message_id}/favorite")
-def favorite_message(message_id: int, request: Request):
+def favorite_message(
+    message_id: int,
+    request: Request,
+):
     user_id = get_auth_user(request)
 
     connection = db()
 
-    message = connection.execute("""
-        SELECT id FROM messages
-        WHERE id = ? AND (sender_id = ? OR receiver_id = ?)
-    """, (message_id, user_id, user_id)).fetchone()
+    message = connection.execute(
+        """
+        SELECT id
+        FROM messages
+        WHERE id = ?
+          AND (
+              sender_id = ?
+              OR receiver_id = ?
+          )
+        """,
+        (
+            message_id,
+            user_id,
+            user_id,
+        ),
+    ).fetchone()
 
     if not message:
         connection.close()
-        raise HTTPException(404, "Сообщение не найдено")
 
-    existing = connection.execute("""
-        SELECT id FROM favorites WHERE user_id = ? AND message_id = ?
-    """, (user_id, message_id)).fetchone()
+        raise HTTPException(
+            404,
+            "Сообщение не найдено",
+        )
+
+    existing = connection.execute(
+        """
+        SELECT id
+        FROM favorites
+        WHERE user_id = ?
+          AND message_id = ?
+        """,
+        (
+            user_id,
+            message_id,
+        ),
+    ).fetchone()
 
     if existing:
-        connection.execute("DELETE FROM favorites WHERE user_id = ? AND message_id = ?",
-                           (user_id, message_id))
+        connection.execute(
+            """
+            DELETE FROM favorites
+            WHERE user_id = ?
+              AND message_id = ?
+            """,
+            (
+                user_id,
+                message_id,
+            ),
+        )
+
         favorite = False
+
     else:
-        connection.execute("INSERT INTO favorites (user_id, message_id) VALUES (?, ?)",
-                           (user_id, message_id))
+        connection.execute(
+            """
+            INSERT INTO favorites
+            (
+                user_id,
+                message_id
+            )
+            VALUES (?, ?)
+            """,
+            (
+                user_id,
+                message_id,
+            ),
+        )
+
         favorite = True
 
     connection.commit()
     connection.close()
 
-    return {"favorite": favorite}
+    return {
+        "favorite": favorite,
+    }
 
 
 @app.get("/api/favorites")
-def get_favorites(request: Request):
+def get_favorites(
+    request: Request,
+):
     user_id = get_auth_user(request)
 
     connection = db()
 
-    rows = connection.execute("""
-        SELECT m.id, m.sender_id, m.receiver_id, m.text, m.created_at, m.edited_at, m.deleted
+    rows = connection.execute(
+        """
+        SELECT
+            m.id,
+            m.sender_id,
+            m.receiver_id,
+            m.text,
+            m.created_at,
+            m.edited_at,
+            m.deleted
         FROM favorites f
-        JOIN messages m ON m.id = f.message_id
+        JOIN messages m
+            ON m.id = f.message_id
         WHERE f.user_id = ?
         ORDER BY f.id DESC
-    """, (user_id,)).fetchall()
+        """,
+        (user_id,),
+    ).fetchall()
 
     connection.close()
 
-    return [dict(row) for row in rows]
+    return [
+        dict(row)
+        for row in rows
+    ]
 
 
 # =========================================================
@@ -1173,50 +2287,151 @@ def feed(request: Request):
 
     connection = db()
 
-    posts = connection.execute("""
+    posts = connection.execute(
+        """
         SELECT
-            p.id, p.author_id, p.text, p.media_url, p.media_type, p.created_at,
-            u.username, u.display_name, u.avatar_url,
-            (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) AS likes,
-            (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count
+            p.id,
+            p.author_id,
+            p.text,
+            p.media_url,
+            p.media_type,
+            p.created_at,
+            u.username,
+            u.display_name,
+            u.avatar_url,
+            (
+                SELECT COUNT(*)
+                FROM post_likes
+                WHERE post_id = p.id
+            ) AS likes,
+            (
+                SELECT COUNT(*)
+                FROM comments
+                WHERE post_id = p.id
+            ) AS comments_count
         FROM posts p
-        JOIN users u ON u.id = p.author_id
+        JOIN users u
+            ON u.id = p.author_id
         ORDER BY p.id DESC
         LIMIT 100
-    """).fetchall()
+        """
+    ).fetchall()
 
     connection.close()
 
-    return [dict(post) for post in posts]
+    return [
+        dict(post)
+        for post in posts
+    ]
+
+
+@app.get("/api/posts/{post_id}")
+def get_post(
+    post_id: int,
+    request: Request,
+):
+    get_auth_user(request)
+
+    connection = db()
+
+    post = connection.execute(
+        """
+        SELECT
+            p.id,
+            p.author_id,
+            p.text,
+            p.media_url,
+            p.media_type,
+            p.created_at,
+            u.username,
+            u.display_name,
+            u.avatar_url,
+            (
+                SELECT COUNT(*)
+                FROM post_likes
+                WHERE post_id = p.id
+            ) AS likes,
+            (
+                SELECT COUNT(*)
+                FROM comments
+                WHERE post_id = p.id
+            ) AS comments_count
+        FROM posts p
+        JOIN users u
+            ON u.id = p.author_id
+        WHERE p.id = ?
+        """,
+        (post_id,),
+    ).fetchone()
+
+    connection.close()
+
+    if not post:
+        raise HTTPException(
+            404,
+            "Пост не найден",
+        )
+
+    return dict(post)
 
 
 @app.post("/api/posts")
-def create_post(data: PostRequest, request: Request):
+def create_post(
+    data: PostRequest,
+    request: Request,
+):
     user_id = get_auth_user(request)
 
     text = data.text.strip()
 
     if not text:
-        raise HTTPException(400, "Напиши текст поста")
+        raise HTTPException(
+            400,
+            "Напиши текст поста",
+        )
 
     if len(text) > 5000:
-        raise HTTPException(400, "Пост слишком длинный")
+        raise HTTPException(
+            400,
+            "Пост слишком длинный",
+        )
 
     connection = db()
 
-    cursor = connection.execute("INSERT INTO posts (author_id, text, created_at) VALUES (?, ?, ?)",
-                                (user_id, text, now()))
+    cursor = connection.execute(
+        """
+        INSERT INTO posts
+        (
+            author_id,
+            text,
+            created_at
+        )
+        VALUES (?, ?, ?)
+        """,
+        (
+            user_id,
+            text,
+            now(),
+        ),
+    )
 
     post_id = cursor.lastrowid
 
     connection.commit()
     connection.close()
 
-    return {"ok": True, "id": post_id}
+    return {
+        "ok": True,
+        "id": post_id,
+    }
 
 
 @app.post("/api/posts/media")
-async def create_media_post(request: Request, text: str = "", file: UploadFile = File(...)):
+async def create_media_post(
+    request: Request,
+    text: str = "",
+    file: UploadFile = File(...),
+):
     user_id = get_auth_user(request)
 
     allowed = {
@@ -1229,59 +2444,139 @@ async def create_media_post(request: Request, text: str = "", file: UploadFile =
     }
 
     if file.content_type not in allowed:
-        raise HTTPException(400, "Формат файла не поддерживается")
+        raise HTTPException(
+            400,
+            "Формат файла не поддерживается",
+        )
 
-    extension, media_type = allowed[file.content_type]
+    extension, media_type = allowed[
+        file.content_type
+    ]
 
-    filename = f"post_{user_id}_{secrets.token_hex(10)}{extension}"
+    filename = (
+        "post_"
+        + str(user_id)
+        + "_"
+        + secrets.token_hex(10)
+        + extension
+    )
+
     path = UPLOAD_DIR / filename
 
     with open(path, "wb") as output:
-        shutil.copyfileobj(file.file, output)
+        shutil.copyfileobj(
+            file.file,
+            output,
+        )
 
     url = "/uploads/" + filename
 
     connection = db()
 
-    cursor = connection.execute("""
-        INSERT INTO posts (author_id, text, media_url, media_type, created_at)
+    cursor = connection.execute(
+        """
+        INSERT INTO posts
+        (
+            author_id,
+            text,
+            media_url,
+            media_type,
+            created_at
+        )
         VALUES (?, ?, ?, ?, ?)
-    """, (user_id, text.strip(), url, media_type, now()))
+        """,
+        (
+            user_id,
+            text.strip(),
+            url,
+            media_type,
+            now(),
+        ),
+    )
 
     post_id = cursor.lastrowid
 
     connection.commit()
     connection.close()
 
-    return {"ok": True, "id": post_id, "media_url": url}
+    return {
+        "ok": True,
+        "id": post_id,
+        "media_url": url,
+    }
 
 
 @app.post("/api/posts/{post_id}/like")
-def like_post(post_id: int, request: Request):
+def like_post(
+    post_id: int,
+    request: Request,
+):
     user_id = get_auth_user(request)
 
     connection = db()
 
     existing = connection.execute(
-        "SELECT id FROM post_likes WHERE post_id = ? AND user_id = ?", (post_id, user_id)
+        """
+        SELECT id
+        FROM post_likes
+        WHERE post_id = ?
+          AND user_id = ?
+        """,
+        (
+            post_id,
+            user_id,
+        ),
     ).fetchone()
 
     if existing:
-        connection.execute("DELETE FROM post_likes WHERE post_id = ? AND user_id = ?",
-                           (post_id, user_id))
+        connection.execute(
+            """
+            DELETE FROM post_likes
+            WHERE post_id = ?
+              AND user_id = ?
+            """,
+            (
+                post_id,
+                user_id,
+            ),
+        )
+
         liked = False
+
     else:
-        connection.execute("INSERT INTO post_likes (post_id, user_id) VALUES (?, ?)",
-                           (post_id, user_id))
+        connection.execute(
+            """
+            INSERT INTO post_likes
+            (
+                post_id,
+                user_id
+            )
+            VALUES (?, ?)
+            """,
+            (
+                post_id,
+                user_id,
+            ),
+        )
+
         liked = True
 
-    count = connection.execute("SELECT COUNT(*) FROM post_likes WHERE post_id = ?",
-                               (post_id,)).fetchone()[0]
+    count = connection.execute(
+        """
+        SELECT COUNT(*)
+        FROM post_likes
+        WHERE post_id = ?
+        """,
+        (post_id,),
+    ).fetchone()[0]
 
     connection.commit()
     connection.close()
 
-    return {"liked": liked, "likes": count}
+    return {
+        "liked": liked,
+        "likes": count,
+    }
 
 
 # =========================================================
@@ -1289,124 +2584,272 @@ def like_post(post_id: int, request: Request):
 # =========================================================
 
 @app.get("/api/posts/{post_id}/comments")
-def get_comments(post_id: int, request: Request):
+def get_comments(
+    post_id: int,
+    request: Request,
+):
     get_auth_user(request)
 
     connection = db()
 
-    comments = connection.execute("""
+    comments = connection.execute(
+        """
         SELECT
-            c.id, c.post_id, c.user_id, c.parent_id, c.text, c.created_at,
-            u.username, u.display_name, u.avatar_url,
+            c.id,
+            c.post_id,
+            c.user_id,
+            c.parent_id,
+            c.text,
+            c.created_at,
+            u.username,
+            u.display_name,
+            u.avatar_url,
             puser.username AS reply_to_username
         FROM comments c
-        JOIN users u ON u.id = c.user_id
-        LEFT JOIN comments parent ON parent.id = c.parent_id
-        LEFT JOIN users puser ON puser.id = parent.user_id
+        JOIN users u
+            ON u.id = c.user_id
+        LEFT JOIN comments parent
+            ON parent.id = c.parent_id
+        LEFT JOIN users puser
+            ON puser.id = parent.user_id
         WHERE c.post_id = ?
         ORDER BY c.id ASC
-    """, (post_id,)).fetchall()
+        """,
+        (post_id,),
+    ).fetchall()
 
     connection.close()
 
-    return [dict(comment) for comment in comments]
+    return [
+        dict(comment)
+        for comment in comments
+    ]
 
 
 @app.post("/api/posts/{post_id}/comments")
-def create_comment(post_id: int, data: CommentRequest, request: Request):
+def create_comment(
+    post_id: int,
+    data: CommentRequest,
+    request: Request,
+):
     user_id = get_auth_user(request)
 
     text = data.text.strip()
 
     if not text:
-        raise HTTPException(400, "Пустой комментарий")
+        raise HTTPException(
+            400,
+            "Пустой комментарий",
+        )
 
     connection = db()
 
-    post = connection.execute("SELECT id FROM posts WHERE id = ?", (post_id,)).fetchone()
+    post = connection.execute(
+        """
+        SELECT id
+        FROM posts
+        WHERE id = ?
+        """,
+        (post_id,),
+    ).fetchone()
 
     if not post:
         connection.close()
-        raise HTTPException(404, "Пост не найден")
+
+        raise HTTPException(
+            404,
+            "Пост не найден",
+        )
 
     if data.parent_id:
         parent = connection.execute(
-            "SELECT id FROM comments WHERE id = ? AND post_id = ?", (data.parent_id, post_id)
+            """
+            SELECT id
+            FROM comments
+            WHERE id = ?
+              AND post_id = ?
+            """,
+            (
+                data.parent_id,
+                post_id,
+            ),
         ).fetchone()
 
         if not parent:
             connection.close()
-            raise HTTPException(400, "Комментарий для ответа не найден")
 
-    cursor = connection.execute("""
-        INSERT INTO comments (post_id, user_id, parent_id, text, created_at)
+            raise HTTPException(
+                400,
+                "Комментарий для ответа не найден",
+            )
+
+    cursor = connection.execute(
+        """
+        INSERT INTO comments
+        (
+            post_id,
+            user_id,
+            parent_id,
+            text,
+            created_at
+        )
         VALUES (?, ?, ?, ?, ?)
-    """, (post_id, user_id, data.parent_id, text, now()))
+        """,
+        (
+            post_id,
+            user_id,
+            data.parent_id,
+            text,
+            now(),
+        ),
+    )
 
     comment_id = cursor.lastrowid
 
     connection.commit()
     connection.close()
 
-    return {"ok": True, "id": comment_id}
+    return {
+        "ok": True,
+        "id": comment_id,
+    }
 
 
 @app.delete("/api/comments/{comment_id}")
-def delete_comment(comment_id: int, request: Request):
+def delete_comment(
+    comment_id: int,
+    request: Request,
+):
     user_id = get_auth_user(request)
 
     connection = db()
 
-    comment = connection.execute("SELECT * FROM comments WHERE id = ?", (comment_id,)).fetchone()
+    comment = connection.execute(
+        """
+        SELECT *
+        FROM comments
+        WHERE id = ?
+        """,
+        (comment_id,),
+    ).fetchone()
 
     if not comment:
         connection.close()
-        raise HTTPException(404, "Комментарий не найден")
+
+        raise HTTPException(
+            404,
+            "Комментарий не найден",
+        )
 
     if comment["user_id"] != user_id:
         connection.close()
-        raise HTTPException(403, "Можно удалять только свои комментарии")
 
-    connection.execute("DELETE FROM comments WHERE id = ? OR parent_id = ?", (comment_id, comment_id))
+        raise HTTPException(
+            403,
+            "Можно удалять только свои комментарии",
+        )
+
+    connection.execute(
+        """
+        DELETE FROM comments
+        WHERE id = ?
+           OR parent_id = ?
+        """,
+        (
+            comment_id,
+            comment_id,
+        ),
+    )
 
     connection.commit()
     connection.close()
 
-    return {"ok": True}
+    return {
+        "ok": True,
+    }
 
+
+# =========================================================
+# DELETE POST
+# =========================================================
 
 @app.delete("/api/posts/{post_id}")
-def delete_post(post_id: int, request: Request):
+def delete_post(
+    post_id: int,
+    request: Request,
+):
     user_id = get_auth_user(request)
 
     connection = db()
 
-    post = connection.execute("SELECT * FROM posts WHERE id = ?", (post_id,)).fetchone()
+    post = connection.execute(
+        """
+        SELECT *
+        FROM posts
+        WHERE id = ?
+        """,
+        (post_id,),
+    ).fetchone()
 
     if not post:
         connection.close()
-        raise HTTPException(404, "Пост не найден")
+
+        raise HTTPException(
+            404,
+            "Пост не найден",
+        )
 
     if post["author_id"] != user_id:
         connection.close()
-        raise HTTPException(403, "Это не твой пост")
 
-    connection.execute("DELETE FROM comments WHERE post_id = ?", (post_id,))
-    connection.execute("DELETE FROM post_likes WHERE post_id = ?", (post_id,))
-    connection.execute("DELETE FROM posts WHERE id = ?", (post_id,))
+        raise HTTPException(
+            403,
+            "Это не твой пост",
+        )
+
+    connection.execute(
+        """
+        DELETE FROM comments
+        WHERE post_id = ?
+        """,
+        (post_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM post_likes
+        WHERE post_id = ?
+        """,
+        (post_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM posts
+        WHERE id = ?
+        """,
+        (post_id,),
+    )
 
     connection.commit()
     connection.close()
 
     if post["media_url"]:
-        path = UPLOAD_DIR / Path(post["media_url"]).name
+        filename = Path(
+            post["media_url"]
+        ).name
+
+        path = UPLOAD_DIR / filename
+
         if path.exists():
             try:
                 path.unlink()
             except Exception:
                 pass
 
-    return {"ok": True}
+    return {
+        "ok": True,
+    }
 
 
 # =========================================================
@@ -1414,18 +2857,37 @@ def delete_post(post_id: int, request: Request):
 # =========================================================
 
 @app.get("/api/settings")
-def get_settings(request: Request):
+def get_settings(
+    request: Request,
+):
     user_id = get_auth_user(request)
 
     connection = db()
 
-    connection.execute("INSERT OR IGNORE INTO settings (user_id) VALUES (?)", (user_id,))
+    connection.execute(
+        """
+        INSERT OR IGNORE INTO settings
+        (user_id)
+        VALUES (?)
+        """,
+        (user_id,),
+    )
+
     connection.commit()
 
-    settings = connection.execute("""
-        SELECT language, theme, notifications, show_online, show_last_seen
-        FROM settings WHERE user_id = ?
-    """, (user_id,)).fetchone()
+    settings = connection.execute(
+        """
+        SELECT
+            language,
+            theme,
+            notifications,
+            show_online,
+            show_last_seen
+        FROM settings
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    ).fetchone()
 
     connection.close()
 
@@ -1433,100 +2895,64 @@ def get_settings(request: Request):
 
 
 @app.put("/api/settings")
-def update_settings(data: SettingsRequest, request: Request):
+def update_settings(
+    data: SettingsRequest,
+    request: Request,
+):
     user_id = get_auth_user(request)
 
-    if data.language not in {"ru", "en", "be", "kk"}:
-        raise HTTPException(400, "Язык не поддерживается")
+    if data.language not in {
+        "ru",
+        "en",
+        "be",
+        "kk",
+    }:
+        raise HTTPException(
+            400,
+            "Язык не поддерживается",
+        )
 
-    if data.theme not in {"dark", "light", "blue"}:
-        raise HTTPException(400, "Тема не поддерживается")
+    if data.theme not in {
+        "dark",
+        "light",
+        "blue",
+    }:
+        raise HTTPException(
+            400,
+            "Тема не поддерживается",
+        )
 
     connection = db()
 
-    connection.execute("""
+    connection.execute(
+        """
         INSERT OR REPLACE INTO settings
-        (user_id, language, theme, notifications, show_online, show_last_seen)
+        (
+            user_id,
+            language,
+            theme,
+            notifications,
+            show_online,
+            show_last_seen
+        )
         VALUES (?, ?, ?, ?, ?, ?)
-    """, (user_id, data.language, data.theme, int(data.notifications),
-          int(data.show_online), int(data.show_last_seen)))
+        """,
+        (
+            user_id,
+            data.language,
+            data.theme,
+            int(data.notifications),
+            int(data.show_online),
+            int(data.show_last_seen),
+        ),
+    )
 
     connection.commit()
     connection.close()
 
-    return {"ok": True}
-
-
-# =========================================================
-# PRIVACY SETTINGS
-# =========================================================
-
-@app.get("/api/privacy")
-def get_privacy_settings(request: Request):
-    user_id = get_auth_user(request)
-
-    connection = db()
-
-    connection.execute("INSERT OR IGNORE INTO privacy_settings (user_id) VALUES (?)", (user_id,))
-    connection.commit()
-
-    settings = connection.execute("""
-        SELECT phone_visibility, avatar_visibility, last_seen_visibility
-        FROM privacy_settings WHERE user_id = ?
-    """, (user_id,)).fetchone()
-
-    connection.close()
-
-    return dict(settings)
-
-
-@app.put("/api/privacy")
-def update_privacy_settings(data: PrivacySettingsRequest, request: Request):
-    user_id = get_auth_user(request)
-
-    valid = {"all", "contacts", "none"}
-
-    if data.phone_visibility not in valid:
-        raise HTTPException(400, "Некорректное значение")
-
-    if data.avatar_visibility not in valid:
-        raise HTTPException(400, "Некорректное значение")
-
-    if data.last_seen_visibility not in valid:
-        raise HTTPException(400, "Некорректное значение")
-
-    connection = db()
-
-    connection.execute("""
-        INSERT OR REPLACE INTO privacy_settings
-        (user_id, phone_visibility, avatar_visibility, last_seen_visibility)
-        VALUES (?, ?, ?, ?)
-    """, (user_id, data.phone_visibility, data.avatar_visibility, data.last_seen_visibility))
-
-    connection.commit()
-    connection.close()
-
-    return {"ok": True}
-
-
-# =========================================================
-# CLEAR ALL CHATS
-# =========================================================
-
-@app.delete("/api/chats/clear")
-def clear_all_chats(request: Request):
-    user_id = get_auth_user(request)
-
-    connection = db()
-
-    connection.execute("DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?", (user_id, user_id))
-    connection.execute("DELETE FROM chat_settings WHERE user_id = ?", (user_id,))
-    connection.execute("DELETE FROM favorites WHERE user_id = ?", (user_id,))
-
-    connection.commit()
-    connection.close()
-
-    return {"ok": True}
+    return {
+        "ok": True,
+    }
 
 
 # =========================================================
@@ -1534,76 +2960,231 @@ def clear_all_chats(request: Request):
 # =========================================================
 
 @app.post("/api/groups")
-def create_group(data: GroupRequest, request: Request):
+def create_group(
+    data: GroupRequest,
+    request: Request,
+):
     user_id = get_auth_user(request)
 
     name = data.name.strip()
 
     if not name:
-        raise HTTPException(400, "Название группы обязательно")
+        raise HTTPException(
+            400,
+            "Название группы обязательно",
+        )
 
     connection = db()
 
-    cursor = connection.execute("""
-        INSERT INTO groups (name, description, owner_id, created_at)
+    cursor = connection.execute(
+        """
+        INSERT INTO groups
+        (
+            name,
+            description,
+            owner_id,
+            created_at
+        )
         VALUES (?, ?, ?, ?)
-    """, (name, data.description.strip(), user_id, now()))
+        """,
+        (
+            name,
+            data.description.strip(),
+            user_id,
+            now(),
+        ),
+    )
 
     group_id = cursor.lastrowid
 
-    connection.execute("INSERT INTO group_members (group_id, user_id, joined_at) VALUES (?, ?, ?)",
-                       (group_id, user_id, now()))
+    connection.execute(
+        """
+        INSERT INTO group_members
+        (
+            group_id,
+            user_id,
+            joined_at
+        )
+        VALUES (?, ?, ?)
+        """,
+        (
+            group_id,
+            user_id,
+            now(),
+        ),
+    )
 
     connection.commit()
     connection.close()
 
-    return {"ok": True, "id": group_id}
+    return {
+        "ok": True,
+        "id": group_id,
+    }
 
 
 @app.get("/api/groups")
-def get_groups(request: Request):
+def get_groups(
+    request: Request,
+):
     user_id = get_auth_user(request)
 
     connection = db()
 
-    groups = connection.execute("""
-        SELECT g.id, g.name, g.description, g.owner_id, g.created_at
+    groups = connection.execute(
+        """
+        SELECT
+            g.id,
+            g.name,
+            g.description,
+            g.owner_id,
+            g.created_at
         FROM groups g
-        JOIN group_members gm ON gm.group_id = g.id
+        JOIN group_members gm
+            ON gm.group_id = g.id
         WHERE gm.user_id = ?
         ORDER BY g.id DESC
-    """, (user_id,)).fetchall()
+        """,
+        (user_id,),
+    ).fetchall()
 
     connection.close()
 
-    return [dict(group) for group in groups]
+    return [
+        dict(group)
+        for group in groups
+    ]
 
 
-@app.get("/api/groups/{group_id}/messages")
-def get_group_messages(group_id: int, request: Request):
+@app.post("/api/groups/{group_id}/invite")
+def invite_to_group(
+    group_id: int,
+    data: InviteRequest,
+    request: Request,
+):
     user_id = get_auth_user(request)
+    username = data.username.strip().lower()
+
+    if not username:
+        raise HTTPException(400, "Укажите username")
 
     connection = db()
 
+    group = connection.execute(
+        """
+        SELECT *
+        FROM groups
+        WHERE id = ?
+        """,
+        (group_id,),
+    ).fetchone()
+
+    if not group:
+        connection.close()
+        raise HTTPException(404, "Группа не найдена")
+
+    # Only members can invite (or only owner — keep simple: any member)
     member = connection.execute(
-        "SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?", (group_id, user_id)
+        """
+        SELECT 1
+        FROM group_members
+        WHERE group_id = ?
+          AND user_id = ?
+        """,
+        (group_id, user_id),
     ).fetchone()
 
     if not member:
         connection.close()
         raise HTTPException(403, "Вы не состоите в этой группе")
 
-    messages = connection.execute("""
+    target = connection.execute(
+        """
+        SELECT id
+        FROM users
+        WHERE username = ?
+        """,
+        (username,),
+    ).fetchone()
+
+    if not target:
+        connection.close()
+        raise HTTPException(404, "Пользователь не найден")
+
+    if target["id"] == user_id:
+        connection.close()
+        raise HTTPException(400, "Нельзя пригласить себя")
+
+    existing = connection.execute(
+        """
+        SELECT 1
+        FROM group_members
+        WHERE group_id = ?
+          AND user_id = ?
+        """,
+        (group_id, target["id"]),
+    ).fetchone()
+
+    if existing:
+        connection.close()
+        raise HTTPException(400, "Пользователь уже в группе")
+
+    connection.execute(
+        """
+        INSERT INTO group_members
+        (group_id, user_id, joined_at)
+        VALUES (?, ?, ?)
+        """,
+        (group_id, target["id"], now()),
+    )
+
+    connection.commit()
+    connection.close()
+
+    return {"ok": True}
+
+
+@app.get("/api/groups/{group_id}/messages")
+def get_group_messages(
+    group_id: int,
+    request: Request,
+):
+    user_id = get_auth_user(request)
+
+    connection = db()
+
+    member = connection.execute(
+        """
+        SELECT 1
+        FROM group_members
+        WHERE group_id = ?
+          AND user_id = ?
+        """,
+        (group_id, user_id),
+    ).fetchone()
+
+    if not member:
+        connection.close()
+        raise HTTPException(403, "Вы не состоите в этой группе")
+
+    messages = connection.execute(
+        """
         SELECT
-            m.id, m.group_id, m.sender_id,
+            m.id,
+            m.group_id,
+            m.sender_id,
             CASE WHEN m.deleted = 1 THEN '' ELSE m.text END AS text,
-            m.created_at, m.deleted,
-            u.username, u.display_name AS sender_name
+            m.created_at,
+            m.deleted,
+            u.username,
+            u.display_name AS sender_name
         FROM group_messages m
         JOIN users u ON u.id = m.sender_id
         WHERE m.group_id = ?
         ORDER BY m.id ASC
-    """, (group_id,)).fetchall()
+        """,
+        (group_id,),
+    ).fetchall()
 
     connection.close()
 
@@ -1611,9 +3192,12 @@ def get_group_messages(group_id: int, request: Request):
 
 
 @app.post("/api/groups/{group_id}/messages")
-async def send_group_message(group_id: int, data: GroupMessageRequest, request: Request):
+async def send_group_message(
+    group_id: int,
+    data: GroupMessageRequest,
+    request: Request,
+):
     user_id = get_auth_user(request)
-
     text = data.text.strip()
 
     if not text:
@@ -1625,7 +3209,13 @@ async def send_group_message(group_id: int, data: GroupMessageRequest, request: 
     connection = db()
 
     member = connection.execute(
-        "SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?", (group_id, user_id)
+        """
+        SELECT 1
+        FROM group_members
+        WHERE group_id = ?
+          AND user_id = ?
+        """,
+        (group_id, user_id),
     ).fetchone()
 
     if not member:
@@ -1634,20 +3224,30 @@ async def send_group_message(group_id: int, data: GroupMessageRequest, request: 
 
     created = now()
 
-    cursor = connection.execute("""
-        INSERT INTO group_messages (group_id, sender_id, text, created_at)
+    cursor = connection.execute(
+        """
+        INSERT INTO group_messages
+        (group_id, sender_id, text, created_at)
         VALUES (?, ?, ?, ?)
-    """, (group_id, user_id, text, created))
+        """,
+        (group_id, user_id, text, created),
+    )
 
     message_id = cursor.lastrowid
 
-    members = connection.execute("SELECT user_id FROM group_members WHERE group_id = ?",
-                                 (group_id,)).fetchall()
-
-    group_row = connection.execute("SELECT name FROM groups WHERE id = ?", (group_id,)).fetchone()
-
+    # Notify all members via WS
+    members = connection.execute(
+        """
+        SELECT user_id
+        FROM group_members
+        WHERE group_id = ?
+        """,
+        (group_id,),
+    ).fetchall()
+    group_row = connection.execute(
+        "SELECT name FROM groups WHERE id = ?", (group_id,)
+    ).fetchone()
     sender_info = user_public(connection, user_id)
-
     connection.commit()
     connection.close()
 
@@ -1664,7 +3264,10 @@ async def send_group_message(group_id: int, data: GroupMessageRequest, request: 
         "chat_kind": "group",
     }
 
-    payload = {"type": "group_message", "message": message}
+    payload = {
+        "type": "group_message",
+        "message": message,
+    }
 
     for row in members:
         await send_ws(row["user_id"], payload)
@@ -1672,102 +3275,47 @@ async def send_group_message(group_id: int, data: GroupMessageRequest, request: 
     return {"ok": True, "message": message}
 
 
-# =========================================================
-# CHANNELS
-# =========================================================
-
-@app.post("/api/channels")
-def create_channel(data: ChannelRequest, request: Request):
-    user_id = get_auth_user(request)
-
-    name = data.name.strip()
-    username = data.username.strip().lower()
-
-    if not name:
-        raise HTTPException(400, "Название канала обязательно")
-
-    if not valid_username(username):
-        raise HTTPException(400, "Некорректный username канала")
-
-    connection = db()
-
-    try:
-        cursor = connection.execute("""
-            INSERT INTO channels (name, username, description, owner_id, created_at)
-            VALUES (?, ?, ?, ?, ?)
-        """, (name, username, data.description.strip(), user_id, now()))
-
-        channel_id = cursor.lastrowid
-
-        connection.execute("""
-            INSERT INTO channel_subscribers (channel_id, user_id, created_at)
-            VALUES (?, ?, ?)
-        """, (channel_id, user_id, now()))
-
-        connection.commit()
-
-    except sqlite3.IntegrityError:
-        connection.rollback()
-        connection.close()
-        raise HTTPException(400, "Такой username канала уже существует")
-
-    connection.close()
-
-    return {"ok": True, "id": channel_id}
-
-
-@app.get("/api/channels")
-def get_channels(request: Request):
-    user_id = get_auth_user(request)
-
-    connection = db()
-
-    channels = connection.execute("""
-        SELECT c.id, c.name, c.username, c.description, c.owner_id, c.created_at
-        FROM channels c
-        JOIN channel_subscribers s ON s.channel_id = c.id
-        WHERE s.user_id = ?
-        ORDER BY c.id DESC
-    """, (user_id,)).fetchall()
-
-    connection.close()
-
-    result = []
-
-    for ch in channels:
-        item = dict(ch)
-        item["is_owner"] = item["owner_id"] == user_id
-        result.append(item)
-
-    return result
-
-
 @app.get("/api/channels/{channel_id}/messages")
-def get_channel_messages(channel_id: int, request: Request):
+def get_channel_messages(
+    channel_id: int,
+    request: Request,
+):
     user_id = get_auth_user(request)
 
     connection = db()
 
     sub = connection.execute(
-        "SELECT 1 FROM channel_subscribers WHERE channel_id = ? AND user_id = ?",
-        (channel_id, user_id)
+        """
+        SELECT 1
+        FROM channel_subscribers
+        WHERE channel_id = ?
+          AND user_id = ?
+        """,
+        (channel_id, user_id),
     ).fetchone()
 
     if not sub:
         connection.close()
         raise HTTPException(403, "Вы не подписаны на канал")
 
-    messages = connection.execute("""
+    messages = connection.execute(
+        """
         SELECT
-            m.id, m.channel_id, m.sender_id,
+            m.id,
+            m.channel_id,
+            m.sender_id,
             CASE WHEN m.deleted = 1 THEN '' ELSE m.text END AS text,
-            m.created_at, m.deleted,
-            u.username, u.display_name AS sender_name
+            m.created_at,
+            m.deleted,
+            u.username,
+            u.display_name AS sender_name
         FROM channel_messages m
         JOIN users u ON u.id = m.sender_id
         WHERE m.channel_id = ?
         ORDER BY m.id ASC
-    """, (channel_id,)).fetchall()
+        """,
+        (channel_id,),
+    ).fetchall()
 
     connection.close()
 
@@ -1775,9 +3323,12 @@ def get_channel_messages(channel_id: int, request: Request):
 
 
 @app.post("/api/channels/{channel_id}/messages")
-async def send_channel_message(channel_id: int, data: ChannelMessageRequest, request: Request):
+async def send_channel_message(
+    channel_id: int,
+    data: ChannelMessageRequest,
+    request: Request,
+):
     user_id = get_auth_user(request)
-
     text = data.text.strip()
 
     if not text:
@@ -1788,32 +3339,52 @@ async def send_channel_message(channel_id: int, data: ChannelMessageRequest, req
 
     connection = db()
 
-    channel = connection.execute("SELECT * FROM channels WHERE id = ?", (channel_id,)).fetchone()
+    channel = connection.execute(
+        """
+        SELECT *
+        FROM channels
+        WHERE id = ?
+        """,
+        (channel_id,),
+    ).fetchone()
 
     if not channel:
         connection.close()
         raise HTTPException(404, "Канал не найден")
 
+    # Only the owner (creator) can post in the channel
     if channel["owner_id"] != user_id:
         connection.close()
-        raise HTTPException(403, "В канал может писать только создатель")
+        raise HTTPException(
+            403,
+            "В канал может писать только создатель",
+        )
 
     created = now()
 
-    cursor = connection.execute("""
-        INSERT INTO channel_messages (channel_id, sender_id, text, created_at)
+    cursor = connection.execute(
+        """
+        INSERT INTO channel_messages
+        (channel_id, sender_id, text, created_at)
         VALUES (?, ?, ?, ?)
-    """, (channel_id, user_id, text, created))
+        """,
+        (channel_id, user_id, text, created),
+    )
 
     message_id = cursor.lastrowid
 
-    subscribers = connection.execute("SELECT user_id FROM channel_subscribers WHERE channel_id = ?",
-                                     (channel_id,)).fetchall()
-
-    ch_row = connection.execute("SELECT name FROM channels WHERE id = ?", (channel_id,)).fetchone()
-
+    subscribers = connection.execute(
+        """
+        SELECT user_id
+        FROM channel_subscribers
+        WHERE channel_id = ?
+        """,
+        (channel_id,),
+    ).fetchall()
+    ch_row = connection.execute(
+        "SELECT name FROM channels WHERE id = ?", (channel_id,)
+    ).fetchone()
     sender_info = user_public(connection, user_id)
-
     connection.commit()
     connection.close()
 
@@ -1830,7 +3401,10 @@ async def send_channel_message(channel_id: int, data: ChannelMessageRequest, req
         "chat_kind": "channel",
     }
 
-    payload = {"type": "channel_message", "message": message}
+    payload = {
+        "type": "channel_message",
+        "message": message,
+    }
 
     for row in subscribers:
         await send_ws(row["user_id"], payload)
@@ -1838,209 +3412,329 @@ async def send_channel_message(channel_id: int, data: ChannelMessageRequest, req
     return {"ok": True, "message": message}
 
 
-@app.post("/api/channels/{channel_id}/join")
-def join_channel(channel_id: int, request: Request):
+# =========================================================
+# CHANNELS
+# =========================================================
+
+@app.post("/api/channels")
+def create_channel(
+    data: ChannelRequest,
+    request: Request,
+):
+    user_id = get_auth_user(request)
+
+    name = data.name.strip()
+    username = data.username.strip().lower()
+
+    if not name:
+        raise HTTPException(
+            400,
+            "Название канала обязательно",
+        )
+
+    if not valid_username(username):
+        raise HTTPException(
+            400,
+            "Некорректный username канала",
+        )
+
+    connection = db()
+
+    try:
+        cursor = connection.execute(
+            """
+            INSERT INTO channels
+            (
+                name,
+                username,
+                description,
+                owner_id,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                name,
+                username,
+                data.description.strip(),
+                user_id,
+                now(),
+            ),
+        )
+
+        channel_id = cursor.lastrowid
+
+        connection.execute(
+            """
+            INSERT INTO channel_subscribers
+            (
+                channel_id,
+                user_id,
+                created_at
+            )
+            VALUES (?, ?, ?)
+            """,
+            (
+                channel_id,
+                user_id,
+                now(),
+            ),
+        )
+
+        connection.commit()
+
+    except sqlite3.IntegrityError:
+        connection.rollback()
+        connection.close()
+
+        raise HTTPException(
+            400,
+            "Такой username канала уже существует",
+        )
+
+    connection.close()
+
+    return {
+        "ok": True,
+        "id": channel_id,
+    }
+
+
+@app.get("/api/channels")
+def get_channels(
+    request: Request,
+):
     user_id = get_auth_user(request)
 
     connection = db()
 
-    channel = connection.execute("SELECT id FROM channels WHERE id = ?", (channel_id,)).fetchone()
+    channels = connection.execute(
+        """
+        SELECT
+            c.id,
+            c.name,
+            c.username,
+            c.description,
+            c.owner_id,
+            c.created_at
+        FROM channels c
+        JOIN channel_subscribers s
+            ON s.channel_id = c.id
+        WHERE s.user_id = ?
+        ORDER BY c.id DESC
+        """,
+        (user_id,),
+    ).fetchall()
+
+    connection.close()
+
+    result = []
+    for ch in channels:
+        item = dict(ch)
+        item["is_owner"] = item["owner_id"] == user_id
+        result.append(item)
+
+    return result
+
+
+@app.get("/api/channels/search")
+def search_channels(
+    request: Request,
+    q: str = "",
+):
+    user_id = get_auth_user(request)
+    q = q.strip()
+
+    if not q:
+        return []
+
+    connection = db()
+
+    rows = connection.execute(
+        """
+        SELECT
+            c.id,
+            c.name,
+            c.username,
+            c.description,
+            c.owner_id,
+            c.created_at,
+            CASE WHEN s.user_id IS NOT NULL THEN 1 ELSE 0 END AS joined
+        FROM channels c
+        LEFT JOIN channel_subscribers s
+            ON s.channel_id = c.id
+           AND s.user_id = ?
+        WHERE
+            c.name LIKE ?
+            OR c.username LIKE ?
+            OR c.description LIKE ?
+        ORDER BY c.name
+        LIMIT 30
+        """,
+        (
+            user_id,
+            "%" + q + "%",
+            "%" + q + "%",
+            "%" + q + "%",
+        ),
+    ).fetchall()
+
+    connection.close()
+
+    result = []
+    for row in rows:
+        item = dict(row)
+        item["is_owner"] = item["owner_id"] == user_id
+        item["joined"] = bool(item["joined"])
+        result.append(item)
+
+    return result
+
+
+@app.post("/api/channels/{channel_id}/join")
+def join_channel(
+    channel_id: int,
+    request: Request,
+):
+    user_id = get_auth_user(request)
+
+    connection = db()
+
+    channel = connection.execute(
+        "SELECT id FROM channels WHERE id = ?",
+        (channel_id,),
+    ).fetchone()
 
     if not channel:
         connection.close()
         raise HTTPException(404, "Канал не найден")
 
     existing = connection.execute(
-        "SELECT 1 FROM channel_subscribers WHERE channel_id = ? AND user_id = ?",
-        (channel_id, user_id)
+        """
+        SELECT 1 FROM channel_subscribers
+        WHERE channel_id = ? AND user_id = ?
+        """,
+        (channel_id, user_id),
     ).fetchone()
 
     if existing:
         connection.close()
         return {"ok": True, "joined": True}
 
-    connection.execute("INSERT INTO channel_subscribers (channel_id, user_id, created_at) VALUES (?, ?, ?)",
-                       (channel_id, user_id, now()))
-
+    connection.execute(
+        """
+        INSERT INTO channel_subscribers
+        (channel_id, user_id, created_at)
+        VALUES (?, ?, ?)
+        """,
+        (channel_id, user_id, now()),
+    )
     connection.commit()
     connection.close()
 
     return {"ok": True, "joined": True}
 
 
-@app.post("/api/channels/{channel_id}/leave")
-def leave_channel(channel_id: int, request: Request):
+@app.get("/api/search")
+def global_search(
+    request: Request,
+    q: str = "",
+):
+    """Unified search: users, channels, groups, communities."""
     user_id = get_auth_user(request)
+    q = q.strip()
 
+    if not q:
+        return {
+            "users": [],
+            "channels": [],
+            "groups": [],
+            "communities": [],
+        }
+
+    like = "%" + q + "%"
     connection = db()
 
-    connection.execute("DELETE FROM channel_subscribers WHERE channel_id = ? AND user_id = ?",
-                       (channel_id, user_id))
+    users = connection.execute(
+        """
+        SELECT id, username, display_name, avatar_url, last_seen, is_bot, is_verified
+        FROM users
+        WHERE (username LIKE ? OR display_name LIKE ?)
+          AND id != ?
+        ORDER BY username
+        LIMIT 20
+        """,
+        (like, like, user_id),
+    ).fetchall()
 
-    connection.execute("DELETE FROM channel_mutes WHERE channel_id = ? AND user_id = ?",
-                       (channel_id, user_id))
+    channels = connection.execute(
+        """
+        SELECT
+            c.id, c.name, c.username, c.description, c.owner_id,
+            CASE WHEN s.user_id IS NOT NULL THEN 1 ELSE 0 END AS joined
+        FROM channels c
+        LEFT JOIN channel_subscribers s
+            ON s.channel_id = c.id AND s.user_id = ?
+        WHERE c.name LIKE ? OR c.username LIKE ? OR c.description LIKE ?
+        ORDER BY c.name
+        LIMIT 20
+        """,
+        (user_id, like, like, like),
+    ).fetchall()
 
-    connection.commit()
+    groups = connection.execute(
+        """
+        SELECT g.id, g.name, g.description, g.owner_id
+        FROM groups g
+        JOIN group_members gm ON gm.group_id = g.id
+        WHERE gm.user_id = ?
+          AND (g.name LIKE ? OR g.description LIKE ?)
+        ORDER BY g.name
+        LIMIT 20
+        """,
+        (user_id, like, like),
+    ).fetchall()
+
+    communities = connection.execute(
+        """
+        SELECT c.id, c.name, c.description, c.owner_id
+        FROM communities c
+        JOIN community_members m ON m.community_id = c.id
+        WHERE m.user_id = ?
+          AND (c.name LIKE ? OR c.description LIKE ?)
+        ORDER BY c.name
+        LIMIT 20
+        """,
+        (user_id, like, like),
+    ).fetchall()
+
     connection.close()
 
-    return {"ok": True}
-
-
-@app.put("/api/channels/{channel_id}")
-def rename_channel(channel_id: int, data: RenameEntityRequest, request: Request):
-    user_id = get_auth_user(request)
-
-    name = data.name.strip()
-
-    if not name:
-        raise HTTPException(400, "Название обязательно")
-
-    connection = db()
-
-    ch = connection.execute("SELECT * FROM channels WHERE id = ?", (channel_id,)).fetchone()
-
-    if not ch:
-        connection.close()
-        raise HTTPException(404, "Канал не найден")
-
-    if ch["owner_id"] != user_id:
-        connection.close()
-        raise HTTPException(403, "Только создатель")
-
-    connection.execute("UPDATE channels SET name = ? WHERE id = ?", (name, channel_id))
-
-    connection.commit()
-    connection.close()
-
-    return {"ok": True}
-
-
-@app.post("/api/channels/{channel_id}/avatar")
-async def channel_avatar(channel_id: int, request: Request, file: UploadFile = File(...)):
-    user_id = get_auth_user(request)
-
-    connection = db()
-
-    ch = connection.execute("SELECT * FROM channels WHERE id = ?", (channel_id,)).fetchone()
-
-    if not ch or ch["owner_id"] != user_id:
-        connection.close()
-        raise HTTPException(403, "Только создатель")
-
-    connection.close()
-
-    allowed = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
-
-    if file.content_type not in allowed:
-        raise HTTPException(400, "Только изображения")
-
-    filename = f"ch_{channel_id}_{secrets.token_hex(8)}{allowed[file.content_type]}"
-    path = UPLOAD_DIR / filename
-
-    with open(path, "wb") as out:
-        shutil.copyfileobj(file.file, out)
-
-    url = "/uploads/" + filename
-
-    connection = db()
-    connection.execute("UPDATE channels SET avatar_url = ? WHERE id = ?", (url, channel_id))
-    connection.commit()
-    connection.close()
-
-    return {"ok": True, "avatar_url": url}
+    return {
+        "users": [dict(u) for u in users],
+        "channels": [
+            {
+                **dict(c),
+                "is_owner": c["owner_id"] == user_id,
+                "joined": bool(c["joined"]),
+            }
+            for c in channels
+        ],
+        "groups": [dict(g) for g in groups],
+        "communities": [dict(c) for c in communities],
+    }
 
 
 # =========================================================
-# GROUPS (additional endpoints)
-# =========================================================
-
-@app.post("/api/groups/{group_id}/leave")
-def leave_group(group_id: int, request: Request):
-    user_id = get_auth_user(request)
-
-    connection = db()
-
-    connection.execute("DELETE FROM group_members WHERE group_id = ? AND user_id = ?",
-                       (group_id, user_id))
-
-    connection.commit()
-    connection.close()
-
-    return {"ok": True}
-
-
-@app.put("/api/groups/{group_id}")
-def rename_group(group_id: int, data: RenameEntityRequest, request: Request):
-    user_id = get_auth_user(request)
-
-    name = data.name.strip()
-
-    if not name:
-        raise HTTPException(400, "Название обязательно")
-
-    connection = db()
-
-    g = connection.execute("SELECT * FROM groups WHERE id = ?", (group_id,)).fetchone()
-
-    if not g:
-        connection.close()
-        raise HTTPException(404, "Группа не найдена")
-
-    if g["owner_id"] != user_id:
-        connection.close()
-        raise HTTPException(403, "Только создатель")
-
-    connection.execute("UPDATE groups SET name = ? WHERE id = ?", (name, group_id))
-
-    connection.commit()
-    connection.close()
-
-    return {"ok": True}
-
-
-@app.post("/api/groups/{group_id}/avatar")
-async def group_avatar(group_id: int, request: Request, file: UploadFile = File(...)):
-    user_id = get_auth_user(request)
-
-    connection = db()
-
-    g = connection.execute("SELECT * FROM groups WHERE id = ?", (group_id,)).fetchone()
-
-    if not g or g["owner_id"] != user_id:
-        connection.close()
-        raise HTTPException(403, "Только создатель")
-
-    connection.close()
-
-    allowed = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
-
-    if file.content_type not in allowed:
-        raise HTTPException(400, "Только изображения")
-
-    filename = f"gr_{group_id}_{secrets.token_hex(8)}{allowed[file.content_type]}"
-    path = UPLOAD_DIR / filename
-
-    with open(path, "wb") as out:
-        shutil.copyfileobj(file.file, out)
-
-    url = "/uploads/" + filename
-
-    connection = db()
-    connection.execute("UPDATE groups SET avatar_url = ? WHERE id = ?", (url, group_id))
-    connection.commit()
-    connection.close()
-
-    return {"ok": True, "avatar_url": url}
-
-
-# =========================================================
-# COMMUNITIES
+# COMMUNITIES (сообщества: все пишут, внутри чаты)
 # =========================================================
 
 @app.post("/api/communities")
-def create_community(data: CommunityRequest, request: Request):
+def create_community(
+    data: CommunityRequest,
+    request: Request,
+):
     user_id = get_auth_user(request)
-
     name = data.name.strip()
 
     if not name:
@@ -2048,20 +3742,34 @@ def create_community(data: CommunityRequest, request: Request):
 
     connection = db()
 
-    cursor = connection.execute("""
-        INSERT INTO communities (name, description, owner_id, created_at)
+    cursor = connection.execute(
+        """
+        INSERT INTO communities
+        (name, description, owner_id, created_at)
         VALUES (?, ?, ?, ?)
-    """, (name, data.description.strip(), user_id, now()))
-
+        """,
+        (name, data.description.strip(), user_id, now()),
+    )
     community_id = cursor.lastrowid
 
-    connection.execute("INSERT INTO community_members (community_id, user_id, joined_at) VALUES (?, ?, ?)",
-                       (community_id, user_id, now()))
+    connection.execute(
+        """
+        INSERT INTO community_members
+        (community_id, user_id, joined_at)
+        VALUES (?, ?, ?)
+        """,
+        (community_id, user_id, now()),
+    )
 
-    connection.execute("""
-        INSERT INTO community_chats (community_id, name, description, created_at)
+    # Default general chat
+    connection.execute(
+        """
+        INSERT INTO community_chats
+        (community_id, name, description, created_at)
         VALUES (?, ?, ?, ?)
-    """, (community_id, "Общий", "Основной чат сообщества", now()))
+        """,
+        (community_id, "Общий", "Основной чат сообщества", now()),
+    )
 
     connection.commit()
     connection.close()
@@ -2074,58 +3782,135 @@ def get_communities(request: Request):
     user_id = get_auth_user(request)
 
     connection = db()
-
-    rows = connection.execute("""
-        SELECT c.id, c.name, c.description, c.owner_id, c.created_at
+    rows = connection.execute(
+        """
+        SELECT
+            c.id,
+            c.name,
+            c.description,
+            c.owner_id,
+            c.created_at
         FROM communities c
-        JOIN community_members m ON m.community_id = c.id
+        JOIN community_members m
+            ON m.community_id = c.id
         WHERE m.user_id = ?
         ORDER BY c.id DESC
-    """, (user_id,)).fetchall()
-
+        """,
+        (user_id,),
+    ).fetchall()
     connection.close()
 
     result = []
-
     for row in rows:
         item = dict(row)
         item["is_owner"] = item["owner_id"] == user_id
         result.append(item)
-
     return result
 
 
-@app.get("/api/communities/{community_id}/chats")
-def get_community_chats(community_id: int, request: Request):
+@app.post("/api/communities/{community_id}/invite")
+def invite_to_community(
+    community_id: int,
+    data: InviteRequest,
+    request: Request,
+):
     user_id = get_auth_user(request)
+    username = data.username.strip().lower()
+
+    if not username:
+        raise HTTPException(400, "Укажите username")
 
     connection = db()
 
     member = connection.execute(
-        "SELECT 1 FROM community_members WHERE community_id = ? AND user_id = ?",
-        (community_id, user_id)
+        """
+        SELECT 1 FROM community_members
+        WHERE community_id = ? AND user_id = ?
+        """,
+        (community_id, user_id),
     ).fetchone()
 
     if not member:
         connection.close()
         raise HTTPException(403, "Вы не состоите в этом сообществе")
 
-    chats = connection.execute("""
+    target = connection.execute(
+        "SELECT id FROM users WHERE username = ?",
+        (username,),
+    ).fetchone()
+
+    if not target:
+        connection.close()
+        raise HTTPException(404, "Пользователь не найден")
+
+    existing = connection.execute(
+        """
+        SELECT 1 FROM community_members
+        WHERE community_id = ? AND user_id = ?
+        """,
+        (community_id, target["id"]),
+    ).fetchone()
+
+    if existing:
+        connection.close()
+        raise HTTPException(400, "Пользователь уже в сообществе")
+
+    connection.execute(
+        """
+        INSERT INTO community_members
+        (community_id, user_id, joined_at)
+        VALUES (?, ?, ?)
+        """,
+        (community_id, target["id"], now()),
+    )
+    connection.commit()
+    connection.close()
+
+    return {"ok": True}
+
+
+@app.get("/api/communities/{community_id}/chats")
+def get_community_chats(
+    community_id: int,
+    request: Request,
+):
+    user_id = get_auth_user(request)
+
+    connection = db()
+
+    member = connection.execute(
+        """
+        SELECT 1 FROM community_members
+        WHERE community_id = ? AND user_id = ?
+        """,
+        (community_id, user_id),
+    ).fetchone()
+
+    if not member:
+        connection.close()
+        raise HTTPException(403, "Вы не состоите в этом сообществе")
+
+    chats = connection.execute(
+        """
         SELECT id, community_id, name, description, created_at
         FROM community_chats
         WHERE community_id = ?
         ORDER BY id ASC
-    """, (community_id,)).fetchall()
+        """,
+        (community_id,),
+    ).fetchall()
 
     connection.close()
-
     return [dict(c) for c in chats]
 
 
 @app.post("/api/communities/{community_id}/chats")
-def create_community_chat(community_id: int, data: CommunityChatRequest, request: Request):
+def create_community_chat(
+    community_id: int,
+    data: CommunityChatRequest,
+    request: Request,
+):
     user_id = get_auth_user(request)
-
     name = data.name.strip()
 
     if not name:
@@ -2134,21 +3919,26 @@ def create_community_chat(community_id: int, data: CommunityChatRequest, request
     connection = db()
 
     member = connection.execute(
-        "SELECT 1 FROM community_members WHERE community_id = ? AND user_id = ?",
-        (community_id, user_id)
+        """
+        SELECT 1 FROM community_members
+        WHERE community_id = ? AND user_id = ?
+        """,
+        (community_id, user_id),
     ).fetchone()
 
     if not member:
         connection.close()
         raise HTTPException(403, "Вы не состоите в этом сообществе")
 
-    cursor = connection.execute("""
-        INSERT INTO community_chats (community_id, name, description, created_at)
+    cursor = connection.execute(
+        """
+        INSERT INTO community_chats
+        (community_id, name, description, created_at)
         VALUES (?, ?, ?, ?)
-    """, (community_id, name, data.description.strip(), now()))
-
+        """,
+        (community_id, name, data.description.strip(), now()),
+    )
     chat_id = cursor.lastrowid
-
     connection.commit()
     connection.close()
 
@@ -2156,51 +3946,69 @@ def create_community_chat(community_id: int, data: CommunityChatRequest, request
 
 
 @app.get("/api/community-chats/{chat_id}/messages")
-def get_community_chat_messages(chat_id: int, request: Request):
+def get_community_chat_messages(
+    chat_id: int,
+    request: Request,
+):
     user_id = get_auth_user(request)
 
     connection = db()
 
-    chat = connection.execute("""
+    chat = connection.execute(
+        """
         SELECT cc.id, cc.community_id
         FROM community_chats cc
         WHERE cc.id = ?
-    """, (chat_id,)).fetchone()
+        """,
+        (chat_id,),
+    ).fetchone()
 
     if not chat:
         connection.close()
         raise HTTPException(404, "Чат не найден")
 
     member = connection.execute(
-        "SELECT 1 FROM community_members WHERE community_id = ? AND user_id = ?",
-        (chat["community_id"], user_id)
+        """
+        SELECT 1 FROM community_members
+        WHERE community_id = ? AND user_id = ?
+        """,
+        (chat["community_id"], user_id),
     ).fetchone()
 
     if not member:
         connection.close()
         raise HTTPException(403, "Нет доступа")
 
-    messages = connection.execute("""
+    messages = connection.execute(
+        """
         SELECT
-            m.id, m.chat_id, m.sender_id,
+            m.id,
+            m.chat_id,
+            m.sender_id,
             CASE WHEN m.deleted = 1 THEN '' ELSE m.text END AS text,
-            m.created_at, m.deleted,
-            u.username, u.display_name AS sender_name
+            m.created_at,
+            m.deleted,
+            u.username,
+            u.display_name AS sender_name
         FROM community_chat_messages m
         JOIN users u ON u.id = m.sender_id
         WHERE m.chat_id = ?
         ORDER BY m.id ASC
-    """, (chat_id,)).fetchall()
+        """,
+        (chat_id,),
+    ).fetchall()
 
     connection.close()
-
     return [dict(m) for m in messages]
 
 
 @app.post("/api/community-chats/{chat_id}/messages")
-async def send_community_chat_message(chat_id: int, data: GroupMessageRequest, request: Request):
+async def send_community_chat_message(
+    chat_id: int,
+    data: GroupMessageRequest,
+    request: Request,
+):
     user_id = get_auth_user(request)
-
     text = data.text.strip()
 
     if not text:
@@ -2211,19 +4019,25 @@ async def send_community_chat_message(chat_id: int, data: GroupMessageRequest, r
 
     connection = db()
 
-    chat = connection.execute("""
+    chat = connection.execute(
+        """
         SELECT cc.id, cc.community_id
         FROM community_chats cc
         WHERE cc.id = ?
-    """, (chat_id,)).fetchone()
+        """,
+        (chat_id,),
+    ).fetchone()
 
     if not chat:
         connection.close()
         raise HTTPException(404, "Чат не найден")
 
     member = connection.execute(
-        "SELECT 1 FROM community_members WHERE community_id = ? AND user_id = ?",
-        (chat["community_id"], user_id)
+        """
+        SELECT 1 FROM community_members
+        WHERE community_id = ? AND user_id = ?
+        """,
+        (chat["community_id"], user_id),
     ).fetchone()
 
     if not member:
@@ -2231,27 +4045,32 @@ async def send_community_chat_message(chat_id: int, data: GroupMessageRequest, r
         raise HTTPException(403, "Нет доступа")
 
     created = now()
-
-    cursor = connection.execute("""
-        INSERT INTO community_chat_messages (chat_id, sender_id, text, created_at)
+    cursor = connection.execute(
+        """
+        INSERT INTO community_chat_messages
+        (chat_id, sender_id, text, created_at)
         VALUES (?, ?, ?, ?)
-    """, (chat_id, user_id, text, created))
-
+        """,
+        (chat_id, user_id, text, created),
+    )
     message_id = cursor.lastrowid
 
     members = connection.execute(
-        "SELECT user_id FROM community_members WHERE community_id = ?",
-        (chat["community_id"],)
+        """
+        SELECT user_id FROM community_members
+        WHERE community_id = ?
+        """,
+        (chat["community_id"],),
     ).fetchall()
-
-    community = connection.execute("SELECT name FROM communities WHERE id = ?",
-                                   (chat["community_id"],)).fetchone()
-
-    chat_row = connection.execute("SELECT name FROM community_chats WHERE id = ?",
-                                  (chat_id,)).fetchone()
-
+    community = connection.execute(
+        "SELECT name FROM communities WHERE id = ?",
+        (chat["community_id"],),
+    ).fetchone()
+    chat_row = connection.execute(
+        "SELECT name FROM community_chats WHERE id = ?",
+        (chat_id,),
+    ).fetchone()
     sender_info = user_public(connection, user_id)
-
     connection.commit()
     connection.close()
 
@@ -2270,12 +4089,16 @@ async def send_community_chat_message(chat_id: int, data: GroupMessageRequest, r
         "chat_kind": "community",
     }
 
-    payload = {"type": "community_message", "message": message}
+    payload = {
+        "type": "community_message",
+        "message": message,
+    }
 
     for row in members:
         await send_ws(row["user_id"], payload)
 
     return {"ok": True, "message": message}
+
 
 
 # =========================================================
@@ -2286,35 +4109,33 @@ def get_lumi_id(connection=None):
     own = connection is None
     if own:
         connection = db()
-
-    row = connection.execute("SELECT id FROM users WHERE username = 'lumi'").fetchone()
-
+    row = connection.execute(
+        "SELECT id FROM users WHERE username = 'lumi'"
+    ).fetchone()
     if own:
         connection.close()
-
-    return row["id"] if row else None
+    if not row:
+        return None
+    return row["id"]
 
 
 def bot_send_message(to_user_id, text, invite_id=None, invite_status=None):
     lumi_id = get_lumi_id()
-
     if not lumi_id:
         return None
-
     connection = db()
-
     created = now()
-
-    cursor = connection.execute("""
-        INSERT INTO messages (sender_id, receiver_id, text, created_at, invite_id, invite_status)
+    cursor = connection.execute(
+        """
+        INSERT INTO messages
+        (sender_id, receiver_id, text, created_at, invite_id, invite_status)
         VALUES (?, ?, ?, ?, ?, ?)
-    """, (lumi_id, to_user_id, text, created, invite_id, invite_status))
-
+        """,
+        (lumi_id, to_user_id, text, created, invite_id, invite_status),
+    )
     mid = cursor.lastrowid
-
     connection.commit()
     connection.close()
-
     return {
         "id": mid,
         "sender_id": lumi_id,
@@ -2334,37 +4155,37 @@ def bot_send_message(to_user_id, text, invite_id=None, invite_status=None):
 @app.post("/api/auth/request-code")
 async def request_login_code(data: RequestCodeRequest, request: Request):
     username = data.username.strip().lower()
-
     connection = db()
-
-    user = connection.execute("SELECT id, username FROM users WHERE username = ?",
-                              (username,)).fetchone()
-
+    user = connection.execute(
+        "SELECT id, username FROM users WHERE username = ?",
+        (username,),
+    ).fetchone()
     if not user:
         connection.close()
         raise HTTPException(404, "Пользователь не найден")
-
     if user["username"] == "lumi":
         connection.close()
         raise HTTPException(400, "Нельзя")
 
     import random
-
     code = f"{random.randint(100000, 999999)}"
-
     created = datetime.utcnow()
     expires = created + timedelta(minutes=10)
 
-    connection.execute("""
+    connection.execute(
+        """
         INSERT INTO login_codes (user_id, code, created_at, expires_at, used)
         VALUES (?, ?, ?, ?, 0)
-    """, (user["id"], code, created.isoformat(), expires.isoformat()))
-
+        """,
+        (user["id"], code, created.isoformat(), expires.isoformat()),
+    )
     connection.commit()
     connection.close()
 
-    msg = bot_send_message(user["id"], f"🔐 Ваш код для входа: {code}\nКод действует 10 минут.")
-
+    msg = bot_send_message(
+        user["id"],
+        f"🔐 Ваш код для входа: {code}\nКод действует 10 минут.",
+    )
     if msg:
         await send_ws(user["id"], {"type": "message", "message": msg})
 
@@ -2377,18 +4198,22 @@ def login_by_code(data: CodeLoginRequest, request: Request, response: Response):
     code = data.code.strip()
 
     connection = db()
-
-    user = connection.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
-
+    user = connection.execute(
+        "SELECT * FROM users WHERE username = ?",
+        (username,),
+    ).fetchone()
     if not user:
         connection.close()
         raise HTTPException(401, "Неверный username или код")
 
-    row = connection.execute("""
+    row = connection.execute(
+        """
         SELECT * FROM login_codes
         WHERE user_id = ? AND code = ? AND used = 0
         ORDER BY id DESC LIMIT 1
-    """, (user["id"], code)).fetchone()
+        """,
+        (user["id"], code),
+    ).fetchone()
 
     if not row:
         connection.close()
@@ -2403,15 +4228,16 @@ def login_by_code(data: CodeLoginRequest, request: Request, response: Response):
         connection.close()
         raise HTTPException(401, "Код истёк")
 
-    connection.execute("UPDATE login_codes SET used = 1 WHERE id = ?", (row["id"],))
-
+    connection.execute(
+        "UPDATE login_codes SET used = 1 WHERE id = ?",
+        (row["id"],),
+    )
     connection.commit()
     connection.close()
 
     browser_id = get_or_create_browser(request, response)
     token = create_session(user["id"], browser_id)
     set_auth_cookie(response, token)
-
     return {"ok": True, "token": token}
 
 
@@ -2422,84 +4248,91 @@ def login_by_code(data: CodeLoginRequest, request: Request, response: Response):
 @app.post("/api/users/{other_id}/block")
 def block_user(other_id: int, request: Request):
     user_id = get_auth_user(request)
-
     if other_id == user_id:
         raise HTTPException(400, "Нельзя заблокировать себя")
-
     connection = db()
-
-    connection.execute("INSERT OR IGNORE INTO blocks (user_id, blocked_id, created_at) VALUES (?, ?, ?)",
-                       (user_id, other_id, now()))
-
+    connection.execute(
+        """
+        INSERT OR IGNORE INTO blocks (user_id, blocked_id, created_at)
+        VALUES (?, ?, ?)
+        """,
+        (user_id, other_id, now()),
+    )
     connection.commit()
     connection.close()
-
     return {"ok": True}
 
 
 @app.delete("/api/users/{other_id}/block")
 def unblock_user(other_id: int, request: Request):
     user_id = get_auth_user(request)
-
     connection = db()
-
-    connection.execute("DELETE FROM blocks WHERE user_id = ? AND blocked_id = ?",
-                       (user_id, other_id))
-
+    connection.execute(
+        "DELETE FROM blocks WHERE user_id = ? AND blocked_id = ?",
+        (user_id, other_id),
+    )
     connection.commit()
     connection.close()
-
     return {"ok": True}
+
+
+@app.get("/api/blocks")
+def list_blocks(request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    rows = connection.execute(
+        "SELECT blocked_id FROM blocks WHERE user_id = ?",
+        (user_id,),
+    ).fetchall()
+    connection.close()
+    return [r["blocked_id"] for r in rows]
 
 
 @app.put("/api/contacts/{contact_id}/alias")
 def set_alias(contact_id: int, data: AliasRequest, request: Request):
     user_id = get_auth_user(request)
-
     alias = data.alias.strip()
-
     connection = db()
-
     if not alias:
-        connection.execute("DELETE FROM contact_aliases WHERE user_id = ? AND contact_id = ?",
-                           (user_id, contact_id))
+        connection.execute(
+            "DELETE FROM contact_aliases WHERE user_id = ? AND contact_id = ?",
+            (user_id, contact_id),
+        )
     else:
-        connection.execute("""
+        connection.execute(
+            """
             INSERT INTO contact_aliases (user_id, contact_id, alias)
             VALUES (?, ?, ?)
             ON CONFLICT(user_id, contact_id) DO UPDATE SET alias = excluded.alias
-        """, (user_id, contact_id, alias))
-
+            """,
+            (user_id, contact_id, alias),
+        )
     connection.commit()
     connection.close()
-
     return {"ok": True, "alias": alias}
 
 
 @app.get("/api/chats/{peer_id}/settings")
 def get_chat_settings(peer_id: int, request: Request):
     user_id = get_auth_user(request)
-
     connection = db()
-
-    row = connection.execute("""
+    row = connection.execute(
+        """
         SELECT wallpaper_url, wallpaper_blur, deleted_for_me
         FROM chat_settings
         WHERE user_id = ? AND peer_id = ?
-    """, (user_id, peer_id)).fetchone()
-
-    alias = connection.execute("""
-        SELECT alias FROM contact_aliases
-        WHERE user_id = ? AND contact_id = ?
-    """, (user_id, peer_id)).fetchone()
-
+        """,
+        (user_id, peer_id),
+    ).fetchone()
+    alias = connection.execute(
+        "SELECT alias FROM contact_aliases WHERE user_id = ? AND contact_id = ?",
+        (user_id, peer_id),
+    ).fetchone()
     blocked = connection.execute(
         "SELECT 1 FROM blocks WHERE user_id = ? AND blocked_id = ?",
-        (user_id, peer_id)
+        (user_id, peer_id),
     ).fetchone()
-
     connection.close()
-
     return {
         "wallpaper_url": row["wallpaper_url"] if row else None,
         "wallpaper_blur": bool(row["wallpaper_blur"]) if row else False,
@@ -2512,49 +4345,50 @@ def get_chat_settings(peer_id: int, request: Request):
 @app.put("/api/chats/{peer_id}/wallpaper")
 def set_wallpaper(peer_id: int, data: WallpaperRequest, request: Request):
     user_id = get_auth_user(request)
-
     connection = db()
-
-    connection.execute("""
+    connection.execute(
+        """
         INSERT INTO chat_settings (user_id, peer_id, wallpaper_url, wallpaper_blur)
         VALUES (?, ?, ?, ?)
         ON CONFLICT(user_id, peer_id) DO UPDATE SET
             wallpaper_url = excluded.wallpaper_url,
             wallpaper_blur = excluded.wallpaper_blur
-    """, (user_id, peer_id, data.wallpaper_url or None, int(data.wallpaper_blur)))
-
+        """,
+        (user_id, peer_id, data.wallpaper_url or None, int(data.wallpaper_blur)),
+    )
     connection.commit()
     connection.close()
-
     return {"ok": True}
 
 
 @app.delete("/api/chats/{peer_id}")
 def delete_chat(peer_id: int, request: Request, for_both: bool = False):
     user_id = get_auth_user(request)
-
     connection = db()
-
     if for_both:
-        connection.execute("""
+        connection.execute(
+            """
             DELETE FROM messages
-            WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
-        """, (user_id, peer_id, peer_id, user_id))
-
-        connection.execute("""
-            DELETE FROM chat_settings
-            WHERE (user_id = ? AND peer_id = ?) OR (user_id = ? AND peer_id = ?)
-        """, (user_id, peer_id, peer_id, user_id))
+            WHERE (sender_id = ? AND receiver_id = ?)
+               OR (sender_id = ? AND receiver_id = ?)
+            """,
+            (user_id, peer_id, peer_id, user_id),
+        )
+        connection.execute(
+            "DELETE FROM chat_settings WHERE (user_id = ? AND peer_id = ?) OR (user_id = ? AND peer_id = ?)",
+            (user_id, peer_id, peer_id, user_id),
+        )
     else:
-        connection.execute("""
+        connection.execute(
+            """
             INSERT INTO chat_settings (user_id, peer_id, deleted_for_me)
             VALUES (?, ?, 1)
             ON CONFLICT(user_id, peer_id) DO UPDATE SET deleted_for_me = 1
-        """, (user_id, peer_id))
-
+            """,
+            (user_id, peer_id),
+        )
     connection.commit()
     connection.close()
-
     return {"ok": True}
 
 
@@ -2563,25 +4397,31 @@ def delete_chat(peer_id: int, request: Request, for_both: bool = False):
 # =========================================================
 
 @app.post("/api/messages/media")
-async def send_message_media(request: Request, receiver_id: int, file: UploadFile = File(...),
-                             text: str = Form("")):
+async def send_message_media(
+    request: Request,
+    receiver_id: int,
+    file: UploadFile = File(...),
+    text: str = Form(""),
+):
     sender_id = get_auth_user(request)
 
     connection = db()
-
-    blocked = connection.execute("""
+    blocked = connection.execute(
+        """
         SELECT 1 FROM blocks
-        WHERE (user_id = ? AND blocked_id = ?) OR (user_id = ? AND blocked_id = ?)
-    """, (sender_id, receiver_id, receiver_id, sender_id)).fetchone()
-
-    peer = connection.execute("SELECT is_bot, username FROM users WHERE id = ?",
-                              (receiver_id,)).fetchone()
-
+        WHERE (user_id = ? AND blocked_id = ?)
+           OR (user_id = ? AND blocked_id = ?)
+        """,
+        (sender_id, receiver_id, receiver_id, sender_id),
+    ).fetchone()
+    peer = connection.execute(
+        "SELECT is_bot, username FROM users WHERE id = ?",
+        (receiver_id,),
+    ).fetchone()
     connection.close()
 
     if blocked:
         raise HTTPException(403, "Пользователь заблокирован")
-
     if peer and (peer["is_bot"] or peer["username"] == "lumi"):
         raise HTTPException(403, "Боту нельзя писать")
 
@@ -2591,44 +4431,41 @@ async def send_message_media(request: Request, receiver_id: int, file: UploadFil
 
     if ctype.startswith("image/") or ext in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
         media_type = "image"
-        ext = ".jpg"
+        if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+            ext = ".jpg"
     elif ctype.startswith("audio/") or ext in {".webm", ".ogg", ".mp3", ".m4a", ".wav", ".opus"}:
         media_type = "voice"
-        ext = ".webm"
+        if ext not in {".webm", ".ogg", ".mp3", ".m4a", ".wav", ".opus"}:
+            ext = ".webm"
     else:
         media_type = "file"
 
     filename = f"msg_{sender_id}_{secrets.token_hex(10)}{ext}"
     path = UPLOAD_DIR / filename
-
     data_bytes = await file.read()
-
     if not data_bytes:
         raise HTTPException(400, "Пустой файл")
-
     with open(path, "wb") as out:
         out.write(data_bytes)
-
     url = "/uploads/" + filename
 
     connection = db()
-
     created = now()
-
-    cursor = connection.execute("""
-        INSERT INTO messages (sender_id, receiver_id, text, created_at, media_url, media_type)
+    cursor = connection.execute(
+        """
+        INSERT INTO messages
+        (sender_id, receiver_id, text, created_at, media_url, media_type)
         VALUES (?, ?, ?, ?, ?, ?)
-    """, (sender_id, receiver_id, (text or "").strip(), created, url, media_type))
-
+        """,
+        (sender_id, receiver_id, (text or "").strip(), created, url, media_type),
+    )
     mid = cursor.lastrowid
-
     connection.commit()
     connection.close()
 
     connection = db()
     sender_info = user_public(connection, sender_id)
     connection.close()
-
     message = {
         "id": mid,
         "sender_id": sender_id,
@@ -2644,327 +4481,393 @@ async def send_message_media(request: Request, receiver_id: int, file: UploadFil
         "sender_name": sender_info.get("display_name") or sender_info.get("username"),
         "chat_kind": "private",
     }
-
     payload = {"type": "message", "message": message}
-
     await send_ws(sender_id, payload)
     await send_ws(receiver_id, payload)
-
     return {"ok": True, "message": message}
 
 
+# Block writing to bot in normal send - patch by wrapping is hard; add check via modifying send is done below through new endpoint usage
+# Intercept existing send_message: we'll add middleware-like check by redefining - actually edit send to check bot
+
 # =========================================================
-# INVITES
+# CHANNEL LEAVE / MUTE / RENAME / AVATAR
 # =========================================================
 
-@app.post("/api/groups/{group_id}/invite-bot")
-async def invite_group_via_bot(group_id: int, data: InviteRequest, request: Request):
+@app.post("/api/channels/{channel_id}/leave")
+def leave_channel(channel_id: int, request: Request):
     user_id = get_auth_user(request)
-
-    username = data.username.strip().lower()
-
     connection = db()
-
-    group = connection.execute("SELECT * FROM groups WHERE id = ?", (group_id,)).fetchone()
-
-    member = connection.execute(
-        "SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?",
-        (group_id, user_id)
-    ).fetchone()
-
-    if not group or not member:
-        connection.close()
-        raise HTTPException(403, "Нет доступа")
-
-    target = connection.execute("SELECT id, username FROM users WHERE username = ?",
-                                (username,)).fetchone()
-
-    inviter = connection.execute("SELECT username, display_name FROM users WHERE id = ?",
-                                 (user_id,)).fetchone()
-
-    if not target:
-        connection.close()
-        raise HTTPException(404, "Пользователь не найден")
-
-    cursor = connection.execute("""
-        INSERT INTO invites (type, target_id, from_user_id, to_user_id, status, created_at)
-        VALUES ('group', ?, ?, ?, 'pending', ?)
-    """, (group_id, user_id, target["id"], now()))
-
-    invite_id = cursor.lastrowid
-
+    connection.execute(
+        "DELETE FROM channel_subscribers WHERE channel_id = ? AND user_id = ?",
+        (channel_id, user_id),
+    )
+    connection.execute(
+        "DELETE FROM channel_mutes WHERE channel_id = ? AND user_id = ?",
+        (channel_id, user_id),
+    )
     connection.commit()
     connection.close()
-
-    text = f'Вам пришло приглашение в группу «{group["name"]}» от @{inviter["username"]}'
-
-    msg = bot_send_message(target["id"], text, invite_id=invite_id, invite_status="pending")
-
-    if msg:
-        connection = db()
-        connection.execute("UPDATE invites SET message_id = ? WHERE id = ?", (msg["id"], invite_id))
-        connection.commit()
-        connection.close()
-        await send_ws(target["id"], {"type": "message", "message": msg})
-
     return {"ok": True}
 
 
-@app.post("/api/communities/{community_id}/invite-bot")
-async def invite_community_via_bot(community_id: int, data: InviteRequest, request: Request):
+@app.post("/api/channels/{channel_id}/mute")
+def mute_channel(channel_id: int, request: Request, muted: bool = True):
     user_id = get_auth_user(request)
-
-    username = data.username.strip().lower()
-
     connection = db()
-
-    community = connection.execute("SELECT * FROM communities WHERE id = ?",
-                                   (community_id,)).fetchone()
-
-    member = connection.execute(
-        "SELECT 1 FROM community_members WHERE community_id = ? AND user_id = ?",
-        (community_id, user_id)
-    ).fetchone()
-
-    if not community or not member:
-        connection.close()
-        raise HTTPException(403, "Нет доступа")
-
-    target = connection.execute("SELECT id FROM users WHERE username = ?",
-                                (username,)).fetchone()
-
-    inviter = connection.execute("SELECT username FROM users WHERE id = ?",
-                                 (user_id,)).fetchone()
-
-    if not target:
-        connection.close()
-        raise HTTPException(404, "Пользователь не найден")
-
-    cursor = connection.execute("""
-        INSERT INTO invites (type, target_id, from_user_id, to_user_id, status, created_at)
-        VALUES ('community', ?, ?, ?, 'pending', ?)
-    """, (community_id, user_id, target["id"], now()))
-
-    invite_id = cursor.lastrowid
-
+    connection.execute(
+        """
+        INSERT INTO channel_mutes (channel_id, user_id, muted)
+        VALUES (?, ?, ?)
+        ON CONFLICT(channel_id, user_id) DO UPDATE SET muted = excluded.muted
+        """,
+        (channel_id, user_id, int(muted)),
+    )
     connection.commit()
     connection.close()
+    return {"ok": True, "muted": muted}
 
-    text = f'Вам пришло приглашение в сообщество «{community["name"]}» от @{inviter["username"]}'
 
-    msg = bot_send_message(target["id"], text, invite_id=invite_id, invite_status="pending")
-
-    if msg:
-        connection = db()
-        connection.execute("UPDATE invites SET message_id = ? WHERE id = ?", (msg["id"], invite_id))
-        connection.commit()
+@app.put("/api/channels/{channel_id}")
+def rename_channel(channel_id: int, data: RenameEntityRequest, request: Request):
+    user_id = get_auth_user(request)
+    name = data.name.strip()
+    if not name:
+        raise HTTPException(400, "Название обязательно")
+    connection = db()
+    ch = connection.execute("SELECT * FROM channels WHERE id = ?", (channel_id,)).fetchone()
+    if not ch:
         connection.close()
-        await send_ws(target["id"], {"type": "message", "message": msg})
-
+        raise HTTPException(404, "Канал не найден")
+    if ch["owner_id"] != user_id:
+        connection.close()
+        raise HTTPException(403, "Только создатель")
+    connection.execute("UPDATE channels SET name = ? WHERE id = ?", (name, channel_id))
+    connection.commit()
+    connection.close()
     return {"ok": True}
 
+
+@app.post("/api/channels/{channel_id}/avatar")
+async def channel_avatar(channel_id: int, request: Request, file: UploadFile = File(...)):
+    user_id = get_auth_user(request)
+    connection = db()
+    ch = connection.execute("SELECT * FROM channels WHERE id = ?", (channel_id,)).fetchone()
+    if not ch or ch["owner_id"] != user_id:
+        connection.close()
+        raise HTTPException(403, "Только создатель")
+    connection.close()
+
+    allowed = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+    if file.content_type not in allowed:
+        raise HTTPException(400, "Только изображения")
+    filename = f"ch_{channel_id}_{secrets.token_hex(8)}{allowed[file.content_type]}"
+    path = UPLOAD_DIR / filename
+    with open(path, "wb") as out:
+        shutil.copyfileobj(file.file, out)
+    url = "/uploads/" + filename
+    connection = db()
+    connection.execute("UPDATE channels SET avatar_url = ? WHERE id = ?", (url, channel_id))
+    connection.commit()
+    connection.close()
+    return {"ok": True, "avatar_url": url}
+
+
+@app.post("/api/groups/{group_id}/leave")
+def leave_group(group_id: int, request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    connection.execute(
+        "DELETE FROM group_members WHERE group_id = ? AND user_id = ?",
+        (group_id, user_id),
+    )
+    connection.commit()
+    connection.close()
+    return {"ok": True}
+
+
+@app.put("/api/groups/{group_id}")
+def rename_group(group_id: int, data: RenameEntityRequest, request: Request):
+    user_id = get_auth_user(request)
+    name = data.name.strip()
+    if not name:
+        raise HTTPException(400, "Название обязательно")
+    connection = db()
+    g = connection.execute("SELECT * FROM groups WHERE id = ?", (group_id,)).fetchone()
+    if not g:
+        connection.close()
+        raise HTTPException(404, "Группа не найдена")
+    if g["owner_id"] != user_id:
+        connection.close()
+        raise HTTPException(403, "Только создатель")
+    connection.execute("UPDATE groups SET name = ? WHERE id = ?", (name, group_id))
+    connection.commit()
+    connection.close()
+    return {"ok": True}
+
+
+@app.post("/api/groups/{group_id}/avatar")
+async def group_avatar(group_id: int, request: Request, file: UploadFile = File(...)):
+    user_id = get_auth_user(request)
+    connection = db()
+    g = connection.execute("SELECT * FROM groups WHERE id = ?", (group_id,)).fetchone()
+    if not g or g["owner_id"] != user_id:
+        connection.close()
+        raise HTTPException(403, "Только создатель")
+    connection.close()
+    allowed = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+    if file.content_type not in allowed:
+        raise HTTPException(400, "Только изображения")
+    filename = f"gr_{group_id}_{secrets.token_hex(8)}{allowed[file.content_type]}"
+    path = UPLOAD_DIR / filename
+    with open(path, "wb") as out:
+        shutil.copyfileobj(file.file, out)
+    url = "/uploads/" + filename
+    connection = db()
+    connection.execute("UPDATE groups SET avatar_url = ? WHERE id = ?", (url, group_id))
+    connection.commit()
+    connection.close()
+    return {"ok": True, "avatar_url": url}
+
+
+# =========================================================
+# INVITES via Lumi bot
+# =========================================================
 
 @app.post("/api/invites/{invite_id}/respond")
 async def respond_invite(invite_id: int, data: InviteActionRequest, request: Request):
     user_id = get_auth_user(request)
-
     action = data.action.strip().lower()
-
     if action not in ("accept", "decline"):
         raise HTTPException(400, "action: accept|decline")
 
     connection = db()
-
-    inv = connection.execute("SELECT * FROM invites WHERE id = ? AND to_user_id = ?",
-                             (invite_id, user_id)).fetchone()
-
+    inv = connection.execute(
+        "SELECT * FROM invites WHERE id = ? AND to_user_id = ?",
+        (invite_id, user_id),
+    ).fetchone()
     if not inv:
         connection.close()
         raise HTTPException(404, "Приглашение не найдено")
-
     if inv["status"] != "pending":
         connection.close()
         raise HTTPException(400, "Уже отвечено")
 
     status = "accepted" if action == "accept" else "declined"
-
-    connection.execute("UPDATE invites SET status = ? WHERE id = ?", (status, invite_id))
+    connection.execute(
+        "UPDATE invites SET status = ? WHERE id = ?",
+        (status, invite_id),
+    )
 
     if action == "accept":
         if inv["type"] == "group":
-            connection.execute("""
+            connection.execute(
+                """
                 INSERT OR IGNORE INTO group_members (group_id, user_id, joined_at)
                 VALUES (?, ?, ?)
-            """, (inv["target_id"], user_id, now()))
+                """,
+                (inv["target_id"], user_id, now()),
+            )
         elif inv["type"] == "community":
-            connection.execute("""
+            connection.execute(
+                """
                 INSERT OR IGNORE INTO community_members (community_id, user_id, joined_at)
                 VALUES (?, ?, ?)
-            """, (inv["target_id"], user_id, now()))
+                """,
+                (inv["target_id"], user_id, now()),
+            )
 
     if inv["message_id"]:
-        connection.execute("UPDATE messages SET invite_status = ? WHERE id = ?",
-                           (status, inv["message_id"]))
+        connection.execute(
+            "UPDATE messages SET invite_status = ? WHERE id = ?",
+            (status, inv["message_id"]),
+        )
 
     connection.commit()
     connection.close()
 
     reply = bot_send_message(user_id, "Ваш выбор был учтён")
-
     if reply:
         await send_ws(user_id, {"type": "message", "message": reply})
 
     return {"ok": True, "status": status}
 
 
-# =========================================================
-# SEARCH
-# =========================================================
+# Override group invite to also notify via Lumi - patch existing invite_to_group by adding after it is complex
+# We'll enhance invite endpoints by replacing invite functions - for now add helper used from new path
 
-@app.get("/api/search")
-def global_search(request: Request, q: str = ""):
+@app.post("/api/groups/{group_id}/invite-bot")
+async def invite_group_via_bot(group_id: int, data: InviteRequest, request: Request):
     user_id = get_auth_user(request)
-
-    q = q.strip()
-
-    if not q:
-        return {"users": [], "channels": [], "groups": [], "communities": []}
-
-    like = "%" + q + "%"
-
+    username = data.username.strip().lower()
     connection = db()
-
-    users = connection.execute("""
-        SELECT id, username, display_name, avatar_url, last_seen, is_bot, is_verified
-        FROM users
-        WHERE (username LIKE ? OR display_name LIKE ?) AND id != ?
-        ORDER BY username
-        LIMIT 20
-    """, (like, like, user_id)).fetchall()
-
-    channels = connection.execute("""
-        SELECT c.id, c.name, c.username, c.description, c.owner_id,
-            CASE WHEN s.user_id IS NOT NULL THEN 1 ELSE 0 END AS joined
-        FROM channels c
-        LEFT JOIN channel_subscribers s ON s.channel_id = c.id AND s.user_id = ?
-        WHERE c.name LIKE ? OR c.username LIKE ? OR c.description LIKE ?
-        ORDER BY c.name
-        LIMIT 20
-    """, (user_id, like, like, like)).fetchall()
-
-    groups = connection.execute("""
-        SELECT g.id, g.name, g.description, g.owner_id
-        FROM groups g
-        JOIN group_members gm ON gm.group_id = g.id
-        WHERE gm.user_id = ? AND (g.name LIKE ? OR g.description LIKE ?)
-        ORDER BY g.name
-        LIMIT 20
-    """, (user_id, like, like)).fetchall()
-
-    communities = connection.execute("""
-        SELECT c.id, c.name, c.description, c.owner_id
-        FROM communities c
-        JOIN community_members m ON m.community_id = c.id
-        WHERE m.user_id = ? AND (c.name LIKE ? OR c.description LIKE ?)
-        ORDER BY c.name
-        LIMIT 20
-    """, (user_id, like, like)).fetchall()
-
+    group = connection.execute("SELECT * FROM groups WHERE id = ?", (group_id,)).fetchone()
+    member = connection.execute(
+        "SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?",
+        (group_id, user_id),
+    ).fetchone()
+    if not group or not member:
+        connection.close()
+        raise HTTPException(403, "Нет доступа")
+    target = connection.execute("SELECT id, username FROM users WHERE username = ?", (username,)).fetchone()
+    inviter = connection.execute("SELECT username, display_name FROM users WHERE id = ?", (user_id,)).fetchone()
+    if not target:
+        connection.close()
+        raise HTTPException(404, "Пользователь не найден")
+    # create invite
+    cursor = connection.execute(
+        """
+        INSERT INTO invites (type, target_id, from_user_id, to_user_id, status, created_at)
+        VALUES ('group', ?, ?, ?, 'pending', ?)
+        """,
+        (group_id, user_id, target["id"], now()),
+    )
+    invite_id = cursor.lastrowid
+    connection.commit()
     connection.close()
 
-    return {
-        "users": [dict(u) for u in users],
-        "channels": [{
-            **dict(c),
-            "is_owner": c["owner_id"] == user_id,
-            "joined": bool(c["joined"])
-        } for c in channels],
-        "groups": [dict(g) for g in groups],
-        "communities": [dict(c) for c in communities],
-    }
+    text = f'Вам пришло приглашение в группу «{group["name"]}» от @{inviter["username"]}'
+    msg = bot_send_message(target["id"], text, invite_id=invite_id, invite_status="pending")
+    if msg:
+        connection = db()
+        connection.execute("UPDATE invites SET message_id = ? WHERE id = ?", (msg["id"], invite_id))
+        connection.commit()
+        connection.close()
+        await send_ws(target["id"], {"type": "message", "message": msg})
+    return {"ok": True}
+
+
+@app.post("/api/communities/{community_id}/invite-bot")
+async def invite_community_via_bot(community_id: int, data: InviteRequest, request: Request):
+    user_id = get_auth_user(request)
+    username = data.username.strip().lower()
+    connection = db()
+    community = connection.execute("SELECT * FROM communities WHERE id = ?", (community_id,)).fetchone()
+    member = connection.execute(
+        "SELECT 1 FROM community_members WHERE community_id = ? AND user_id = ?",
+        (community_id, user_id),
+    ).fetchone()
+    if not community or not member:
+        connection.close()
+        raise HTTPException(403, "Нет доступа")
+    target = connection.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
+    inviter = connection.execute("SELECT username FROM users WHERE id = ?", (user_id,)).fetchone()
+    if not target:
+        connection.close()
+        raise HTTPException(404, "Пользователь не найден")
+    cursor = connection.execute(
+        """
+        INSERT INTO invites (type, target_id, from_user_id, to_user_id, status, created_at)
+        VALUES ('community', ?, ?, ?, 'pending', ?)
+        """,
+        (community_id, user_id, target["id"], now()),
+    )
+    invite_id = cursor.lastrowid
+    connection.commit()
+    connection.close()
+
+    text = f'Вам пришло приглашение в сообщество «{community["name"]}» от @{inviter["username"]}'
+    msg = bot_send_message(target["id"], text, invite_id=invite_id, invite_status="pending")
+    if msg:
+        connection = db()
+        connection.execute("UPDATE invites SET message_id = ? WHERE id = ?", (msg["id"], invite_id))
+        connection.commit()
+        connection.close()
+        await send_ws(target["id"], {"type": "message", "message": msg})
+    return {"ok": True}
 
 
 # =========================================================
-# CALL SIGNALING
+# CALL SIGNALING (WebRTC)
 # =========================================================
 
 @app.post("/api/calls/signal")
 async def call_signal(data: CallSignalRequest, request: Request):
     user_id = get_auth_user(request)
+    target_id = int(data.target_id)
+
+    if target_id == user_id:
+        raise HTTPException(400, "Нельзя звонить себе")
+
+    connection = db()
+    me = user_public(connection, user_id)
+    online = target_id in connections and len(connections[target_id]) > 0
+    connection.close()
 
     payload = {
         "type": "call_signal",
-        "from_id": user_id,
+        "from_id": int(user_id),
+        "from_name": me.get("display_name") or me.get("username") or "User",
+        "from_username": me.get("username") or "",
         "signal_type": data.signal_type,
-        "payload": data.payload,
+        "payload": data.payload or {},
     }
-
-    await send_ws(data.target_id, payload)
-
-    return {"ok": True}
+    await send_ws(target_id, payload)
+    return {"ok": True, "online": online}
 
 
-# =========================================================
-# DIALOGS
-# =========================================================
 
 @app.get("/api/dialogs")
 def get_dialogs(request: Request):
+    """Recent private chats like Telegram left list."""
     user_id = get_auth_user(request)
-
     connection = db()
 
-    rows = connection.execute("""
+    rows = connection.execute(
+        """
         SELECT
             CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END AS peer_id,
             MAX(m.id) AS last_id
         FROM messages m
-        LEFT JOIN chat_settings cs ON cs.user_id = ?
-            AND cs.peer_id = CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END
+        LEFT JOIN chat_settings cs
+            ON cs.user_id = ?
+           AND cs.peer_id = CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END
         WHERE (m.sender_id = ? OR m.receiver_id = ?)
-            AND IFNULL(cs.deleted_for_me, 0) = 0
+          AND IFNULL(cs.deleted_for_me, 0) = 0
         GROUP BY peer_id
         ORDER BY last_id DESC
         LIMIT 50
-    """, (user_id, user_id, user_id, user_id, user_id)).fetchall()
+        """,
+        (user_id, user_id, user_id, user_id, user_id),
+    ).fetchall()
 
     result = []
-
     for row in rows:
         peer_id = row["peer_id"]
-
-        user = connection.execute("""
+        user = connection.execute(
+            """
             SELECT id, username, display_name, avatar_url, is_bot, is_verified, last_seen
             FROM users WHERE id = ?
-        """, (peer_id,)).fetchone()
-
+            """,
+            (peer_id,),
+        ).fetchone()
         if not user:
             continue
-
-        last = connection.execute("""
+        last = connection.execute(
+            """
             SELECT id, text, created_at, sender_id, media_type, deleted, is_read
             FROM messages WHERE id = ?
-        """, (row["last_id"],)).fetchone()
-
-        alias = connection.execute("""
-            SELECT alias FROM contact_aliases
-            WHERE user_id = ? AND contact_id = ?
-        """, (user_id, peer_id)).fetchone()
-
-        unread = connection.execute("""
+            """,
+            (row["last_id"],),
+        ).fetchone()
+        alias = connection.execute(
+            "SELECT alias FROM contact_aliases WHERE user_id = ? AND contact_id = ?",
+            (user_id, peer_id),
+        ).fetchone()
+        unread = connection.execute(
+            """
             SELECT COUNT(*) AS c FROM messages
             WHERE sender_id = ? AND receiver_id = ? AND is_read = 0 AND deleted = 0
-        """, (peer_id, user_id)).fetchone()["c"]
-
+            """,
+            (peer_id, user_id),
+        ).fetchone()["c"]
         item = dict(user)
         item["alias"] = alias["alias"] if alias else None
         item["last_message"] = dict(last) if last else None
         item["unread"] = unread
-
         result.append(item)
 
     connection.close()
-
     return result
 
 
@@ -2973,37 +4876,57 @@ def get_dialogs(request: Request):
 # =========================================================
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    token = websocket.query_params.get("token")
+async def websocket_endpoint(
+    websocket: WebSocket,
+):
+    token = websocket.query_params.get(
+        "token"
+    )
 
     if not token:
-        await websocket.close(code=1008)
+        await websocket.close(
+            code=1008
+        )
         return
 
     connection = db()
 
-    session = connection.execute("""
-        SELECT id, user_id, expires_at
+    session = connection.execute(
+        """
+        SELECT
+            id,
+            user_id,
+            expires_at
         FROM sessions
         WHERE token_hash = ?
-    """, (hash_token(token),)).fetchone()
+        """,
+        (
+            hash_token(token),
+        ),
+    ).fetchone()
 
     connection.close()
 
     if not session:
-        await websocket.close(code=1008)
+        await websocket.close(
+            code=1008
+        )
         return
 
     try:
-        expires = datetime.fromisoformat(session["expires_at"])
+        expires = datetime.fromisoformat(
+            session["expires_at"]
+        )
     except Exception:
         expires = datetime.utcnow()
 
     if expires < datetime.utcnow():
-        await websocket.close(code=1008)
+        await websocket.close(
+            code=1008
+        )
         return
 
-    user_id = session["user_id"]
+    user_id = int(session["user_id"])
 
     await websocket.accept()
 
@@ -3014,26 +4937,45 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_json()
 
             if data.get("type") == "ping":
-                await websocket.send_json({"type": "pong"})
+                await websocket.send_json({
+                    "type": "pong"
+                })
 
     except WebSocketDisconnect:
         pass
+
     except Exception:
         pass
+
     finally:
-        connections[user_id].discard(websocket)
+        connections[user_id].discard(
+            websocket
+        )
 
         if not connections[user_id]:
-            connections.pop(user_id, None)
+            connections.pop(
+                user_id,
+                None,
+            )
 
 
 # =========================================================
 # STATIC
 # =========================================================
 
-app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+app.mount(
+    "/uploads",
+    StaticFiles(
+        directory=str(UPLOAD_DIR)
+    ),
+    name="uploads",
+)
 
 
 @app.get("/")
 def index():
-    return FileResponse(str(STATIC_DIR / "index.html"))
+    return FileResponse(
+        str(
+            STATIC_DIR / "index.html"
+        )
+    )
