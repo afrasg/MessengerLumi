@@ -46,6 +46,9 @@ SESSION_DAYS = 30
 
 connections = defaultdict(set)
 
+# Аватар для бота Lumi
+LUMI_AVATAR_URL = "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/5c/e5/f3/5ce5f3be-c924-0649-5dba-309206c42ba6/Placeholder.mill/1200x630wa.jpg"
+
 
 # =========================================================
 # CORS
@@ -315,6 +318,13 @@ def init_db():
             muted INTEGER DEFAULT 1,
             UNIQUE(group_id, user_id)
         );
+
+        CREATE TABLE IF NOT EXISTS privacy_settings (
+            user_id INTEGER PRIMARY KEY,
+            phone_visibility TEXT DEFAULT 'all',
+            avatar_visibility TEXT DEFAULT 'all',
+            last_seen_visibility TEXT DEFAULT 'all'
+        );
         """
     )
 
@@ -437,14 +447,19 @@ def init_db():
         connection.execute(
             """
             INSERT INTO users
-            (username, password_hash, created_at, last_seen, display_name, bio, is_bot, is_verified)
-            VALUES ('lumi', ?, ?, ?, 'Lumi', 'Официальный бот Messenger Lumi', 1, 1)
+            (username, password_hash, created_at, last_seen, display_name, bio, is_bot, is_verified, avatar_url)
+            VALUES ('lumi', ?, ?, ?, 'Lumi', 'Официальный бот Messenger Lumi', 1, 1, ?)
             """,
-            (_ph, _ts, _ts),
+            (_ph, _ts, _ts, LUMI_AVATAR_URL),
         )
     else:
         connection.execute(
-            "UPDATE users SET is_bot = 1, is_verified = 1, display_name = 'Lumi' WHERE username = 'lumi'"
+            """
+            UPDATE users 
+            SET is_bot = 1, is_verified = 1, display_name = 'Lumi', avatar_url = ?
+            WHERE username = 'lumi'
+            """,
+            (LUMI_AVATAR_URL,),
         )
 
     connection.commit()
@@ -530,7 +545,6 @@ def set_browser_cookie(
 
 
 def is_https(request: Request) -> bool:
-    # Respect reverse-proxy headers
     proto = (
         request.headers.get("x-forwarded-proto")
         or request.url.scheme
@@ -607,7 +621,6 @@ def get_auth_user(
         SESSION_COOKIE
     )
 
-    # Also accept Authorization: Bearer <token> (frontend localStorage)
     if not token:
         auth = request.headers.get("Authorization") or ""
         if auth.lower().startswith("bearer "):
@@ -640,7 +653,6 @@ def get_auth_user(
 
     if not session:
         connection.close()
-
         raise HTTPException(
             401,
             "Сессия недействительна",
@@ -798,6 +810,12 @@ class SettingsRequest(BaseModel):
     show_last_seen: bool = True
 
 
+class PrivacySettingsRequest(BaseModel):
+    phone_visibility: str = "all"
+    avatar_visibility: str = "all"
+    last_seen_visibility: str = "all"
+
+
 class GroupRequest(BaseModel):
     name: str
     description: str = ""
@@ -858,7 +876,7 @@ class RenameEntityRequest(BaseModel):
 
 
 class InviteActionRequest(BaseModel):
-    action: str  # accept | decline
+    action: str
 
 
 class CallSignalRequest(BaseModel):
@@ -904,7 +922,6 @@ def register(
 
     if exists:
         connection.close()
-
         raise HTTPException(
             400,
             "Такой username уже занят",
@@ -940,6 +957,15 @@ def register(
     connection.execute(
         """
         INSERT OR IGNORE INTO settings
+        (user_id)
+        VALUES (?)
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
+        INSERT OR IGNORE INTO privacy_settings
         (user_id)
         VALUES (?)
         """,
@@ -991,7 +1017,6 @@ def login(
 
     if not user:
         connection.close()
-
         raise HTTPException(
             401,
             "Неверный логин или пароль",
@@ -1001,7 +1026,6 @@ def login(
         data.password
     ):
         connection.close()
-
         raise HTTPException(
             401,
             "Неверный логин или пароль",
@@ -1010,6 +1034,15 @@ def login(
     connection.execute(
         """
         INSERT OR IGNORE INTO settings
+        (user_id)
+        VALUES (?)
+        """,
+        (user["id"],),
+    )
+
+    connection.execute(
+        """
+        INSERT OR IGNORE INTO privacy_settings
         (user_id)
         VALUES (?)
         """,
@@ -1212,7 +1245,6 @@ def switch_account(
 
     if not target:
         connection.close()
-
         raise HTTPException(
             404,
             "Аккаунт не найден на этом устройстве",
@@ -1239,9 +1271,6 @@ def switch_account(
 
     connection = db()
 
-    # Сам токен не хранится в открытом виде,
-    # поэтому при переключении создаём новую
-    # сессию для этого же аккаунта.
     new_session_token = new_token()
 
     created = now()
@@ -1315,7 +1344,6 @@ def delete_account(
 
     if not user:
         connection.close()
-
         raise HTTPException(
             404,
             "Аккаунт не найден",
@@ -1325,13 +1353,12 @@ def delete_account(
         data.password
     ):
         connection.close()
-
         raise HTTPException(
             403,
             "Неверный пароль",
         )
 
-    # Удаляем всё, что принадлежит аккаунту.
+    # Удаляем всё, что принадлежит аккаунту
     message_ids = connection.execute(
         """
         SELECT id
@@ -1476,6 +1503,14 @@ def delete_account(
 
     connection.execute(
         """
+        DELETE FROM privacy_settings
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
         DELETE FROM groups
         WHERE owner_id = ?
         """,
@@ -1485,6 +1520,14 @@ def delete_account(
     connection.execute(
         """
         DELETE FROM channels
+        WHERE owner_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.execute(
+        """
+        DELETE FROM communities
         WHERE owner_id = ?
         """,
         (user_id,),
@@ -1555,7 +1598,6 @@ def update_profile(
 
     if exists:
         connection.close()
-
         raise HTTPException(
             400,
             "Этот username уже занят",
@@ -1659,7 +1701,6 @@ def search_users(
 
     q = q.strip()
 
-    # Users appear only via search — empty query returns nothing
     if not q:
         return []
 
@@ -1791,8 +1832,6 @@ def get_messages(
         ),
     ).fetchall()
 
-    # При открытии чата сообщения собеседника
-    # становятся прочитанными.
     connection.execute(
         """
         UPDATE messages
@@ -1857,7 +1896,6 @@ async def send_message(
 
     if not receiver:
         connection.close()
-
         raise HTTPException(
             404,
             "Пользователь не найден",
@@ -2006,7 +2044,6 @@ async def edit_message(
 
     if not message:
         connection.close()
-
         raise HTTPException(
             404,
             "Сообщение не найдено",
@@ -2014,7 +2051,6 @@ async def edit_message(
 
     if message["sender_id"] != user_id:
         connection.close()
-
         raise HTTPException(
             403,
             "Можно изменять только свои сообщения",
@@ -2022,7 +2058,6 @@ async def edit_message(
 
     if message["deleted"]:
         connection.close()
-
         raise HTTPException(
             400,
             "Сообщение удалено",
@@ -2099,7 +2134,6 @@ async def delete_message(
 
     if not message:
         connection.close()
-
         raise HTTPException(
             404,
             "Сообщение не найдено",
@@ -2107,7 +2141,6 @@ async def delete_message(
 
     if message["sender_id"] != user_id:
         connection.close()
-
         raise HTTPException(
             403,
             "Можно удалять только свои сообщения",
@@ -2185,7 +2218,6 @@ def favorite_message(
 
     if not message:
         connection.close()
-
         raise HTTPException(
             404,
             "Сообщение не найдено",
@@ -2658,7 +2690,6 @@ def create_comment(
 
     if not post:
         connection.close()
-
         raise HTTPException(
             404,
             "Пост не найден",
@@ -2680,7 +2711,6 @@ def create_comment(
 
         if not parent:
             connection.close()
-
             raise HTTPException(
                 400,
                 "Комментарий для ответа не найден",
@@ -2738,7 +2768,6 @@ def delete_comment(
 
     if not comment:
         connection.close()
-
         raise HTTPException(
             404,
             "Комментарий не найден",
@@ -2746,7 +2775,6 @@ def delete_comment(
 
     if comment["user_id"] != user_id:
         connection.close()
-
         raise HTTPException(
             403,
             "Можно удалять только свои комментарии",
@@ -2796,7 +2824,6 @@ def delete_post(
 
     if not post:
         connection.close()
-
         raise HTTPException(
             404,
             "Пост не найден",
@@ -2804,7 +2831,6 @@ def delete_post(
 
     if post["author_id"] != user_id:
         connection.close()
-
         raise HTTPException(
             403,
             "Это не твой пост",
@@ -2959,6 +2985,137 @@ def update_settings(
 
 
 # =========================================================
+# PRIVACY SETTINGS
+# =========================================================
+
+@app.get("/api/privacy")
+def get_privacy_settings(
+    request: Request,
+):
+    user_id = get_auth_user(request)
+
+    connection = db()
+
+    connection.execute(
+        """
+        INSERT OR IGNORE INTO privacy_settings
+        (user_id)
+        VALUES (?)
+        """,
+        (user_id,),
+    )
+
+    connection.commit()
+
+    settings = connection.execute(
+        """
+        SELECT
+            phone_visibility,
+            avatar_visibility,
+            last_seen_visibility
+        FROM privacy_settings
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    ).fetchone()
+
+    connection.close()
+
+    return dict(settings)
+
+
+@app.put("/api/privacy")
+def update_privacy_settings(
+    data: PrivacySettingsRequest,
+    request: Request,
+):
+    user_id = get_auth_user(request)
+
+    valid = {"all", "contacts", "none"}
+    if data.phone_visibility not in valid:
+        raise HTTPException(400, "Некорректное значение")
+    if data.avatar_visibility not in valid:
+        raise HTTPException(400, "Некорректное значение")
+    if data.last_seen_visibility not in valid:
+        raise HTTPException(400, "Некорректное значение")
+
+    connection = db()
+
+    connection.execute(
+        """
+        INSERT OR REPLACE INTO privacy_settings
+        (
+            user_id,
+            phone_visibility,
+            avatar_visibility,
+            last_seen_visibility
+        )
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            user_id,
+            data.phone_visibility,
+            data.avatar_visibility,
+            data.last_seen_visibility,
+        ),
+    )
+
+    connection.commit()
+    connection.close()
+
+    return {"ok": True}
+
+
+# =========================================================
+# CLEAR ALL CHATS
+# =========================================================
+
+@app.delete("/api/chats/clear")
+def clear_all_chats(
+    request: Request,
+):
+    user_id = get_auth_user(request)
+
+    connection = db()
+
+    # Удаляем все сообщения пользователя
+    connection.execute(
+        """
+        DELETE FROM messages
+        WHERE sender_id = ?
+           OR receiver_id = ?
+        """,
+        (
+            user_id,
+            user_id,
+        ),
+    )
+
+    # Очищаем настройки чатов
+    connection.execute(
+        """
+        DELETE FROM chat_settings
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    )
+
+    # Очищаем избранное
+    connection.execute(
+        """
+        DELETE FROM favorites
+        WHERE user_id = ?
+        """,
+        (user_id,),
+    )
+
+    connection.commit()
+    connection.close()
+
+    return {"ok": True}
+
+
+# =========================================================
 # GROUPS
 # =========================================================
 
@@ -3086,7 +3243,6 @@ def invite_to_group(
         connection.close()
         raise HTTPException(404, "Группа не найдена")
 
-    # Only members can invite (or only owner — keep simple: any member)
     member = connection.execute(
         """
         SELECT 1
@@ -3238,7 +3394,6 @@ async def send_group_message(
 
     message_id = cursor.lastrowid
 
-    # Notify all members via WS
     members = connection.execute(
         """
         SELECT user_id
@@ -3355,7 +3510,6 @@ async def send_channel_message(
         connection.close()
         raise HTTPException(404, "Канал не найден")
 
-    # Only the owner (creator) can post in the channel
     if channel["owner_id"] != user_id:
         connection.close()
         raise HTTPException(
@@ -3643,7 +3797,6 @@ def global_search(
     request: Request,
     q: str = "",
 ):
-    """Unified search: users, channels, groups, communities."""
     user_id = get_auth_user(request)
     q = q.strip()
 
@@ -3729,7 +3882,7 @@ def global_search(
 
 
 # =========================================================
-# COMMUNITIES (сообщества: все пишут, внутри чаты)
+# COMMUNITIES
 # =========================================================
 
 @app.post("/api/communities")
@@ -3764,7 +3917,6 @@ def create_community(
         (community_id, user_id, now()),
     )
 
-    # Default general chat
     connection.execute(
         """
         INSERT INTO community_chats
@@ -4101,7 +4253,6 @@ async def send_community_chat_message(
         await send_ws(row["user_id"], payload)
 
     return {"ok": True, "message": message}
-
 
 
 # =========================================================
@@ -4490,9 +4641,6 @@ async def send_message_media(
     return {"ok": True, "message": message}
 
 
-# Block writing to bot in normal send - patch by wrapping is hard; add check via modifying send is done below through new endpoint usage
-# Intercept existing send_message: we'll add middleware-like check by redefining - actually edit send to check bot
-
 # =========================================================
 # CHANNEL LEAVE / MUTE / RENAME / AVATAR
 # =========================================================
@@ -4696,9 +4844,6 @@ async def respond_invite(invite_id: int, data: InviteActionRequest, request: Req
     return {"ok": True, "status": status}
 
 
-# Override group invite to also notify via Lumi - patch existing invite_to_group by adding after it is complex
-# We'll enhance invite endpoints by replacing invite functions - for now add helper used from new path
-
 @app.post("/api/groups/{group_id}/invite-bot")
 async def invite_group_via_bot(group_id: int, data: InviteRequest, request: Request):
     user_id = get_auth_user(request)
@@ -4717,7 +4862,7 @@ async def invite_group_via_bot(group_id: int, data: InviteRequest, request: Requ
     if not target:
         connection.close()
         raise HTTPException(404, "Пользователь не найден")
-    # create invite
+
     cursor = connection.execute(
         """
         INSERT INTO invites (type, target_id, from_user_id, to_user_id, status, created_at)
@@ -4797,10 +4942,8 @@ async def call_signal(data: CallSignalRequest, request: Request):
     return {"ok": True}
 
 
-
 @app.get("/api/dialogs")
 def get_dialogs(request: Request):
-    """Recent private chats like Telegram left list."""
     user_id = get_auth_user(request)
     connection = db()
 
