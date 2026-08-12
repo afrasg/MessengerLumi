@@ -104,6 +104,10 @@
         .post .comments-box .comment:last-child{border-bottom:none}
         .post .comments-box .comment .cname{font-weight:600;cursor:pointer;color:#8a8aff}
         .post .comments-box .comment .ctime{font-size:12px;color:#6a6a7a;margin-left:8px}
+        .post .comments-box .comment .reply-btn{font-size:12px;color:#5865f2;cursor:pointer;margin-left:8px}
+        .post .comments-box .comment .reply-btn:hover{text-decoration:underline}
+        .post .comments-box .comment .replies{margin-left:20px;margin-top:6px;padding-left:10px;border-left:2px solid #2a2a38}
+        .post .comments-box .comment .replies .comment{padding:4px 0;font-size:13px}
         .post .comments-box .comment-form{display:flex;gap:8px;margin-top:10px}
         .post .comments-box .comment-form input{flex:1;padding:10px 14px;border-radius:10px;background:#1a1a24;border:1px solid #2a2a38;font-size:14px;color:#fff}
         .post .comments-box .comment-form button{padding:10px 18px;border-radius:10px;background:#5865f2;color:#fff;font-weight:600}
@@ -264,7 +268,7 @@
         @media (max-width:700px){.sidebar{width:240px}.message-bubble{max-width:85%}.composer .send-btn{min-width:60px;font-size:0;padding:10px 14px}.composer .send-btn::after{content:"➤";font-size:18px}.reels-container .reel .reel-actions{right:8px;bottom:100px}.reels-container .reel .reel-actions button{width:40px;height:40px;font-size:20px}.reels-container .reel .reel-profile{top:50px;right:8px}.reels-container .reel .reel-profile .avatar{width:36px;height:36px}}
 
         /* ============================================================
-           СВЕТЛАЯ ТЕМА
+           ТЕМЫ
         ============================================================ */
         body.theme-light{background:#eef0f4;color:#111}
         body.theme-light .sidebar{background:#f8f9fc;border-right-color:#d0d3d9}
@@ -349,9 +353,6 @@
         body.theme-light .reels-container .reel .reel-info .author{color:#fff}
         body.theme-light .reels-container .reel .reel-info .text{color:#fff}
 
-        /* ============================================================
-           СИНЯЯ ТЕМА
-        ============================================================ */
         body.theme-blue{background:#0a1428;color:#e0e8f0}
         body.theme-blue .sidebar{background:#0c1a30;border-right-color:#1a2a44}
         body.theme-blue .sidebar-header{border-bottom-color:#1a2a44}
@@ -435,217 +436,69 @@
         body.theme-blue .reels-container .reel .reel-info .author{color:#fff}
         body.theme-blue .reels-container .reel .reel-info .text{color:#fff}
 
-        /* ============================================================
-           ДОПОЛНИТЕЛЬНЫЕ ПРАВИЛА ДЛЯ КНОПОК В ТЕМАХ
-        ============================================================ */
-
         /* ----- ТЕМНАЯ ТЕМА (кнопки белые) ----- */
-        body.theme-dark .primary {
-            background: #fff;
-            color: #111;
-        }
-        body.theme-dark .primary:hover {
-            background: #e8eaed;
-        }
-        body.theme-dark .secondary {
-            background: #fff;
-            color: #111;
-        }
-        body.theme-dark .secondary:hover {
-            background: #e8eaed;
-        }
-        body.theme-dark .danger-button {
-            background: #e74c4c;
-            color: #fff;
-        }
-        body.theme-dark .danger-button:hover {
-            background: #c0392b;
-        }
-        body.theme-dark .icon-btn {
-            background: transparent !important;
-            color: #b0b0c0 !important;
-        }
-        body.theme-dark .icon-btn:hover {
-            background: rgba(255,255,255,0.12) !important;
-            color: #fff !important;
-        }
-        body.theme-dark .icon-btn img {
-            filter: brightness(0) invert(0.7);
-        }
-        body.theme-dark .icon-btn:hover img {
-            filter: brightness(0) invert(1);
-        }
-        body.theme-dark .composer .send-btn {
-            background: #fff;
-            color: #111;
-        }
-        body.theme-dark .composer .send-btn:hover {
-            background: #e8eaed;
-        }
-        body.theme-dark .modal .primary {
-            background: #fff;
-            color: #111;
-        }
-        body.theme-dark .modal .primary:hover {
-            background: #e8eaed;
-        }
-        body.theme-dark .modal .secondary {
-            background: #fff;
-            color: #111;
-        }
-        body.theme-dark .modal .secondary:hover {
-            background: #e8eaed;
-        }
-        body.theme-dark .post-box .tools .primary-btn {
-            background: #fff;
-            color: #111;
-        }
-        body.theme-dark .post-box .tools .primary-btn:hover {
-            background: #e8eaed;
-        }
-        body.theme-dark .card .btn-row .primary {
-            background: #fff;
-            color: #111;
-        }
-        body.theme-dark .card .btn-row .primary:hover {
-            background: #e8eaed;
-        }
-        body.theme-dark .card .btn-row .secondary {
-            background: #fff;
-            color: #111;
-        }
-        body.theme-dark .card .btn-row .secondary:hover {
-            background: #e8eaed;
-        }
-        body.theme-dark .auth-card .primary {
-            background: #fff;
-            color: #111;
-        }
-        body.theme-dark .auth-card .primary:hover {
-            background: #e8eaed;
-        }
-        body.theme-dark .auth-card .secondary {
-            background: #fff;
-            color: #111;
-        }
-        body.theme-dark .auth-card .secondary:hover {
-            background: #e8eaed;
-        }
-        /* иконки в топбаре в темной теме - белые */
-        body.theme-dark .top-actions .icon-btn img {
-            filter: brightness(0) invert(1);
-        }
-        body.theme-dark .top-actions .icon-btn:hover img {
-            filter: brightness(0) invert(1);
-        }
+        body.theme-dark .primary { background: #fff; color: #111; }
+        body.theme-dark .primary:hover { background: #e8eaed; }
+        body.theme-dark .secondary { background: #fff; color: #111; }
+        body.theme-dark .secondary:hover { background: #e8eaed; }
+        body.theme-dark .danger-button { background: #e74c4c; color: #fff; }
+        body.theme-dark .danger-button:hover { background: #c0392b; }
+        body.theme-dark .icon-btn { background: transparent !important; color: #b0b0c0 !important; }
+        body.theme-dark .icon-btn:hover { background: rgba(255,255,255,0.12) !important; color: #fff !important; }
+        body.theme-dark .icon-btn img { filter: brightness(0) invert(0.7); }
+        body.theme-dark .icon-btn:hover img { filter: brightness(0) invert(1); }
+        body.theme-dark .composer .send-btn { background: #fff; color: #111; }
+        body.theme-dark .composer .send-btn:hover { background: #e8eaed; }
+        body.theme-dark .modal .primary { background: #fff; color: #111; }
+        body.theme-dark .modal .primary:hover { background: #e8eaed; }
+        body.theme-dark .modal .secondary { background: #fff; color: #111; }
+        body.theme-dark .modal .secondary:hover { background: #e8eaed; }
+        body.theme-dark .post-box .tools .primary-btn { background: #fff; color: #111; }
+        body.theme-dark .post-box .tools .primary-btn:hover { background: #e8eaed; }
+        body.theme-dark .card .btn-row .primary { background: #fff; color: #111; }
+        body.theme-dark .card .btn-row .primary:hover { background: #e8eaed; }
+        body.theme-dark .card .btn-row .secondary { background: #fff; color: #111; }
+        body.theme-dark .card .btn-row .secondary:hover { background: #e8eaed; }
+        body.theme-dark .auth-card .primary { background: #fff; color: #111; }
+        body.theme-dark .auth-card .primary:hover { background: #e8eaed; }
+        body.theme-dark .auth-card .secondary { background: #fff; color: #111; }
+        body.theme-dark .auth-card .secondary:hover { background: #e8eaed; }
+        body.theme-dark .top-actions .icon-btn img { filter: brightness(0) invert(1); }
+        body.theme-dark .top-actions .icon-btn:hover img { filter: brightness(0) invert(1); }
 
         /* ----- СВЕТЛАЯ ТЕМА (кнопки черные) ----- */
-        body.theme-light .primary {
-            background: #222;
-            color: #fff;
-        }
-        body.theme-light .primary:hover {
-            background: #444;
-        }
-        body.theme-light .secondary {
-            background: #222;
-            color: #fff;
-        }
-        body.theme-light .secondary:hover {
-            background: #444;
-        }
-        body.theme-light .danger-button {
-            background: #222;
-            color: #fff;
-        }
-        body.theme-light .danger-button:hover {
-            background: #444;
-        }
-        body.theme-light .icon-btn {
-            background: transparent !important;
-            color: #6a6a7a !important;
-        }
-        body.theme-light .icon-btn:hover {
-            background: rgba(0,0,0,0.08) !important;
-            color: #111 !important;
-        }
-        body.theme-light .icon-btn img {
-            filter: brightness(0) invert(0.4);
-        }
-        body.theme-light .icon-btn:hover img {
-            filter: brightness(0) invert(0);
-        }
-        body.theme-light .composer .send-btn {
-            background: #222;
-            color: #fff;
-        }
-        body.theme-light .composer .send-btn:hover {
-            background: #444;
-        }
-        body.theme-light .modal .primary {
-            background: #222;
-            color: #fff;
-        }
-        body.theme-light .modal .primary:hover {
-            background: #444;
-        }
-        body.theme-light .modal .secondary {
-            background: #222;
-            color: #fff;
-        }
-        body.theme-light .modal .secondary:hover {
-            background: #444;
-        }
-        body.theme-light .post-box .tools .primary-btn {
-            background: #222;
-            color: #fff;
-        }
-        body.theme-light .post-box .tools .primary-btn:hover {
-            background: #444;
-        }
-        body.theme-light .card .btn-row .primary {
-            background: #222;
-            color: #fff;
-        }
-        body.theme-light .card .btn-row .primary:hover {
-            background: #444;
-        }
-        body.theme-light .card .btn-row .secondary {
-            background: #222;
-            color: #fff;
-        }
-        body.theme-light .card .btn-row .secondary:hover {
-            background: #444;
-        }
-        body.theme-light .auth-card .primary {
-            background: #222;
-            color: #fff;
-        }
-        body.theme-light .auth-card .primary:hover {
-            background: #444;
-        }
-        body.theme-light .auth-card .secondary {
-            background: #222;
-            color: #fff;
-        }
-        body.theme-light .auth-card .secondary:hover {
-            background: #444;
-        }
-        /* иконки в топбаре в светлой теме - черные */
-        body.theme-light .top-actions .icon-btn img {
-            filter: brightness(0) invert(0);
-        }
-        body.theme-light .top-actions .icon-btn:hover img {
-            filter: brightness(0) invert(0);
-        }
+        body.theme-light .primary { background: #222; color: #fff; }
+        body.theme-light .primary:hover { background: #444; }
+        body.theme-light .secondary { background: #222; color: #fff; }
+        body.theme-light .secondary:hover { background: #444; }
+        body.theme-light .danger-button { background: #222; color: #fff; }
+        body.theme-light .danger-button:hover { background: #444; }
+        body.theme-light .icon-btn { background: transparent !important; color: #6a6a7a !important; }
+        body.theme-light .icon-btn:hover { background: rgba(0,0,0,0.08) !important; color: #111 !important; }
+        body.theme-light .icon-btn img { filter: brightness(0) invert(0.4); }
+        body.theme-light .icon-btn:hover img { filter: brightness(0) invert(0); }
+        body.theme-light .composer .send-btn { background: #222; color: #fff; }
+        body.theme-light .composer .send-btn:hover { background: #444; }
+        body.theme-light .modal .primary { background: #222; color: #fff; }
+        body.theme-light .modal .primary:hover { background: #444; }
+        body.theme-light .modal .secondary { background: #222; color: #fff; }
+        body.theme-light .modal .secondary:hover { background: #444; }
+        body.theme-light .post-box .tools .primary-btn { background: #222; color: #fff; }
+        body.theme-light .post-box .tools .primary-btn:hover { background: #444; }
+        body.theme-light .card .btn-row .primary { background: #222; color: #fff; }
+        body.theme-light .card .btn-row .primary:hover { background: #444; }
+        body.theme-light .card .btn-row .secondary { background: #222; color: #fff; }
+        body.theme-light .card .btn-row .secondary:hover { background: #444; }
+        body.theme-light .auth-card .primary { background: #222; color: #fff; }
+        body.theme-light .auth-card .primary:hover { background: #444; }
+        body.theme-light .auth-card .secondary { background: #222; color: #fff; }
+        body.theme-light .auth-card .secondary:hover { background: #444; }
+        body.theme-light .top-actions .icon-btn img { filter: brightness(0) invert(0); }
+        body.theme-light .top-actions .icon-btn:hover img { filter: brightness(0) invert(0); }
 
-        /* ----- СИНЯЯ ТЕМА (иконки серые) ----- */
-        body.theme-blue .top-actions .icon-btn img {
-            filter: brightness(0) invert(0.6);
-        }
-        body.theme-blue .top-actions .icon-btn:hover img {
-            filter: brightness(0) invert(1);
-        }
+        /* ----- СИНЯЯ ТЕМА ----- */
+        body.theme-blue .top-actions .icon-btn img { filter: brightness(0) invert(0.6); }
+        body.theme-blue .top-actions .icon-btn:hover img { filter: brightness(0) invert(1); }
     </style>
 </head>
 <body>
@@ -697,8 +550,8 @@
                             <textarea id="postText" placeholder="Что нового?"></textarea>
                             <div id="postMediaPreview" class="hidden" style="margin-top:8px"></div>
                             <div class="tools">
-                                <button class="primary-btn" onclick="publishPost()">📝 Опубликовать</button>
-                                <label>📷 Фото / видео <input type="file" id="mediaFile" accept="image/*,video/*" onchange="publishMediaPost()"></label>
+                                <button class="primary-btn" onclick="publishPost()">Опубликовать</button>
+                                <label>Фото / видео <input type="file" id="mediaFile" accept="image/*,video/*" onchange="publishMediaPost()"></label>
                             </div>
                         </div>
                         <div id="feed"></div>
@@ -754,14 +607,14 @@
                             <div class="btn-row"><button class="primary" onclick="saveProfile()">Сохранить</button></div>
                         </div>
                         <div class="card">
-                            <h3>👥 Аккаунт</h3>
+                            <h3>Аккаунт</h3>
                             <div class="btn-row">
-                                <button class="secondary" onclick="openCreateAccount()">➕ Добавить аккаунт</button>
-                                <button class="secondary" onclick="switchAccount()">🔄 Переключить</button>
+                                <button class="secondary" onclick="openCreateAccount()">Добавить аккаунт</button>
+                                <button class="secondary" onclick="switchAccount()">Переключить</button>
                             </div>
                             <div class="btn-row" style="margin-top:8px">
-                                <button class="danger" onclick="logout()">🚪 Выйти</button>
-                                <button class="danger" onclick="deleteAccount()">🗑️ Удалить</button>
+                                <button class="danger" onclick="logout()">Выйти</button>
+                                <button class="danger" onclick="deleteAccount()">Удалить</button>
                             </div>
                         </div>
                     </div>
@@ -1115,9 +968,7 @@
             var dialogs = await safeJson(r);
             var container = document.getElementById("users");
             if (!container) return;
-            // Удаляем старые диалоги, но оставляем остальные секции
             container.querySelectorAll(".dialog-item").forEach(function(el){ el.remove(); });
-            // Удаляем старый заголовок "ЧАТЫ" если есть
             container.querySelectorAll(".dialogs-header").forEach(function(el){ el.remove(); });
             if (!dialogs.length) return;
             var frag = document.createDocumentFragment();
@@ -1465,9 +1316,12 @@
             box.innerHTML = "";
             if (!comments.length) { box.innerHTML = "<div style='color:#6a6a7a;padding:8px 0'>Комментариев пока нет</div>"; }
             comments.forEach(function(c){
-                var d = document.createElement("div"); d.className = "comment";
+                var d = document.createElement("div"); d.className = "comment"; d.dataset.id = c.id;
                 var reply = c.reply_to_username ? '<span style="color:#5865f2">@'+escapeHtml(c.reply_to_username)+'</span> ' : "";
-                d.innerHTML = '<span class="cname" onclick="openUserProfile('+c.user_id+')">'+escapeHtml(c.display_name||c.username)+'</span><span class="ctime">'+new Date(c.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})+'</span><br>'+reply+escapeHtml(c.text);
+                d.innerHTML = '<span class="cname" onclick="openUserProfile('+c.user_id+')">'+escapeHtml(c.display_name||c.username)+'</span><span class="ctime">'+new Date(c.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})+'</span>'+
+                    (c.reply_count ? ' <span style="color:#6a6a7a;font-size:12px">('+c.reply_count+' ответов)</span>' : '') +
+                    '<br>'+reply+escapeHtml(c.text) +
+                    ' <span class="reply-btn" onclick="openReplyComment('+postId+','+c.id+',\''+escapeHtml(c.username)+'\')">Ответить</span>';
                 if (Number(c.user_id) === Number(currentUser.id)) {
                     var del = document.createElement("button"); del.textContent = "🗑️";
                     del.style.cssText = "background:none;border:none;color:#e74c4c;cursor:pointer;font-size:12px;margin-left:8px";
@@ -1481,22 +1335,49 @@
                     };
                     d.appendChild(del);
                 }
+                // Ответы
+                if (c.replies && c.replies.length) {
+                    var repliesDiv = document.createElement("div");
+                    repliesDiv.className = "replies";
+                    c.replies.forEach(function(rp){
+                        var rd = document.createElement("div"); rd.className = "comment";
+                        rd.innerHTML = '<span class="cname" onclick="openUserProfile('+rp.user_id+')">'+escapeHtml(rp.display_name||rp.username)+'</span><span class="ctime">'+new Date(rp.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})+'</span><br>'+escapeHtml(rp.text);
+                        repliesDiv.appendChild(rd);
+                    });
+                    d.appendChild(repliesDiv);
+                }
                 box.appendChild(d);
             });
             var form = document.createElement("div"); form.className = "comment-form";
             form.innerHTML = '<input id="commentInput-'+postId+'" placeholder="Написать комментарий..."><button onclick="sendComment('+postId+')">➤</button>';
             box.appendChild(form);
         }
+        // Функция для ответа на комментарий
+        function openReplyComment(postId, commentId, username) {
+            var input = document.getElementById("commentInput-" + postId);
+            if (input) {
+                input.value = "@" + username + " ";
+                input.focus();
+                // Сохраняем ID комментария для ответа
+                input.dataset.replyTo = commentId;
+            }
+        }
         async function sendComment(postId) {
             var input = document.getElementById("commentInput-" + postId);
             var text = (input?.value || "").trim();
             if (!text) return;
-            var r = await req("/api/posts/" + postId + "/comments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: text }) });
+            var replyTo = input.dataset.replyTo || null;
+            var r = await req("/api/posts/" + postId + "/comments", { 
+                method: "POST", 
+                headers: { "Content-Type": "application/json" }, 
+                body: JSON.stringify({ text: text, reply_to: replyTo }) 
+            });
             if (!r.ok) { var d = await safeJson(r); alert(d.detail || "Ошибка"); return; }
             var article = document.querySelector('.post[data-id="'+postId+'"]');
             var btn = article?.querySelector(".actions button:nth-child(2)");
             if (btn) { var cur = parseInt(btn.textContent.replace(/\D/g, "")) || 0; btn.textContent = "💬 " + (cur + 1); }
             if (article && btn) { var box = document.getElementById("comments-" + postId); if (box) box.style.display = "none"; toggleComments(postId, article, btn); }
+            if (input) { input.value = ""; input.dataset.replyTo = ""; }
         }
         async function publishPost() {
             var text = document.getElementById("postText").value.trim();
@@ -1528,12 +1409,9 @@
 
         // REELS - скрываем полностью, но оставляем функцию для совместимости
         async function showReels() {
-            // Просто показываем ленту вместо рилсов
             showFeed();
         }
-        async function loadReels() {
-            // Пустая заглушка
-        }
+        async function loadReels() {}
 
         // FAVORITES (сообщения)
         async function showFavorites() {
@@ -1646,7 +1524,7 @@
 
         // GROUPS
         function openCreateGroup() {
-            openModal('<h2>👥 Новая группа</h2><input id="newGroupName" placeholder="Название"><textarea id="newGroupDescription" placeholder="Описание" style="margin-top:8px;min-height:60px;resize:vertical"></textarea><button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px" onclick="createGroup()">Создать</button>');
+            openModal('<h2>Новая группа</h2><input id="newGroupName" placeholder="Название"><textarea id="newGroupDescription" placeholder="Описание" style="margin-top:8px;min-height:60px;resize:vertical"></textarea><button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px" onclick="createGroup()">Создать</button>');
         }
         async function createGroup() {
             var name = document.getElementById("newGroupName").value.trim();
@@ -1664,7 +1542,7 @@
             groups.forEach(function(g){
                 var div = document.createElement("div"); div.className = "comment";
                 div.style.cssText = "background:#1a1a24;padding:12px;border-radius:10px;margin-bottom:8px;cursor:pointer";
-                div.innerHTML = '<b>👥 '+escapeHtml(g.name)+'</b><div style="font-size:13px;color:#6a6a7a">'+escapeHtml(g.description||"")+'</div><div style="margin-top:6px;display:flex;gap:6px"><button class="primary" style="padding:4px 12px;border-radius:6px;font-size:12px" onclick="event.stopPropagation();openGroupChat('+g.id+',\''+escapeHtml(g.name).replace(/'/g,"\\'")+'\')">💬 Открыть</button><button class="secondary" style="padding:4px 12px;border-radius:6px;font-size:12px;background:#2a2a38" onclick="event.stopPropagation();openInviteToGroup('+g.id+',\''+escapeHtml(g.name).replace(/'/g,"\\'")+'\')">➕ Пригласить</button></div>';
+                div.innerHTML = '<b>'+escapeHtml(g.name)+'</b><div style="font-size:13px;color:#6a6a7a">'+escapeHtml(g.description||"")+'</div><div style="margin-top:6px;display:flex;gap:6px"><button class="primary" style="padding:4px 12px;border-radius:6px;font-size:12px" onclick="event.stopPropagation();openGroupChat('+g.id+',\''+escapeHtml(g.name).replace(/'/g,"\\'")+'\')">Открыть</button><button class="secondary" style="padding:4px 12px;border-radius:6px;font-size:12px;background:#2a2a38" onclick="event.stopPropagation();openInviteToGroup('+g.id+',\''+escapeHtml(g.name).replace(/'/g,"\\'")+'\')">Пригласить</button></div>';
                 container.appendChild(div);
             });
             loadGroupsSidebar(groups);
@@ -1685,9 +1563,9 @@
             selectedGroupId = Number(groupId); selectedUserId = null; selectedChannelId = null; selectedChannelIsOwner = false; selectedCommunityId = null; selectedCommunityChatId = null;
             currentChatPeer = null; setComposerEnabled(true);
             showOnly("chatView");
-            setPageTitle(null, "👥 " + groupName);
+            setPageTitle(null, "Группа: " + groupName);
             document.getElementById("chatAvatar").src = "";
-            document.getElementById("chatName").textContent = "👥 " + groupName;
+            document.getElementById("chatName").textContent = "Группа: " + groupName;
             document.getElementById("chatStatus").textContent = "группа";
             document.getElementById("chatActions").style.display = "flex";
             document.getElementById("chatActions").querySelectorAll("button").forEach(function(b){ b.style.display = "none"; });
@@ -1728,7 +1606,7 @@
             scrollMessages();
         }
         function openInviteToGroup(groupId, groupName) {
-            openModal('<h2>➕ Пригласить в группу</h2><p style="color:#6a6a7a">Группа: <b>'+escapeHtml(groupName)+'</b></p><input id="inviteUsername" placeholder="Username пользователя"><button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px" onclick="inviteToGroup('+groupId+')">Пригласить</button><button class="secondary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px;background:#2a2a38" onclick="closeModal()">Отмена</button>');
+            openModal('<h2>Пригласить в группу</h2><p style="color:#6a6a7a">Группа: <b>'+escapeHtml(groupName)+'</b></p><input id="inviteUsername" placeholder="Username пользователя"><button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px" onclick="inviteToGroup('+groupId+')">Пригласить</button><button class="secondary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px;background:#2a2a38" onclick="closeModal()">Отмена</button>');
         }
         async function inviteToGroup(groupId) {
             var username = document.getElementById("inviteUsername")?.value.trim();
@@ -1740,7 +1618,7 @@
 
         // CHANNELS
         function openCreateChannel() {
-            openModal('<h2>📢 Новый канал</h2><input id="newChannelName" placeholder="Название"><input id="newChannelUsername" placeholder="username канала" style="margin-top:8px"><textarea id="newChannelDescription" placeholder="Описание" style="margin-top:8px;min-height:60px;resize:vertical"></textarea><button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px" onclick="createChannel()">Создать</button>');
+            openModal('<h2>Новый канал</h2><input id="newChannelName" placeholder="Название"><input id="newChannelUsername" placeholder="username канала" style="margin-top:8px"><textarea id="newChannelDescription" placeholder="Описание" style="margin-top:8px;min-height:60px;resize:vertical"></textarea><button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px" onclick="createChannel()">Создать</button>');
         }
         async function createChannel() {
             var name = document.getElementById("newChannelName").value.trim();
@@ -1759,7 +1637,7 @@
             channels.forEach(function(ch){
                 var div = document.createElement("div"); div.className = "comment";
                 div.style.cssText = "background:#1a1a24;padding:12px;border-radius:10px;margin-bottom:8px;cursor:pointer";
-                div.innerHTML = '<b>📢 '+escapeHtml(ch.name)+'</b><div style="font-size:13px;color:#6a6a7a">@'+escapeHtml(ch.username)+'</div><div style="margin-top:6px"><button class="primary" style="padding:4px 12px;border-radius:6px;font-size:12px" onclick="openChannelChat('+ch.id+',\''+escapeHtml(ch.name).replace(/'/g,"\\'")+'\','+(!!ch.is_owner)+')">💬 Открыть</button></div>';
+                div.innerHTML = '<b>'+escapeHtml(ch.name)+'</b><div style="font-size:13px;color:#6a6a7a">@'+escapeHtml(ch.username)+'</div><div style="margin-top:6px"><button class="primary" style="padding:4px 12px;border-radius:6px;font-size:12px" onclick="openChannelChat('+ch.id+',\''+escapeHtml(ch.name).replace(/'/g,"\\'")+'\','+(!!ch.is_owner)+')">Открыть</button></div>';
                 container.appendChild(div);
             });
             loadChannelsSidebar(channels);
@@ -1781,9 +1659,9 @@
             selectedUserId = null; selectedGroupId = null; selectedCommunityId = null; selectedCommunityChatId = null;
             currentChatPeer = null; setComposerEnabled(isOwner);
             showOnly("chatView");
-            setPageTitle(null, "📢 " + channelName);
+            setPageTitle(null, "Канал: " + channelName);
             document.getElementById("chatAvatar").src = "";
-            document.getElementById("chatName").textContent = "📢 " + channelName;
+            document.getElementById("chatName").textContent = "Канал: " + channelName;
             document.getElementById("chatStatus").textContent = isOwner ? "Вы создатель" : "Канал";
             document.getElementById("chatActions").style.display = "flex";
             document.getElementById("chatActions").querySelectorAll("button").forEach(function(b){ b.style.display = "none"; });
@@ -1798,7 +1676,7 @@
 
         // COMMUNITIES
         function openCreateCommunity() {
-            openModal('<h2>🌐 Новое сообщество</h2><input id="newCommunityName" placeholder="Название"><textarea id="newCommunityDescription" placeholder="Описание" style="margin-top:8px;min-height:60px;resize:vertical"></textarea><button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px" onclick="createCommunity()">Создать</button>');
+            openModal('<h2>Новое сообщество</h2><input id="newCommunityName" placeholder="Название"><textarea id="newCommunityDescription" placeholder="Описание" style="margin-top:8px;min-height:60px;resize:vertical"></textarea><button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px" onclick="createCommunity()">Создать</button>');
         }
         async function createCommunity() {
             var name = document.getElementById("newCommunityName").value.trim();
@@ -1816,7 +1694,7 @@
             communities.forEach(function(c){
                 var div = document.createElement("div"); div.className = "comment";
                 div.style.cssText = "background:#1a1a24;padding:12px;border-radius:10px;margin-bottom:8px;cursor:pointer";
-                div.innerHTML = '<b>🌐 '+escapeHtml(c.name)+'</b><div style="font-size:13px;color:#6a6a7a">'+escapeHtml(c.description||"")+'</div><div style="margin-top:6px;display:flex;gap:6px"><button class="primary" style="padding:4px 12px;border-radius:6px;font-size:12px" onclick="event.stopPropagation();openCommunity('+c.id+',\''+escapeHtml(c.name).replace(/'/g,"\\'")+'\')">🌐 Открыть</button><button class="secondary" style="padding:4px 12px;border-radius:6px;font-size:12px;background:#2a2a38" onclick="event.stopPropagation();openInviteToCommunity('+c.id+',\''+escapeHtml(c.name).replace(/'/g,"\\'")+'\')">➕ Пригласить</button></div>';
+                div.innerHTML = '<b>'+escapeHtml(c.name)+'</b><div style="font-size:13px;color:#6a6a7a">'+escapeHtml(c.description||"")+'</div><div style="margin-top:6px;display:flex;gap:6px"><button class="primary" style="padding:4px 12px;border-radius:6px;font-size:12px" onclick="event.stopPropagation();openCommunity('+c.id+',\''+escapeHtml(c.name).replace(/'/g,"\\'")+'\')">Открыть</button><button class="secondary" style="padding:4px 12px;border-radius:6px;font-size:12px;background:#2a2a38" onclick="event.stopPropagation();openInviteToCommunity('+c.id+',\''+escapeHtml(c.name).replace(/'/g,"\\'")+'\')">Пригласить</button></div>';
                 container.appendChild(div);
             });
             loadCommunitiesSidebar(communities);
@@ -1838,9 +1716,9 @@
             selectedUserId = null; selectedGroupId = null; selectedChannelId = null; selectedChannelIsOwner = false;
             currentChatPeer = null; setComposerEnabled(false);
             showOnly("chatView");
-            setPageTitle(null, "🌐 " + communityName);
+            setPageTitle(null, "Сообщество: " + communityName);
             document.getElementById("chatAvatar").src = "";
-            document.getElementById("chatName").textContent = "🌐 " + communityName;
+            document.getElementById("chatName").textContent = "Сообщество: " + communityName;
             document.getElementById("chatStatus").textContent = "сообщество";
             document.getElementById("chatActions").style.display = "flex";
             document.getElementById("chatActions").querySelectorAll("button").forEach(function(b){ b.style.display = "none"; });
@@ -1850,7 +1728,7 @@
             var chats = await safeJson(r);
             box.innerHTML = "";
             var head = document.createElement("div"); head.style.cssText = "display:flex;justify-content:space-between;align-items:center;padding:8px 0 14px;flex-wrap:wrap;gap:8px";
-            head.innerHTML = '<div style="font-weight:600">Чаты сообщества</div><button class="primary" style="padding:6px 14px;border-radius:8px;font-size:13px" onclick="openCreateCommunityChat('+communityId+')">➕ Новый чат</button>';
+            head.innerHTML = '<div style="font-weight:600">Чаты сообщества</div><button class="primary" style="padding:6px 14px;border-radius:8px;font-size:13px" onclick="openCreateCommunityChat('+communityId+')">Новый чат</button>';
             box.appendChild(head);
             if (!chats.length) {
                 var empty = document.createElement("div"); empty.style.cssText = "color:#6a6a7a;padding:12px 0;text-align:center";
@@ -1861,13 +1739,13 @@
             chats.forEach(function(chat){
                 var div = document.createElement("div"); div.className = "post";
                 div.style.cursor = "pointer"; div.style.marginBottom = "10px";
-                div.innerHTML = '<strong>💬 '+escapeHtml(chat.name)+'</strong>'+(chat.description ? '<div style="color:#6a6a7a;font-size:13px;margin-top:4px">'+escapeHtml(chat.description)+'</div>' : '');
+                div.innerHTML = '<strong>'+escapeHtml(chat.name)+'</strong>'+(chat.description ? '<div style="color:#6a6a7a;font-size:13px;margin-top:4px">'+escapeHtml(chat.description)+'</div>' : '');
                 div.onclick = function(){ openCommunityChat(chat.id, chat.name, communityName); };
                 box.appendChild(div);
             });
         }
         function openCreateCommunityChat(communityId) {
-            openModal('<h2>💬 Новый чат в сообществе</h2><input id="newCommunityChatName" placeholder="Название чата"><textarea id="newCommunityChatDescription" placeholder="Описание" style="margin-top:8px;min-height:60px;resize:vertical"></textarea><button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px" onclick="createCommunityChat('+communityId+')">Создать</button>');
+            openModal('<h2>Новый чат в сообществе</h2><input id="newCommunityChatName" placeholder="Название чата"><textarea id="newCommunityChatDescription" placeholder="Описание" style="margin-top:8px;min-height:60px;resize:vertical"></textarea><button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px" onclick="createCommunityChat('+communityId+')">Создать</button>');
         }
         async function createCommunityChat(communityId) {
             var name = document.getElementById("newCommunityChatName").value.trim();
@@ -1875,14 +1753,14 @@
             var r = await req("/api/communities/" + communityId + "/chats", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name, description: desc }) });
             if (!r.ok) { var d = await safeJson(r); alert(d.detail || "Ошибка"); return; }
             closeModal();
-            var title = document.getElementById("pageTitle").textContent.replace(/^🌐\s*/, "");
+            var title = document.getElementById("pageTitle").textContent.replace(/^Сообщество:\s*/, "");
             await openCommunity(communityId, title);
         }
         async function openCommunityChat(chatId, chatName, communityName) {
             selectedCommunityChatId = Number(chatId); selectedUserId = null; selectedGroupId = null; selectedChannelId = null;
             currentChatPeer = null; setComposerEnabled(true);
             showOnly("chatView");
-            var full = communityName ? "🌐 " + communityName + " · " + chatName : "💬 " + chatName;
+            var full = communityName ? communityName + " · " + chatName : chatName;
             setPageTitle(null, full);
             document.getElementById("chatAvatar").src = "";
             document.getElementById("chatName").textContent = full;
@@ -1898,7 +1776,7 @@
             renderGroupMessages(msgs);
         }
         function openInviteToCommunity(communityId, communityName) {
-            openModal('<h2>➕ Пригласить в сообщество</h2><p style="color:#6a6a7a">Сообщество: <b>'+escapeHtml(communityName)+'</b></p><input id="inviteCommunityUsername" placeholder="Username пользователя"><button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px" onclick="inviteToCommunity('+communityId+')">Пригласить</button><button class="secondary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px;background:#2a2a38" onclick="closeModal()">Отмена</button>');
+            openModal('<h2>Пригласить в сообщество</h2><p style="color:#6a6a7a">Сообщество: <b>'+escapeHtml(communityName)+'</b></p><input id="inviteCommunityUsername" placeholder="Username пользователя"><button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px" onclick="inviteToCommunity('+communityId+')">Пригласить</button><button class="secondary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px;background:#2a2a38" onclick="closeModal()">Отмена</button>');
         }
         async function inviteToCommunity(communityId) {
             var username = document.getElementById("inviteCommunityUsername")?.value.trim();
@@ -1936,7 +1814,7 @@
 
         // ACCOUNTS
         function openCreateAccount() {
-            openModal('<h2>➕ Новый аккаунт</h2><input id="secondUsername" placeholder="Username"><input id="secondPassword" type="password" placeholder="Пароль" style="margin-top:8px"><button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px" onclick="createSecondAccount()">Создать</button>');
+            openModal('<h2>Новый аккаунт</h2><input id="secondUsername" placeholder="Username"><input id="secondPassword" type="password" placeholder="Пароль" style="margin-top:8px"><button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px" onclick="createSecondAccount()">Создать</button>');
         }
         async function createSecondAccount() {
             var username = document.getElementById("secondUsername").value.trim();
@@ -1952,7 +1830,7 @@
         function switchAccount() {
             var accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
             if (!accounts.length) { alert("Нет дополнительных аккаунтов"); return; }
-            openModal('<h2>🔄 Переключение аккаунта</h2><div id="accountList"></div>');
+            openModal('<h2>Переключение аккаунта</h2><div id="accountList"></div>');
             var list = document.getElementById("accountList");
             accounts.forEach(function(acc){
                 var btn = document.createElement("button"); btn.className = "primary";
@@ -2229,12 +2107,12 @@
         async function renameChannel() {
             var name = prompt("Новое название канала:"); if (!name) return;
             await req("/api/channels/" + selectedChannelId, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name }) });
-            document.getElementById("chatName").textContent = "📢 " + name;
+            document.getElementById("chatName").textContent = "Канал: " + name;
         }
         async function renameGroup() {
             var name = prompt("Новое название группы:"); if (!name) return;
             await req("/api/groups/" + selectedGroupId, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name }) });
-            document.getElementById("chatName").textContent = "👥 " + name;
+            document.getElementById("chatName").textContent = "Группа: " + name;
         }
         async function setChannelAvatar() {
             var input = document.createElement("input"); input.type = "file"; input.accept = "image/*";
