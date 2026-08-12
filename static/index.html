@@ -70,8 +70,10 @@
         .topbar .title{font-size:18px;font-weight:600;display:flex;align-items:center;gap:8px;color:#fff}
         .topbar .title img{width:24px;height:24px;vertical-align:middle}
         .top-actions{display:flex;align-items:center;gap:4px}
-        .top-actions .icon-btn{padding:8px;border-radius:10px;transition:background 0.15s;display:flex;align-items:center;justify-content:center}
-        .top-actions .icon-btn img{width:22px;height:22px;display:block}
+        .top-actions .icon-btn{padding:8px;border-radius:10px;transition:background 0.15s;display:flex;align-items:center;justify-content:center;background:transparent!important;color:#b0b0c0!important}
+        .top-actions .icon-btn:hover{background:#1a1a24!important;color:#fff!important}
+        .top-actions .icon-btn img{width:22px;height:22px;opacity:0.7;filter:brightness(0) invert(1)}
+        .top-actions .icon-btn:hover img{opacity:1}
         .content{flex:1;min-height:0;overflow:hidden;position:relative}
         .view{width:100%;height:100%;overflow-y:auto;padding:20px;position:absolute;top:0;left:0;background:#0a0a0f}
         .view.hidden{display:none!important}
@@ -120,7 +122,8 @@
         .chat-header .left .info .status.typing{color:#5865f2;animation:typingDots 1.2s ease-in-out infinite}
         @keyframes typingDots{0%,20%{opacity:0.3}40%{opacity:1}60%,100%{opacity:0.3}}
         .chat-header .actions{display:flex;align-items:center;gap:4px}
-        .chat-header .actions button{padding:6px;border-radius:8px;font-size:18px;transition:background 0.15s}
+        .chat-header .actions button{padding:6px;border-radius:8px;font-size:18px;transition:background 0.15s;background:transparent!important;color:#b0b0c0!important}
+        .chat-header .actions button:hover{background:#1a1a24!important;color:#fff!important}
         .messages{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:4px}
         .message-row{display:flex;width:100%}
         .message-row.mine{justify-content:flex-end}
@@ -143,7 +146,8 @@
         .composer .send-btn{padding:10px 20px;border-radius:12px;background:#5865f2;color:#fff;font-weight:600;font-size:15px;white-space:nowrap;min-width:120px}
         .composer .send-btn:hover{background:#4752c4}
         .composer .send-btn:disabled{opacity:0.5;cursor:not-allowed}
-        .composer .icon-btn{padding:8px;border-radius:10px;font-size:20px;transition:background 0.15s}
+        .composer .icon-btn{padding:8px;border-radius:10px;font-size:20px;transition:background 0.15s;background:transparent!important;color:#b0b0c0!important}
+        .composer .icon-btn:hover{background:#1a1a24!important;color:#fff!important}
         .composer .icon-btn.recording{outline:2px solid #e74c4c;background:rgba(231,76,76,0.15)!important}
         #attachPreview{padding:8px 16px;border-top:1px solid #1a1a24;background:#0f0f17;display:none;align-items:center;gap:10px;flex-shrink:0}
         #attachPreview:not(.hidden){display:flex}
@@ -274,6 +278,10 @@
         body.theme-light .section-header{color:#6a6a7a}
         body.theme-light .topbar{background:#f8f9fc;border-bottom-color:#d0d3d9}
         body.theme-light .topbar .title{color:#111}
+        body.theme-light .top-actions .icon-btn{color:#6a6a7a!important}
+        body.theme-light .top-actions .icon-btn:hover{background:#e4e6eb!important;color:#111!important}
+        body.theme-light .top-actions .icon-btn img{filter:brightness(0) invert(0.4)}
+        body.theme-light .top-actions .icon-btn:hover img{filter:brightness(0) invert(0)}
         body.theme-light .content .view{background:#eef0f4}
         body.theme-light .card,body.theme-light .post,body.theme-light .post-box,body.theme-light .chat-header{background:#fff;border-color:#d0d3d9}
         body.theme-light .card h2,body.theme-light .card h3,body.theme-light .post .head .author,body.theme-light .post .text{color:#111}
@@ -290,6 +298,8 @@
         body.theme-light .post-box .tools .primary-btn:hover{background:#4752c4}
         body.theme-light .chat-container{background:#eef0f4}
         body.theme-light .chat-header .left .info .name{color:#111}
+        body.theme-light .chat-header .actions button{color:#6a6a7a!important}
+        body.theme-light .chat-header .actions button:hover{background:#e4e6eb!important;color:#111!important}
         body.theme-light .message-row.mine .message-bubble{background:#5865f2;color:#fff}
         body.theme-light .message-row.theirs .message-bubble{background:#e4e6eb;color:#111}
         body.theme-light .message-bubble .meta{color:#6a6a7a}
@@ -297,6 +307,8 @@
         body.theme-light .composer{background:#fff;border-top-color:#d0d3d9}
         body.theme-light .composer input{background:#f0f2f5;border-color:#d0d3d9;color:#111}
         body.theme-light .composer input::placeholder{color:#8a8a9a}
+        body.theme-light .composer .icon-btn{color:#6a6a7a!important}
+        body.theme-light .composer .icon-btn:hover{background:#e4e6eb!important;color:#111!important}
         body.theme-light .composer .send-btn{background:#5865f2;color:#fff}
         body.theme-light .composer .send-btn:hover{background:#4752c4}
         body.theme-light .settings-tabs button{color:#6a6a7a}
@@ -352,6 +364,10 @@
         body.theme-blue .section-header{color:#6a7a9a}
         body.theme-blue .topbar{background:#0c1a30;border-bottom-color:#1a2a44}
         body.theme-blue .topbar .title{color:#e0e8f0}
+        body.theme-blue .top-actions .icon-btn{color:#8a9aae!important}
+        body.theme-blue .top-actions .icon-btn:hover{background:#0f2040!important;color:#fff!important}
+        body.theme-blue .top-actions .icon-btn img{filter:brightness(0) invert(0.6)}
+        body.theme-blue .top-actions .icon-btn:hover img{filter:brightness(0) invert(1)}
         body.theme-blue .content .view{background:#0a1428}
         body.theme-blue .card,body.theme-blue .post,body.theme-blue .post-box,body.theme-blue .chat-header{background:#0c1a30;border-color:#1a2a44}
         body.theme-blue .card h2,body.theme-blue .card h3,body.theme-blue .post .head .author,body.theme-blue .post .text{color:#e0e8f0}
@@ -368,6 +384,8 @@
         body.theme-blue .post-box .tools .primary-btn:hover{background:#4752c4}
         body.theme-blue .chat-container{background:#0a1428}
         body.theme-blue .chat-header .left .info .name{color:#e0e8f0}
+        body.theme-blue .chat-header .actions button{color:#8a9aae!important}
+        body.theme-blue .chat-header .actions button:hover{background:#0f2040!important;color:#fff!important}
         body.theme-blue .message-row.mine .message-bubble{background:#5865f2;color:#fff}
         body.theme-blue .message-row.theirs .message-bubble{background:#0f2040;color:#e0e8f0}
         body.theme-blue .message-bubble .meta{color:#8a9aae}
@@ -375,6 +393,8 @@
         body.theme-blue .composer{background:#0c1a30;border-top-color:#1a2a44}
         body.theme-blue .composer input{background:#0a1428;border-color:#1a2a44;color:#e0e8f0}
         body.theme-blue .composer input::placeholder{color:#6a7a9a}
+        body.theme-blue .composer .icon-btn{color:#8a9aae!important}
+        body.theme-blue .composer .icon-btn:hover{background:#0f2040!important;color:#fff!important}
         body.theme-blue .composer .send-btn{background:#5865f2;color:#fff}
         body.theme-blue .composer .send-btn:hover{background:#4752c4}
         body.theme-blue .settings-tabs button{color:#8a9aae}
@@ -416,25 +436,10 @@
         body.theme-blue .reels-container .reel .reel-info .text{color:#fff}
 
         /* ============================================================
-           КНОПКИ В ТЕМАХ
+           ДОПОЛНИТЕЛЬНЫЕ ПРАВИЛА ДЛЯ КНОПОК В ТЕМАХ
         ============================================================ */
 
-        /* ----- ТЕМНАЯ ТЕМА (кнопки белые, иконки белые) ----- */
-        body.theme-dark .top-actions .icon-btn {
-            background: transparent !important;
-            color: #fff !important;
-        }
-        body.theme-dark .top-actions .icon-btn:hover {
-            background: rgba(255,255,255,0.12) !important;
-            color: #fff !important;
-        }
-        body.theme-dark .top-actions .icon-btn img {
-            filter: brightness(0) invert(1);
-        }
-        body.theme-dark .top-actions .icon-btn:hover img {
-            filter: brightness(0) invert(1);
-        }
-
+        /* ----- ТЕМНАЯ ТЕМА (кнопки белые) ----- */
         body.theme-dark .primary {
             background: #fff;
             color: #111;
@@ -456,18 +461,26 @@
         body.theme-dark .danger-button:hover {
             background: #c0392b;
         }
+        body.theme-dark .icon-btn {
+            background: transparent !important;
+            color: #b0b0c0 !important;
+        }
+        body.theme-dark .icon-btn:hover {
+            background: rgba(255,255,255,0.12) !important;
+            color: #fff !important;
+        }
+        body.theme-dark .icon-btn img {
+            filter: brightness(0) invert(0.7);
+        }
+        body.theme-dark .icon-btn:hover img {
+            filter: brightness(0) invert(1);
+        }
         body.theme-dark .composer .send-btn {
             background: #fff;
             color: #111;
         }
         body.theme-dark .composer .send-btn:hover {
             background: #e8eaed;
-        }
-        body.theme-dark .composer .icon-btn {
-            color: #fff !important;
-        }
-        body.theme-dark .composer .icon-btn:hover {
-            background: rgba(255,255,255,0.12) !important;
         }
         body.theme-dark .modal .primary {
             background: #fff;
@@ -518,30 +531,15 @@
         body.theme-dark .auth-card .secondary:hover {
             background: #e8eaed;
         }
-        body.theme-dark .chat-header .actions button {
-            color: #fff !important;
+        /* иконки в топбаре в темной теме - белые */
+        body.theme-dark .top-actions .icon-btn img {
+            filter: brightness(0) invert(1);
         }
-        body.theme-dark .chat-header .actions button:hover {
-            background: rgba(255,255,255,0.12) !important;
-            color: #fff !important;
-        }
-
-        /* ----- СВЕТЛАЯ ТЕМА (кнопки черные, иконки черные) ----- */
-        body.theme-light .top-actions .icon-btn {
-            background: transparent !important;
-            color: #111 !important;
-        }
-        body.theme-light .top-actions .icon-btn:hover {
-            background: rgba(0,0,0,0.08) !important;
-            color: #111 !important;
-        }
-        body.theme-light .top-actions .icon-btn img {
-            filter: brightness(0) invert(0);
-        }
-        body.theme-light .top-actions .icon-btn:hover img {
-            filter: brightness(0) invert(0);
+        body.theme-dark .top-actions .icon-btn:hover img {
+            filter: brightness(0) invert(1);
         }
 
+        /* ----- СВЕТЛАЯ ТЕМА (кнопки черные) ----- */
         body.theme-light .primary {
             background: #222;
             color: #fff;
@@ -563,18 +561,26 @@
         body.theme-light .danger-button:hover {
             background: #444;
         }
+        body.theme-light .icon-btn {
+            background: transparent !important;
+            color: #6a6a7a !important;
+        }
+        body.theme-light .icon-btn:hover {
+            background: rgba(0,0,0,0.08) !important;
+            color: #111 !important;
+        }
+        body.theme-light .icon-btn img {
+            filter: brightness(0) invert(0.4);
+        }
+        body.theme-light .icon-btn:hover img {
+            filter: brightness(0) invert(0);
+        }
         body.theme-light .composer .send-btn {
             background: #222;
             color: #fff;
         }
         body.theme-light .composer .send-btn:hover {
             background: #444;
-        }
-        body.theme-light .composer .icon-btn {
-            color: #111 !important;
-        }
-        body.theme-light .composer .icon-btn:hover {
-            background: rgba(0,0,0,0.08) !important;
         }
         body.theme-light .modal .primary {
             background: #222;
@@ -625,120 +631,20 @@
         body.theme-light .auth-card .secondary:hover {
             background: #444;
         }
-        body.theme-light .chat-header .actions button {
-            color: #111 !important;
+        /* иконки в топбаре в светлой теме - черные */
+        body.theme-light .top-actions .icon-btn img {
+            filter: brightness(0) invert(0);
         }
-        body.theme-light .chat-header .actions button:hover {
-            background: rgba(0,0,0,0.08) !important;
-            color: #111 !important;
+        body.theme-light .top-actions .icon-btn:hover img {
+            filter: brightness(0) invert(0);
         }
 
         /* ----- СИНЯЯ ТЕМА (иконки серые) ----- */
-        body.theme-blue .top-actions .icon-btn {
-            background: transparent !important;
-            color: #8a9aae !important;
-        }
-        body.theme-blue .top-actions .icon-btn:hover {
-            background: #0f2040 !important;
-            color: #e0e8f0 !important;
-        }
         body.theme-blue .top-actions .icon-btn img {
             filter: brightness(0) invert(0.6);
         }
         body.theme-blue .top-actions .icon-btn:hover img {
-            filter: brightness(0) invert(0.8);
-        }
-
-        body.theme-blue .primary {
-            background: #5865f2;
-            color: #fff;
-        }
-        body.theme-blue .primary:hover {
-            background: #4752c4;
-        }
-        body.theme-blue .secondary {
-            background: #0f2040;
-            color: #b0c0d0;
-        }
-        body.theme-blue .secondary:hover {
-            background: #1a2a44;
-        }
-        body.theme-blue .danger-button {
-            background: #e74c4c;
-            color: #fff;
-        }
-        body.theme-blue .danger-button:hover {
-            background: #c0392b;
-        }
-        body.theme-blue .composer .send-btn {
-            background: #5865f2;
-            color: #fff;
-        }
-        body.theme-blue .composer .send-btn:hover {
-            background: #4752c4;
-        }
-        body.theme-blue .composer .icon-btn {
-            color: #8a9aae !important;
-        }
-        body.theme-blue .composer .icon-btn:hover {
-            background: #0f2040 !important;
-            color: #e0e8f0 !important;
-        }
-        body.theme-blue .modal .primary {
-            background: #5865f2;
-            color: #fff;
-        }
-        body.theme-blue .modal .primary:hover {
-            background: #4752c4;
-        }
-        body.theme-blue .modal .secondary {
-            background: #0f2040;
-            color: #b0c0d0;
-        }
-        body.theme-blue .modal .secondary:hover {
-            background: #1a2a44;
-        }
-        body.theme-blue .post-box .tools .primary-btn {
-            background: #5865f2;
-            color: #fff;
-        }
-        body.theme-blue .post-box .tools .primary-btn:hover {
-            background: #4752c4;
-        }
-        body.theme-blue .card .btn-row .primary {
-            background: #5865f2;
-            color: #fff;
-        }
-        body.theme-blue .card .btn-row .primary:hover {
-            background: #4752c4;
-        }
-        body.theme-blue .card .btn-row .secondary {
-            background: #0f2040;
-            color: #b0c0d0;
-        }
-        body.theme-blue .card .btn-row .secondary:hover {
-            background: #1a2a44;
-        }
-        body.theme-blue .auth-card .primary {
-            background: #5865f2;
-            color: #fff;
-        }
-        body.theme-blue .auth-card .primary:hover {
-            background: #4752c4;
-        }
-        body.theme-blue .auth-card .secondary {
-            background: #0f2040;
-            color: #b0c0d0;
-        }
-        body.theme-blue .auth-card .secondary:hover {
-            background: #1a2a44;
-        }
-        body.theme-blue .chat-header .actions button {
-            color: #8a9aae !important;
-        }
-        body.theme-blue .chat-header .actions button:hover {
-            background: #0f2040 !important;
-            color: #e0e8f0 !important;
+            filter: brightness(0) invert(1);
         }
     </style>
 </head>
@@ -780,7 +686,6 @@
                 <div class="title" id="pageTitle"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAzUlEQVR4nO3UzQqCQBSG4Re6i9rWNbjIhZsWXWlBXVG7omU/tOlHx4wgYQjFmXNGpPDAtxA5PsonA/30A3NgDxTC7ICZBN4q0DIbCWwCwNeu4FtX8P2n4Mx6wNRjL7L2Hlo48diLrb1UC0uT+hwYg891GgDOfA6MKljasfH5i6tgace5FpYm7wp+SmBT03HU0L19v9DCSU2HVd3HIeFCkcYx1ld8v3Wr8CkgVubiAq9agNcu8Bg4BESPwATHGQIL4KwA37tLYOSK9vNf8wLXNGJYzhg1tAAAAABJRU5ErkJggg==" alt="feed"> Лента</div>
                 <div class="top-actions">
                     <button class="icon-btn" onclick="showFeed()" title="Лента"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAzUlEQVR4nO3UzQqCQBSG4Re6i9rWNbjIhZsWXWlBXVG7omU/tOlHx4wgYQjFmXNGpPDAtxA5PsonA/30A3NgDxTC7ICZBN4q0DIbCWwCwNeu4FtX8P2n4Mx6wNRjL7L2Hlo48diLrb1UC0uT+hwYg891GgDOfA6MKljasfH5i6tgace5FpYm7wp+SmBT03HU0L19v9DCSU2HVd3HIeFCkcYx1ld8v3Wr8CkgVubiAq9agNcu8Bg4BESPwATHGQIL4KwA37tLYOSK9vNf8wLXNGJYzhg1tAAAAABJRU5ErkJggg==" alt="feed"></button>
-                    <button class="icon-btn" onclick="showReels()" title="Рилсы"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAAA6klEQVR4nO2WPQrCQBBGX6PeIQhexUbwNraWnsXS1sJS8OcEWnkM0foTwYQVFUTjurOZBx8hk7DJI7PZBcdx3mELyGjWoYiMp+Kh8KKWWl0ughERGU1FdiLWkIskhlwkMeQiTRJZADtggHERBZkDvZrG/ZvIKTiOgXZN40cXKYBpcH4AhjU9I6pISR/Y/6jdFFPkSgsYAcfbtTMwATrWREq6wCy4Z8N3yEWa3Fp965O9yOX3e8plQZT1Lcoyl01jTOQiiSEXSQy5iBURGU1FdiLvtFtKdbkIadWV7RxZJ/Ayn2b15Os5jsM9F85+nSCshqh0AAAAAElFTkSuQmCC" alt="reels"></button>
                     <button class="icon-btn" onclick="showFavorites()" title="Избранное"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAABWElEQVR4nO2Wu0oDURRFl4pNwPRi4wPB2BoUjJ02dtqohUbQD9BOW/0Df8HSLqUIprHwA0yXD1CQgIpgFeXCuTDFfXNnRHDDhhk4Z6+Z+5qBP6glcaVaBL7E6roSjQIPwLf4ERirAnxagGqflA2dBj4M4E9grizoCHBrgGrfS012HTug2kc5F1ITOAcGAeCB1DalN0qTQBu4AV4DYDa/A3ey8GZdQPWk/YjgVaAVUd8Hzkzgl8g30orpeTaBt4BhieAhsGMb7ssSwReueVYrseOYU59sc94JWeV1oGdoVqE+rRn6epIZpJmAraTl29fzoVCtzQxglRGtegbwRAp4yhPassxp0SojWo3Iw8HkhRTwSgbwcgp4IwN4PQW87Ql9ErtqVEa0Dg1Bb8C1jIaW+sW9sux79XmN1kHhcO/Kfc1RX5OabuFjs58CHgf2En/iVM+uZPzrd/UDjrQ/+7ZZv/QAAAAASUVORK5CYII=" alt="favorites"></button>
                     <button class="icon-btn" onclick="showProfile()" title="Профиль"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAAA7ElEQVR4nO2UPQrCQBBGHwhJIXgBGz1BSnsPIXgH41VEvZM/ldprJ1aiiBaKRWRhAiJods3ESMiDD5Zkdh+T7C6U/Ck+0AdmwEVixqG8y4Q6sASiN1lIjSp+gvRZrtp530Iap6cpnjuIp5ris4PY1KoROSaXjk+F+MdhXrvalzNqc449lKknyDO5uWI8+ZRT2XAmE3mm3mnJT6kAbSD4UBNIjalNTQMYAHvZuVdgBLSAqsSMx8BNavYyx8x1piaC+xf3dBwzdyhrWdEENimEr1nLmomsFKVxljbiXQbirY24CxwVpQegYyMuKRYP4K3qdvJRSZ4AAAAASUVORK5CYII=" alt="profile"></button>
                 </div>
@@ -1210,10 +1115,16 @@
             var dialogs = await safeJson(r);
             var container = document.getElementById("users");
             if (!container) return;
-            container.querySelectorAll(".dialog-item, .dialogs-header").forEach(function(el){ el.remove(); });
+            // Удаляем старые диалоги, но оставляем остальные секции
+            container.querySelectorAll(".dialog-item").forEach(function(el){ el.remove(); });
+            // Удаляем старый заголовок "ЧАТЫ" если есть
+            container.querySelectorAll(".dialogs-header").forEach(function(el){ el.remove(); });
             if (!dialogs.length) return;
             var frag = document.createDocumentFragment();
-            frag.appendChild(sectionHeader("ЧАТЫ"));
+            var header = document.createElement("div");
+            header.className = "section-header dialogs-header";
+            header.textContent = "ЧАТЫ";
+            frag.appendChild(header);
             dialogs.forEach(function(d){
                 var div = document.createElement("div"); div.className = "user-item dialog-item";
                 var avatar = document.createElement("img"); avatar.className = "avatar";
@@ -1615,138 +1526,13 @@
             try { await navigator.clipboard.writeText(url); alert("Ссылка скопирована!"); } catch(ex) { prompt("Скопируй ссылку:", url); }
         }
 
-        // REELS
-        var reelsData = [], currentReelIndex = 0;
+        // REELS - скрываем полностью, но оставляем функцию для совместимости
         async function showReels() {
-            showOnly("reelsView");
-            setPageTitle("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAAA6klEQVR4nO2WPQrCQBBGX6PeIQhexUbwNraWnsXS1sJS8OcEWnkM0foTwYQVFUTjurOZBx8hk7DJI7PZBcdx3mELyGjWoYiMp+Kh8KKWWl0ughERGU1FdiLWkIskhlwkMeQiTRJZADtggHERBZkDvZrG/ZvIKTiOgXZN40cXKYBpcH4AhjU9I6pISR/Y/6jdFFPkSgsYAcfbtTMwATrWREq6wCy4Z8N3yEWa3Fp965O9yOX3e8plQZT1Lcoyl01jTOQiiSEXSQy5iBURGU1FdiLvtFtKdbkIadWV7RxZJ/Ayn2b15Os5jsM9F85+nSCshqh0AAAAAElFTkSuQmCC", "Рилсы");
-            await loadReels();
+            // Просто показываем ленту вместо рилсов
+            showFeed();
         }
         async function loadReels() {
-            var r = await req("/api/feed");
-            if (!r.ok) return;
-            reelsData = await safeJson(r);
-            var container = document.getElementById("reelsContainer");
-            container.innerHTML = "";
-            if (!reelsData.length) {
-                container.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#6a6a7a;gap:16px">'+
-                    '<div style="font-size:18px">Нет рилсов</div>'+
-                    '<button class="primary" style="padding:10px 20px;border-radius:12px" onclick="openAddReel()">➕ Добавить рилс</button>'+
-                    '</div>';
-                return;
-            }
-            var addBtn = document.createElement("div");
-            addBtn.style.cssText = "position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10";
-            addBtn.innerHTML = '<button class="primary" style="padding:12px 24px;border-radius:50px;font-weight:600;box-shadow:0 4px 20px rgba(88,101,242,0.4)" onclick="openAddReel()">➕ Добавить рилс</button>';
-            container.appendChild(addBtn);
-            var favBtn = document.createElement("div");
-            favBtn.style.cssText = "position:fixed;top:70px;right:16px;z-index:10";
-            favBtn.innerHTML = '<button class="secondary" style="padding:10px 14px;border-radius:50px;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);color:#fff;font-weight:600" onclick="showFavoriteReels()">⭐ Избранное</button>';
-            container.appendChild(favBtn);
-            reelsData.forEach(function(post, idx){
-                var div = document.createElement("div"); div.className = "reel";
-                var media = document.createElement(post.media_type === "video" ? "video" : "img");
-                media.className = "reel-media";
-                if (post.media_url) media.src = mediaUrl(post.media_url);
-                else {
-                    media.style.display = "none";
-                    var txt = document.createElement("div");
-                    txt.style.cssText = "color:#fff;font-size:20px;text-align:center;padding:20px";
-                    txt.textContent = post.text || "Нет контента";
-                    div.appendChild(txt);
-                }
-                if (post.media_type === "video") media.controls = true;
-                var info = document.createElement("div"); info.className = "reel-info";
-                info.innerHTML = '<div class="author" onclick="openReelsProfile('+post.author_id+')">'+escapeHtml(post.display_name||post.username)+'</div><div class="text">'+escapeHtml(post.text||"")+'</div>';
-                var actions = document.createElement("div"); actions.className = "reel-actions";
-                var like = document.createElement("button");
-                like.innerHTML = '❤️ <span class="count">'+(post.likes||0)+'</span>';
-                like.onclick = async function(){
-                    var r2 = await req("/api/posts/" + post.id + "/like", { method: "POST" });
-                    var d2 = await safeJson(r2);
-                    if (r2.ok) like.innerHTML = '❤️ <span class="count">'+d2.likes+'</span>';
-                };
-                var fav = document.createElement("button");
-                fav.textContent = "⭐";
-                fav.onclick = async function(){
-                    var r2 = await req("/api/reels/" + post.id + "/favorite", { method: "POST" });
-                    var d2 = await safeJson(r2);
-                    if (r2.ok) {
-                        fav.textContent = d2.favorited ? "⭐" : "☆";
-                        showToast(d2.favorited ? "Добавлено" : "Удалено", "Избранное");
-                    }
-                };
-                req("/api/reels/favorites").then(function(rf){
-                    if (rf.ok) {
-                        rf.json().then(function(favs){
-                            if (favs.some(function(f){ return f.id === post.id; })) fav.textContent = "⭐";
-                        });
-                    }
-                });
-                actions.appendChild(like); actions.appendChild(fav);
-                var profile = document.createElement("div"); profile.className = "reel-profile";
-                var pAvatar = document.createElement("img"); pAvatar.className = "avatar";
-                if (post.avatar_url) pAvatar.src = mediaUrl(post.avatar_url);
-                pAvatar.onclick = function(){ openReelsProfile(post.author_id); };
-                var pName = document.createElement("div"); pName.className = "username";
-                pName.textContent = "@" + post.username;
-                profile.appendChild(pAvatar); profile.appendChild(pName);
-                div.appendChild(media); div.appendChild(info); div.appendChild(actions); div.appendChild(profile);
-                container.appendChild(div);
-            });
-        }
-        function openAddReel() {
-            openModal('<h2>➕ Добавить рилс</h2><textarea id="reelText" placeholder="Текст рилса..." style="width:100%;min-height:80px;border-radius:10px;background:#1a1a24;border:1px solid #2a2a38;padding:10px;color:#fff;margin-bottom:12px"></textarea><input type="file" id="reelFile" accept="image/*,video/*" style="margin-bottom:12px"><button class="primary" style="width:100%;padding:10px;border-radius:10px" onclick="publishReel()">Опубликовать</button>');
-        }
-        async function publishReel() {
-            var text = document.getElementById("reelText").value.trim();
-            var file = document.getElementById("reelFile").files[0];
-            var form = new FormData();
-            form.append("text", text);
-            if (file) form.append("file", file);
-            var r = await req("/api/posts/media", { method: "POST", body: form });
-            if (!r.ok) { 
-                var d = await safeJson(r); 
-                showToast("Ошибка", d.detail || "Не удалось опубликовать рилс");
-                return; 
-            }
-            closeModal();
-            showToast("Рилс добавлен", "Ваш рилс опубликован");
-            await loadReels();
-        }
-        async function showFavoriteReels() {
-            var r = await req("/api/reels/favorites");
-            if (!r.ok) return;
-            var favs = await safeJson(r);
-            if (!favs.length) { showToast("Нет избранных", "Добавьте рилсы в избранное"); return; }
-            var container = document.getElementById("reelsContainer");
-            container.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;padding:20px;gap:12px">'+
-                '<div style="font-size:18px;font-weight:600;color:#fff">⭐ Избранные рилсы</div>'+
-                '<button class="secondary" style="padding:8px 16px;border-radius:10px" onclick="loadReels()">← Назад</button>'+
-                '</div>';
-            favs.forEach(function(post){
-                var div = document.createElement("div"); div.className = "reel";
-                div.style.height = "auto"; div.style.scrollSnapAlign = "none";
-                div.style.padding = "10px 0"; div.style.borderBottom = "1px solid #2a2a38";
-                var media = document.createElement(post.media_type === "video" ? "video" : "img");
-                media.style.cssText = "max-height:400px;max-width:100%;border-radius:12px;object-fit:contain";
-                if (post.media_url) media.src = mediaUrl(post.media_url);
-                if (post.media_type === "video") media.controls = true;
-                var info = document.createElement("div");
-                info.style.cssText = "color:#fff;padding:8px 0;width:100%";
-                info.innerHTML = '<div style="font-weight:600">'+escapeHtml(post.display_name||post.username)+'</div><div>'+escapeHtml(post.text||"")+'</div>';
-                div.appendChild(media); div.appendChild(info);
-                container.appendChild(div);
-            });
-        }
-        async function openReelsProfile(userId) {
-            showOnly("reelsProfileView");
-            var r = await req("/api/users/" + userId);
-            if (!r.ok) { alert("Пользователь не найден"); return; }
-            var user = await safeJson(r);
-            var container = document.getElementById("reelsProfileContent");
-            var posts = reelsData.filter(function(p){ return Number(p.author_id) === Number(userId); });
-            container.innerHTML = '<div class="reels-profile"><div class="header"><img class="avatar" src="'+(user.avatar_url ? mediaUrl(user.avatar_url) : '')+'" alt=""><div class="info"><div class="name">'+escapeHtml(user.display_name||user.username)+'</div><div class="username">@'+escapeHtml(user.username)+'</div><div class="bio">'+escapeHtml(user.bio||"")+'</div></div></div><div class="stats"><div><div class="num">'+posts.length+'</div><div class="label">Рилсы</div></div><div><div class="num">'+posts.reduce(function(s,p){return s+(p.likes||0);},0)+'</div><div class="label">Лайки</div></div></div><div class="reels-grid">'+posts.map(function(p){ return '<div class="item" onclick="showReels()">'+(p.media_url ? '<'+(p.media_type === 'video' ? 'video' : 'img')+' src="'+mediaUrl(p.media_url)+'" '+(p.media_type === 'video' ? 'muted' : '')+'></'+(p.media_type === 'video' ? 'video' : 'img')+'>' : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#6a6a7a;font-size:12px;text-align:center;padding:8px">Нет медиа</div>')+'<div class="overlay">❤️ '+(p.likes||0)+'</div></div>'; }).join('')+'</div><div style="margin-top:16px"><button class="secondary" style="padding:10px;border-radius:10px;width:100%;background:#2a2a38;color:#fff;border:none" onclick="showReels()">← Назад к рилсам</button></div></div>';
+            // Пустая заглушка
         }
 
         // FAVORITES (сообщения)
