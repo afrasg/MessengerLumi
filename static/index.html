@@ -70,10 +70,8 @@
         .topbar .title{font-size:18px;font-weight:600;display:flex;align-items:center;gap:8px;color:#fff}
         .topbar .title img{width:24px;height:24px;vertical-align:middle}
         .top-actions{display:flex;align-items:center;gap:4px}
-        .top-actions .icon-btn{padding:8px;border-radius:10px;transition:background 0.15s;display:flex;align-items:center;justify-content:center;background:transparent!important;color:#b0b0c0!important}
-        .top-actions .icon-btn:hover{background:#1a1a24!important;color:#fff!important}
-        .top-actions .icon-btn img{width:22px;height:22px;opacity:0.7;filter:brightness(0) invert(1)}
-        .top-actions .icon-btn:hover img{opacity:1}
+        .top-actions .icon-btn{padding:8px;border-radius:10px;transition:background 0.15s;display:flex;align-items:center;justify-content:center}
+        .top-actions .icon-btn img{width:22px;height:22px;display:block}
         .content{flex:1;min-height:0;overflow:hidden;position:relative}
         .view{width:100%;height:100%;overflow-y:auto;padding:20px;position:absolute;top:0;left:0;background:#0a0a0f}
         .view.hidden{display:none!important}
@@ -122,8 +120,7 @@
         .chat-header .left .info .status.typing{color:#5865f2;animation:typingDots 1.2s ease-in-out infinite}
         @keyframes typingDots{0%,20%{opacity:0.3}40%{opacity:1}60%,100%{opacity:0.3}}
         .chat-header .actions{display:flex;align-items:center;gap:4px}
-        .chat-header .actions button{padding:6px;border-radius:8px;font-size:18px;transition:background 0.15s;background:transparent!important;color:#b0b0c0!important}
-        .chat-header .actions button:hover{background:#1a1a24!important;color:#fff!important}
+        .chat-header .actions button{padding:6px;border-radius:8px;font-size:18px;transition:background 0.15s}
         .messages{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:4px}
         .message-row{display:flex;width:100%}
         .message-row.mine{justify-content:flex-end}
@@ -146,8 +143,7 @@
         .composer .send-btn{padding:10px 20px;border-radius:12px;background:#5865f2;color:#fff;font-weight:600;font-size:15px;white-space:nowrap;min-width:120px}
         .composer .send-btn:hover{background:#4752c4}
         .composer .send-btn:disabled{opacity:0.5;cursor:not-allowed}
-        .composer .icon-btn{padding:8px;border-radius:10px;font-size:20px;transition:background 0.15s;background:transparent!important;color:#b0b0c0!important}
-        .composer .icon-btn:hover{background:#1a1a24!important;color:#fff!important}
+        .composer .icon-btn{padding:8px;border-radius:10px;font-size:20px;transition:background 0.15s}
         .composer .icon-btn.recording{outline:2px solid #e74c4c;background:rgba(231,76,76,0.15)!important}
         #attachPreview{padding:8px 16px;border-top:1px solid #1a1a24;background:#0f0f17;display:none;align-items:center;gap:10px;flex-shrink:0}
         #attachPreview:not(.hidden){display:flex}
@@ -278,10 +274,6 @@
         body.theme-light .section-header{color:#6a6a7a}
         body.theme-light .topbar{background:#f8f9fc;border-bottom-color:#d0d3d9}
         body.theme-light .topbar .title{color:#111}
-        body.theme-light .top-actions .icon-btn{color:#6a6a7a!important}
-        body.theme-light .top-actions .icon-btn:hover{background:#e4e6eb!important;color:#111!important}
-        body.theme-light .top-actions .icon-btn img{filter:brightness(0) invert(0.4)}
-        body.theme-light .top-actions .icon-btn:hover img{filter:brightness(0) invert(0)}
         body.theme-light .content .view{background:#eef0f4}
         body.theme-light .card,body.theme-light .post,body.theme-light .post-box,body.theme-light .chat-header{background:#fff;border-color:#d0d3d9}
         body.theme-light .card h2,body.theme-light .card h3,body.theme-light .post .head .author,body.theme-light .post .text{color:#111}
@@ -298,8 +290,6 @@
         body.theme-light .post-box .tools .primary-btn:hover{background:#4752c4}
         body.theme-light .chat-container{background:#eef0f4}
         body.theme-light .chat-header .left .info .name{color:#111}
-        body.theme-light .chat-header .actions button{color:#6a6a7a!important}
-        body.theme-light .chat-header .actions button:hover{background:#e4e6eb!important;color:#111!important}
         body.theme-light .message-row.mine .message-bubble{background:#5865f2;color:#fff}
         body.theme-light .message-row.theirs .message-bubble{background:#e4e6eb;color:#111}
         body.theme-light .message-bubble .meta{color:#6a6a7a}
@@ -307,8 +297,6 @@
         body.theme-light .composer{background:#fff;border-top-color:#d0d3d9}
         body.theme-light .composer input{background:#f0f2f5;border-color:#d0d3d9;color:#111}
         body.theme-light .composer input::placeholder{color:#8a8a9a}
-        body.theme-light .composer .icon-btn{color:#6a6a7a!important}
-        body.theme-light .composer .icon-btn:hover{background:#e4e6eb!important;color:#111!important}
         body.theme-light .composer .send-btn{background:#5865f2;color:#fff}
         body.theme-light .composer .send-btn:hover{background:#4752c4}
         body.theme-light .settings-tabs button{color:#6a6a7a}
@@ -364,10 +352,6 @@
         body.theme-blue .section-header{color:#6a7a9a}
         body.theme-blue .topbar{background:#0c1a30;border-bottom-color:#1a2a44}
         body.theme-blue .topbar .title{color:#e0e8f0}
-        body.theme-blue .top-actions .icon-btn{color:#8a9aae!important}
-        body.theme-blue .top-actions .icon-btn:hover{background:#0f2040!important;color:#fff!important}
-        body.theme-blue .top-actions .icon-btn img{filter:brightness(0) invert(0.6)}
-        body.theme-blue .top-actions .icon-btn:hover img{filter:brightness(0) invert(1)}
         body.theme-blue .content .view{background:#0a1428}
         body.theme-blue .card,body.theme-blue .post,body.theme-blue .post-box,body.theme-blue .chat-header{background:#0c1a30;border-color:#1a2a44}
         body.theme-blue .card h2,body.theme-blue .card h3,body.theme-blue .post .head .author,body.theme-blue .post .text{color:#e0e8f0}
@@ -384,8 +368,6 @@
         body.theme-blue .post-box .tools .primary-btn:hover{background:#4752c4}
         body.theme-blue .chat-container{background:#0a1428}
         body.theme-blue .chat-header .left .info .name{color:#e0e8f0}
-        body.theme-blue .chat-header .actions button{color:#8a9aae!important}
-        body.theme-blue .chat-header .actions button:hover{background:#0f2040!important;color:#fff!important}
         body.theme-blue .message-row.mine .message-bubble{background:#5865f2;color:#fff}
         body.theme-blue .message-row.theirs .message-bubble{background:#0f2040;color:#e0e8f0}
         body.theme-blue .message-bubble .meta{color:#8a9aae}
@@ -393,8 +375,6 @@
         body.theme-blue .composer{background:#0c1a30;border-top-color:#1a2a44}
         body.theme-blue .composer input{background:#0a1428;border-color:#1a2a44;color:#e0e8f0}
         body.theme-blue .composer input::placeholder{color:#6a7a9a}
-        body.theme-blue .composer .icon-btn{color:#8a9aae!important}
-        body.theme-blue .composer .icon-btn:hover{background:#0f2040!important;color:#fff!important}
         body.theme-blue .composer .send-btn{background:#5865f2;color:#fff}
         body.theme-blue .composer .send-btn:hover{background:#4752c4}
         body.theme-blue .settings-tabs button{color:#8a9aae}
@@ -436,10 +416,25 @@
         body.theme-blue .reels-container .reel .reel-info .text{color:#fff}
 
         /* ============================================================
-           ДОПОЛНИТЕЛЬНЫЕ ПРАВИЛА ДЛЯ КНОПОК В ТЕМАХ
+           КНОПКИ В ТЕМАХ
         ============================================================ */
 
-        /* ----- ТЕМНАЯ ТЕМА (кнопки белые) ----- */
+        /* ----- ТЕМНАЯ ТЕМА (кнопки белые, иконки белые) ----- */
+        body.theme-dark .top-actions .icon-btn {
+            background: transparent !important;
+            color: #fff !important;
+        }
+        body.theme-dark .top-actions .icon-btn:hover {
+            background: rgba(255,255,255,0.12) !important;
+            color: #fff !important;
+        }
+        body.theme-dark .top-actions .icon-btn img {
+            filter: brightness(0) invert(1);
+        }
+        body.theme-dark .top-actions .icon-btn:hover img {
+            filter: brightness(0) invert(1);
+        }
+
         body.theme-dark .primary {
             background: #fff;
             color: #111;
@@ -461,26 +456,18 @@
         body.theme-dark .danger-button:hover {
             background: #c0392b;
         }
-        body.theme-dark .icon-btn {
-            background: transparent !important;
-            color: #b0b0c0 !important;
-        }
-        body.theme-dark .icon-btn:hover {
-            background: rgba(255,255,255,0.12) !important;
-            color: #fff !important;
-        }
-        body.theme-dark .icon-btn img {
-            filter: brightness(0) invert(0.7);
-        }
-        body.theme-dark .icon-btn:hover img {
-            filter: brightness(0) invert(1);
-        }
         body.theme-dark .composer .send-btn {
             background: #fff;
             color: #111;
         }
         body.theme-dark .composer .send-btn:hover {
             background: #e8eaed;
+        }
+        body.theme-dark .composer .icon-btn {
+            color: #fff !important;
+        }
+        body.theme-dark .composer .icon-btn:hover {
+            background: rgba(255,255,255,0.12) !important;
         }
         body.theme-dark .modal .primary {
             background: #fff;
@@ -531,8 +518,30 @@
         body.theme-dark .auth-card .secondary:hover {
             background: #e8eaed;
         }
+        body.theme-dark .chat-header .actions button {
+            color: #fff !important;
+        }
+        body.theme-dark .chat-header .actions button:hover {
+            background: rgba(255,255,255,0.12) !important;
+            color: #fff !important;
+        }
 
-        /* ----- СВЕТЛАЯ ТЕМА (кнопки черные) ----- */
+        /* ----- СВЕТЛАЯ ТЕМА (кнопки черные, иконки черные) ----- */
+        body.theme-light .top-actions .icon-btn {
+            background: transparent !important;
+            color: #111 !important;
+        }
+        body.theme-light .top-actions .icon-btn:hover {
+            background: rgba(0,0,0,0.08) !important;
+            color: #111 !important;
+        }
+        body.theme-light .top-actions .icon-btn img {
+            filter: brightness(0) invert(0);
+        }
+        body.theme-light .top-actions .icon-btn:hover img {
+            filter: brightness(0) invert(0);
+        }
+
         body.theme-light .primary {
             background: #222;
             color: #fff;
@@ -554,26 +563,18 @@
         body.theme-light .danger-button:hover {
             background: #444;
         }
-        body.theme-light .icon-btn {
-            background: transparent !important;
-            color: #6a6a7a !important;
-        }
-        body.theme-light .icon-btn:hover {
-            background: rgba(0,0,0,0.08) !important;
-            color: #111 !important;
-        }
-        body.theme-light .icon-btn img {
-            filter: brightness(0) invert(0.4);
-        }
-        body.theme-light .icon-btn:hover img {
-            filter: brightness(0) invert(0);
-        }
         body.theme-light .composer .send-btn {
             background: #222;
             color: #fff;
         }
         body.theme-light .composer .send-btn:hover {
             background: #444;
+        }
+        body.theme-light .composer .icon-btn {
+            color: #111 !important;
+        }
+        body.theme-light .composer .icon-btn:hover {
+            background: rgba(0,0,0,0.08) !important;
         }
         body.theme-light .modal .primary {
             background: #222;
@@ -624,8 +625,30 @@
         body.theme-light .auth-card .secondary:hover {
             background: #444;
         }
+        body.theme-light .chat-header .actions button {
+            color: #111 !important;
+        }
+        body.theme-light .chat-header .actions button:hover {
+            background: rgba(0,0,0,0.08) !important;
+            color: #111 !important;
+        }
 
-        /* ----- СИНЯЯ ТЕМА (оставляем как есть) ----- */
+        /* ----- СИНЯЯ ТЕМА (иконки серые) ----- */
+        body.theme-blue .top-actions .icon-btn {
+            background: transparent !important;
+            color: #8a9aae !important;
+        }
+        body.theme-blue .top-actions .icon-btn:hover {
+            background: #0f2040 !important;
+            color: #e0e8f0 !important;
+        }
+        body.theme-blue .top-actions .icon-btn img {
+            filter: brightness(0) invert(0.6);
+        }
+        body.theme-blue .top-actions .icon-btn:hover img {
+            filter: brightness(0) invert(0.8);
+        }
+
         body.theme-blue .primary {
             background: #5865f2;
             color: #fff;
@@ -647,26 +670,19 @@
         body.theme-blue .danger-button:hover {
             background: #c0392b;
         }
-        body.theme-blue .icon-btn {
-            background: transparent !important;
-            color: #8a9aae !important;
-        }
-        body.theme-blue .icon-btn:hover {
-            background: #0f2040 !important;
-            color: #fff !important;
-        }
-        body.theme-blue .icon-btn img {
-            filter: brightness(0) invert(0.6);
-        }
-        body.theme-blue .icon-btn:hover img {
-            filter: brightness(0) invert(1);
-        }
         body.theme-blue .composer .send-btn {
             background: #5865f2;
             color: #fff;
         }
         body.theme-blue .composer .send-btn:hover {
             background: #4752c4;
+        }
+        body.theme-blue .composer .icon-btn {
+            color: #8a9aae !important;
+        }
+        body.theme-blue .composer .icon-btn:hover {
+            background: #0f2040 !important;
+            color: #e0e8f0 !important;
         }
         body.theme-blue .modal .primary {
             background: #5865f2;
@@ -716,6 +732,13 @@
         }
         body.theme-blue .auth-card .secondary:hover {
             background: #1a2a44;
+        }
+        body.theme-blue .chat-header .actions button {
+            color: #8a9aae !important;
+        }
+        body.theme-blue .chat-header .actions button:hover {
+            background: #0f2040 !important;
+            color: #e0e8f0 !important;
         }
     </style>
 </head>
@@ -849,42 +872,42 @@
                                 <button data-tab="calls" onclick="switchSettingsTab('calls')">Звонки</button>
                             </div>
                             <div id="settingsTabGeneral" class="settings-tab active">
-                                <div class="setting"><label><span>🌐 Язык</span><select id="language" onchange="saveSettings()"><option value="ru">Русский</option><option value="en">English</option><option value="be">Беларуская</option><option value="kk">Қазақша</option></select></label></div>
-                                <div class="setting"><label><span>🎨 Тема</span><select id="theme" onchange="saveSettings()"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="blue">Синяя</option></select></label></div>
-                                <div class="setting"><label>🔔 Уведомления <input id="notifications" type="checkbox" onchange="saveSettings()"></label></div>
-                                <div class="setting"><label>🟢 Показывать онлайн <input id="showOnline" type="checkbox" onchange="saveSettings()"></label></div>
-                                <div class="setting"><label>🕒 Показывать статус <input id="showLastSeen" type="checkbox" onchange="saveSettings()"></label></div>
+                                <div class="setting"><label><span>Язык</span><select id="language" onchange="saveSettings()"><option value="ru">Русский</option><option value="en">English</option><option value="be">Беларуская</option><option value="kk">Қазақша</option></select></label></div>
+                                <div class="setting"><label><span>Тема</span><select id="theme" onchange="saveSettings()"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="blue">Синяя</option></select></label></div>
+                                <div class="setting"><label>Уведомления <input id="notifications" type="checkbox" onchange="saveSettings()"></label></div>
+                                <div class="setting"><label>Показывать онлайн <input id="showOnline" type="checkbox" onchange="saveSettings()"></label></div>
+                                <div class="setting"><label>Показывать статус <input id="showLastSeen" type="checkbox" onchange="saveSettings()"></label></div>
                             </div>
                             <div id="settingsTabPrivacy" class="settings-tab">
-                                <div class="setting"><label>📷 Кто видит аватарку <select id="avatarVisibility" onchange="savePrivacy()"><option value="all">Все</option><option value="contacts">Контакты</option><option value="none">Никто</option></select></label></div>
-                                <div class="setting"><label>📅 Кто видит статус <select id="lastSeenVisibility" onchange="savePrivacy()"><option value="all">Все</option><option value="contacts">Контакты</option><option value="none">Никто</option></select></label></div>
-                                <button class="danger" style="padding:10px;border-radius:10px;width:100%;margin-top:8px" onclick="clearAllChats()">🗑️ Очистить все чаты</button>
+                                <div class="setting"><label>Кто видит аватарку <select id="avatarVisibility" onchange="savePrivacy()"><option value="all">Все</option><option value="contacts">Контакты</option><option value="none">Никто</option></select></label></div>
+                                <div class="setting"><label>Кто видит статус <select id="lastSeenVisibility" onchange="savePrivacy()"><option value="all">Все</option><option value="contacts">Контакты</option><option value="none">Никто</option></select></label></div>
+                                <button class="danger" style="padding:10px;border-radius:10px;width:100%;margin-top:8px" onclick="clearAllChats()">Очистить все чаты</button>
                             </div>
                             <div id="settingsTabAccounts" class="settings-tab">
-                                <div class="setting"><button class="primary" style="width:100%;padding:10px;border-radius:10px" onclick="openCreateAccount()">➕ Добавить аккаунт</button></div>
-                                <div class="setting"><button class="primary" style="width:100%;padding:10px;border-radius:10px" onclick="switchAccount()">🔄 Переключить</button></div>
-                                <div class="setting"><button class="danger" style="width:100%;padding:10px;border-radius:10px" onclick="logout()">🚪 Выйти</button></div>
-                                <div class="setting"><button class="danger" style="width:100%;padding:10px;border-radius:10px" onclick="deleteAccount()">🗑️ Удалить аккаунт</button></div>
+                                <div class="setting"><button class="primary" style="width:100%;padding:10px;border-radius:10px" onclick="openCreateAccount()">Добавить аккаунт</button></div>
+                                <div class="setting"><button class="primary" style="width:100%;padding:10px;border-radius:10px" onclick="switchAccount()">Переключить</button></div>
+                                <div class="setting"><button class="danger" style="width:100%;padding:10px;border-radius:10px" onclick="logout()">Выйти</button></div>
+                                <div class="setting"><button class="danger" style="width:100%;padding:10px;border-radius:10px" onclick="deleteAccount()">Удалить аккаунт</button></div>
                             </div>
                             <div id="settingsTabCalls" class="settings-tab">
-                                <div class="setting"><label>📞 Автоответ на звонки <input id="autoAnswer" type="checkbox" onchange="saveSettings()"></label></div>
-                                <div class="setting"><label>🔇 Заглушать микрофон при входе <input id="muteOnJoin" type="checkbox" onchange="saveSettings()"></label></div>
-                                <div class="setting"><label>📹 Включать камеру при видео <input id="cameraOnJoin" type="checkbox" onchange="saveSettings()"></label></div>
+                                <div class="setting"><label>Автоответ на звонки <input id="autoAnswer" type="checkbox" onchange="saveSettings()"></label></div>
+                                <div class="setting"><label>Заглушать микрофон при входе <input id="muteOnJoin" type="checkbox" onchange="saveSettings()"></label></div>
+                                <div class="setting"><label>Включать камеру при видео <input id="cameraOnJoin" type="checkbox" onchange="saveSettings()"></label></div>
                             </div>
                         </div>
                         <div class="card">
-                            <h3>👥 Группы</h3>
-                            <button class="primary" style="padding:10px;border-radius:10px;width:100%" onclick="openCreateGroup()">➕ Создать группу</button>
+                            <h3>Группы</h3>
+                            <button class="primary" style="padding:10px;border-radius:10px;width:100%" onclick="openCreateGroup()">Создать группу</button>
                             <div id="groups" style="margin-top:8px"></div>
                         </div>
                         <div class="card">
-                            <h3>📢 Каналы</h3>
-                            <button class="primary" style="padding:10px;border-radius:10px;width:100%" onclick="openCreateChannel()">➕ Создать канал</button>
+                            <h3>Каналы</h3>
+                            <button class="primary" style="padding:10px;border-radius:10px;width:100%" onclick="openCreateChannel()">Создать канал</button>
                             <div id="channels" style="margin-top:8px"></div>
                         </div>
                         <div class="card">
-                            <h3>🌐 Сообщества</h3>
-                            <button class="primary" style="padding:10px;border-radius:10px;width:100%" onclick="openCreateCommunity()">➕ Создать сообщество</button>
+                            <h3>Сообщества</h3>
+                            <button class="primary" style="padding:10px;border-radius:10px;width:100%" onclick="openCreateCommunity()">Создать сообщество</button>
                             <div id="communities" style="margin-top:8px"></div>
                         </div>
                     </div>
