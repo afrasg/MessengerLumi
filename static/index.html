@@ -5453,3 +5453,13 @@
     </script>
 </body>
 </html>
+    // Показываем экран входа
+document.addEventListener("DOMContentLoaded", function() {
+    document.getElementById("auth").classList.remove("hidden");
+    document.getElementById("app").classList.add("hidden");
+    
+    // Пробуем залогиниться
+    if (localStorage.getItem("token")) {
+        checkAuth();
+    }
+});
