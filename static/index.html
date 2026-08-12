@@ -153,6 +153,8 @@
         .composer .icon-btn{padding:8px;border-radius:10px;font-size:20px;transition:background 0.15s;background:transparent!important;color:#b0b0c0!important}
         .composer .icon-btn:hover{background:#1a1a24!important;color:#fff!important}
         .composer .icon-btn.recording{outline:2px solid #e74c4c;background:rgba(231,76,76,0.15)!important}
+        .composer .icon-btn img{width:24px;height:24px;filter:brightness(0) invert(0.7)}
+        .composer .icon-btn:hover img{filter:brightness(0) invert(1)}
         #attachPreview{padding:8px 16px;border-top:1px solid #1a1a24;background:#0f0f17;display:none;align-items:center;gap:10px;flex-shrink:0}
         #attachPreview:not(.hidden){display:flex}
         #attachPreview img{max-height:120px;border-radius:8px}
@@ -313,6 +315,8 @@
         body.theme-light .composer input::placeholder{color:#8a8a9a}
         body.theme-light .composer .icon-btn{color:#6a6a7a!important}
         body.theme-light .composer .icon-btn:hover{background:#e4e6eb!important;color:#111!important}
+        body.theme-light .composer .icon-btn img{filter:brightness(0) invert(0.4)}
+        body.theme-light .composer .icon-btn:hover img{filter:brightness(0) invert(0)}
         body.theme-light .composer .send-btn{background:#5865f2;color:#fff}
         body.theme-light .composer .send-btn:hover{background:#4752c4}
         body.theme-light .settings-tabs button{color:#6a6a7a}
@@ -396,6 +400,8 @@
         body.theme-blue .composer input::placeholder{color:#6a7a9a}
         body.theme-blue .composer .icon-btn{color:#8a9aae!important}
         body.theme-blue .composer .icon-btn:hover{background:#0f2040!important;color:#fff!important}
+        body.theme-blue .composer .icon-btn img{filter:brightness(0) invert(0.6)}
+        body.theme-blue .composer .icon-btn:hover img{filter:brightness(0) invert(1)}
         body.theme-blue .composer .send-btn{background:#5865f2;color:#fff}
         body.theme-blue .composer .send-btn:hover{background:#4752c4}
         body.theme-blue .settings-tabs button{color:#8a9aae}
@@ -465,6 +471,8 @@
         body.theme-dark .auth-card .secondary:hover { background: #e8eaed; }
         body.theme-dark .top-actions .icon-btn img { filter: brightness(0) invert(1); }
         body.theme-dark .top-actions .icon-btn:hover img { filter: brightness(0) invert(1); }
+        body.theme-dark .chat-header .actions button img { filter: brightness(0) invert(0.7); }
+        body.theme-dark .chat-header .actions button:hover img { filter: brightness(0) invert(1); }
 
         /* ----- СВЕТЛАЯ ТЕМА (кнопки черные) ----- */
         body.theme-light .primary { background: #222; color: #fff; }
@@ -495,10 +503,14 @@
         body.theme-light .auth-card .secondary:hover { background: #444; }
         body.theme-light .top-actions .icon-btn img { filter: brightness(0) invert(0); }
         body.theme-light .top-actions .icon-btn:hover img { filter: brightness(0) invert(0); }
+        body.theme-light .chat-header .actions button img { filter: brightness(0) invert(0.4); }
+        body.theme-light .chat-header .actions button:hover img { filter: brightness(0) invert(0); }
 
         /* ----- СИНЯЯ ТЕМА ----- */
         body.theme-blue .top-actions .icon-btn img { filter: brightness(0) invert(0.6); }
         body.theme-blue .top-actions .icon-btn:hover img { filter: brightness(0) invert(1); }
+        body.theme-blue .chat-header .actions button img { filter: brightness(0) invert(0.6); }
+        body.theme-blue .chat-header .actions button:hover img { filter: brightness(0) invert(1); }
     </style>
 </head>
 <body>
@@ -529,18 +541,18 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="logo"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAACgklEQVR4nO2ZO2gUURSGvzUG4xuCEfGBhYWCQhQFY6E2KmihjRZaCKYQK7XzgY82NoKihbqVCHYZxGChFhaCRHyARQJaCEbjA0EUETUmKwfOyGGdvbs7O7N7xfvBbeb+c+75Z+6ce/cuBAKBQMAT1gDHgEuetuPA6momTgHjQMnzNg6crGRiPTChwtfAHU/bG81Rct2YZOSMCp4DHfhLB/BCc5Wp9hdF7XwMFPCXAvBUc72RJNht5uA5T80UNLeSy0gbcMuIinrNF9rMrHEaieffTSO8DrTTeto1F1u1nEaEycBVc9MAMJXWMQXoL3u4A7UYSXqN94CZNJ9pwG2Tx2VgEhDVaiT+sM6aIA+BTprHbOC+Gf+CKUB1GYk5YoI9AbrIn05g0IzbV9afyki5mWFgIfkxD3hmxkvaiqQ2Ihww1eIlsITsWWxWbdmCHKqgcxqZDxwFFjkG2gf80iAjwFKyQ2KNaGwZY69D6zRyRTul9LrYBfxU7Tugm8bp1lgl4Aews4reaSRecERUjW3AN9V/AtbR2O+fjxrrO7CjhnsyMyJsAL7oPV+BTfXl/yfG5xQxoiyNpH2aMVsbeKtR1kaE5cComd/yDVVjuxqXe94DK+scM8rDSFLF6XVo9wBjqpUHsCLFeFFeRpLWgMM5rkVRnkaEBcBQ2f5ombaL5vqQavHViDBX92SVTkCy2K9FzTAiTNc3EH/QcVU7r338K0ZiZmhZ7cnIQMuM5EUUjHhG9F8YKWrnA/xnUHO9ltS535wZbcZftpjdwcEkgZTHVyoY07OkPs9av9mnvQVmVXK7SgUlz9sHYG0tRzEn9L+IR561u8BpYE6j8zMQCAQCAQy/AVYpvpGGNPN0AAAAAElFTkSuQmCC" alt="logo"><span>Lumi</span></div>
-                <button class="icon-btn" onclick="showSettings()" title="Настройки"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAAB8UlEQVR4nO1W3UpCQRD+8MoCyQt7AdMuCuopIgLtymfoKi3synqGnqK/B7B7QfEV+nmD0EBToTKzWPoWhmGPZ0+aQfTBwtnZmfl2Z8/sDPCPYCyoeRNAI0RnapQAjADkOM8C+OAw3wa71NmfJfExSfoA6gB6grhH2YDzyjRESZ4yBSAO4FoQhY0qbZYBHNCXN0p00gXQikBqR4u25rvoT/t10o7D4Q03tSFkG5TdOvQ79OWNuDrpM3ceEzp2zSLG0L6okxtfoSjxR5J3+gpgy6GriS22aSPv/IS+nVhkOuhwPQAoRCAu0Eb7eZuU53mmjFWWG6kB2ASwAuBKyM13mmu1ANu+eAMCURcGZQB74r5HKodlLluiFm3KYr0eRrqqHK9RbnLxlOEy8ncAZxxjEcpTkbframPZINKm4yQJpfNIuSG0OKfMrEkkHP4aLuKGB3F7AnHbg7gedOpMSKiHlI9JeCFCPQwJdQZz+rmOovxceY90Sqt0uvRIpwHL5q88ICNyOFFkPa2qJ3M7AvGO48ms+DYIukiYh//Qo0iUFWkrajuUCiiLd6xAuiyaTd079LtsCObaCHS+0wgkeScphuo7rU+KPpaiEGtUJjR7T5T1Z9HsaRSZDibPbTGxxPZFyv1EewtHDjYcL9LMG3r8GXwCWVtNc8Ye75UAAAAASUVORK5CYII=" alt="settings"></button>
+                <button class="icon-btn" onclick="showSettings()" title="Настройки"><img width="24" height="24" src="https://img.icons8.ru/ios-filled/50/settings.png" alt="settings"></button>
             </div>
             <div class="sidebar-search"><input id="search" placeholder="Поиск..." oninput="searchUsers()"></div>
             <div class="sidebar-users" id="users"></div>
         </aside>
         <main class="main">
             <div class="topbar">
-                <div class="title" id="pageTitle"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAzUlEQVR4nO3UzQqCQBSG4Re6i9rWNbjIhZsWXWlBXVG7omU/tOlHx4wgYQjFmXNGpPDAtxA5PsonA/30A3NgDxTC7ICZBN4q0DIbCWwCwNeu4FtX8P2n4Mx6wNRjL7L2Hlo48diLrb1UC0uT+hwYg891GgDOfA6MKljasfH5i6tgace5FpYm7wp+SmBT03HU0L19v9DCSU2HVd3HIeFCkcYx1ld8v3Wr8CkgVubiAq9agNcu8Bg4BESPwATHGQIL4KwA37tLYOSK9vNf8wLXNGJYzhg1tAAAAABJRU5ErkJggg==" alt="feed"> Лента</div>
+                <div class="title" id="pageTitle"><img width="24" height="24" src="https://img.icons8.ru/ios-filled/50/home.png" alt="feed"> Лента</div>
                 <div class="top-actions">
-                    <button class="icon-btn" onclick="showFeed()" title="Лента"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAzUlEQVR4nO3UzQqCQBSG4Re6i9rWNbjIhZsWXWlBXVG7omU/tOlHx4wgYQjFmXNGpPDAtxA5PsonA/30A3NgDxTC7ICZBN4q0DIbCWwCwNeu4FtX8P2n4Mx6wNRjL7L2Hlo48diLrb1UC0uT+hwYg891GgDOfA6MKljasfH5i6tgace5FpYm7wp+SmBT03HU0L19v9DCSU2HVd3HIeFCkcYx1ld8v3Wr8CkgVubiAq9agNcu8Bg4BESPwATHGQIL4KwA37tLYOSK9vNf8wLXNGJYzhg1tAAAAABJRU5ErkJggg==" alt="feed"></button>
-                    <button class="icon-btn" onclick="showFavorites()" title="Избранное"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAABWElEQVR4nO2Wu0oDURRFl4pNwPRi4wPB2BoUjJ02dtqohUbQD9BOW/0Df8HSLqUIprHwA0yXD1CQgIpgFeXCuTDFfXNnRHDDhhk4Z6+Z+5qBP6glcaVaBL7E6roSjQIPwLf4ERirAnxagGqflA2dBj4M4E9grizoCHBrgGrfS012HTug2kc5F1ITOAcGAeCB1DalN0qTQBu4AV4DYDa/A3ey8GZdQPWk/YjgVaAVUd8Hzkzgl8g30orpeTaBt4BhieAhsGMb7ssSwReueVYrseOYU59sc94JWeV1oGdoVqE+rRn6epIZpJmAraTl29fzoVCtzQxglRGtegbwRAp4yhPassxp0SojWo3Iw8HkhRTwSgbwcgp4IwN4PQW87Ql9ErtqVEa0Dg1Bb8C1jIaW+sW9sux79XmN1kHhcO/Kfc1RX5OabuFjs58CHgf2En/iVM+uZPzrd/UDjrQ/+7ZZv/QAAAAASUVORK5CYII=" alt="favorites"></button>
-                    <button class="icon-btn" onclick="showProfile()" title="Профиль"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAAA7ElEQVR4nO2UPQrCQBBGHwhJIXgBGz1BSnsPIXgH41VEvZM/ldprJ1aiiBaKRWRhAiJods3ESMiDD5Zkdh+T7C6U/Ck+0AdmwEVixqG8y4Q6sASiN1lIjSp+gvRZrtp530Iap6cpnjuIp5ris4PY1KoROSaXjk+F+MdhXrvalzNqc449lKknyDO5uWI8+ZRT2XAmE3mm3mnJT6kAbSD4UBNIjalNTQMYAHvZuVdgBLSAqsSMx8BNavYyx8x1piaC+xf3dBwzdyhrWdEENimEr1nLmomsFKVxljbiXQbirY24CxwVpQegYyMuKRYP4K3qdvJRSZ4AAAAASUVORK5CYII=" alt="profile"></button>
+                    <button class="icon-btn" onclick="showFeed()" title="Лента"><img width="24" height="24" src="https://img.icons8.ru/ios-filled/50/home.png" alt="feed"></button>
+                    <button class="icon-btn" onclick="showFavorites()" title="Избранное"><img width="24" height="24" src="https://img.icons8.ru/external-tanah-basah-basic-outline-tanah-basah/24/external-bookmark-social-media-ui-tanah-basah-basic-outline-tanah-basah.png" alt="bookmark"></button>
+                    <button class="icon-btn" onclick="showProfile()" title="Профиль"><img width="24" height="24" src="https://img.icons8.ru/ios-filled/50/user.png" alt="user"></button>
                 </div>
             </div>
             <div class="content">
@@ -574,9 +586,9 @@
                                 </div>
                             </div>
                             <div class="actions" id="chatActions">
-                                <button onclick="event.stopPropagation();startCall(false)" title="Аудиозвонок">📞</button>
-                                <button onclick="event.stopPropagation();startCall(true)" title="Видеозвонок">📹</button>
-                                <button onclick="event.stopPropagation();openChatMenu(event)" title="Меню">⋮</button>
+                                <button onclick="event.stopPropagation();startCall(false)" title="Аудиозвонок"><img width="24" height="24" src="https://img.icons8.ru/parakeet-filled/48/phone.png" alt="phone"></button>
+                                <button onclick="event.stopPropagation();startCall(true)" title="Видеозвонок"><img width="24" height="24" src="https://img.icons8.ru/ios-filled/50/video-call.png" alt="video-call"></button>
+                                <button onclick="event.stopPropagation();openChatMenu(event)" title="Меню"><svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="24" height="24" viewBox="0 0 50 50"><path d="M 3 9 A 1.0001 1.0001 0 1 0 3 11 L 47 11 A 1.0001 1.0001 0 1 0 47 9 L 3 9 z M 3 24 A 1.0001 1.0001 0 1 0 3 26 L 47 26 A 1.0001 1.0001 0 1 0 47 24 L 3 24 z M 3 39 A 1.0001 1.0001 0 1 0 3 41 L 47 41 A 1.0001 1.0001 0 1 0 47 39 L 3 39 z"></path></svg></button>
                             </div>
                         </div>
                         <div class="messages" id="messages"></div>
@@ -584,12 +596,12 @@
                         <div id="attachPreview" class="hidden">
                             <span class="file-info"></span>
                             <button class="primary" style="padding:6px 14px;border-radius:8px" onclick="sendPendingFile()">Отправить</button>
-                            <button class="secondary" style="padding:6px 14px;border-radius:8px;background:#2a2a38" onclick="clearAttachPreview()">✕</button>
+                            <button class="secondary" style="padding:6px 14px;border-radius:8px;background:#2a2a38" onclick="clearAttachPreview()"><img width="20" height="20" src="https://img.icons8.ru/external-glyph-silhouettes-icons-papa-vector/78/external-Cross-Mark-interface-glyph-silhouettes-icons-papa-vector.png" alt="close"></button>
                         </div>
                         <div class="composer">
-                            <button class="icon-btn" onclick="document.getElementById('dmFile').click()" title="Файл">📎</button>
+                            <button class="icon-btn" onclick="document.getElementById('dmFile').click()" title="Файл"><img width="24" height="24" src="https://img.icons8.ru/ios-filled/50/attach.png" alt="attach"></button>
                             <input id="dmFile" type="file" hidden onchange="previewFile()">
-                            <button class="icon-btn" id="voiceBtn" onpointerdown="startVoice()" onpointerup="stopVoice()" onpointerleave="stopVoice()" title="Голосовое">🎤</button>
+                            <button class="icon-btn" id="voiceBtn" onpointerdown="startVoice()" onpointerup="stopVoice()" onpointerleave="stopVoice()" title="Голосовое"><img width="24" height="24" src="https://img.icons8.ru/ios-filled/50/microphone--v1.png" alt="microphone"></button>
                             <input id="messageInput" placeholder="Сообщение..." onkeydown="messageKey(event)">
                             <button class="send-btn" onclick="sendMessage()">Отправить</button>
                         </div>
@@ -599,7 +611,7 @@
                     <div class="profile-container">
                         <div class="card">
                             <img id="bigAvatar" class="big-avatar" alt="">
-                            <h2><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAAA7ElEQVR4nO2UPQrCQBBGHwhJIXgBGz1BSnsPIXgH41VEvZM/ldprJ1aiiBaKRWRhAiJods3ESMiDD5Zkdh+T7C6U/Ck+0AdmwEVixqG8y4Q6sASiN1lIjSp+gvRZrtp530Iap6cpnjuIp5ris4PY1KoROSaXjk+F+MdhXrvalzNqc449lKknyDO5uWI8+ZRT2XAmE3mm3mnJT6kAbSD4UBNIjalNTQMYAHvZuVdgBLSAqsSMx8BNavYyx8x1piaC+xf3dBwzdyhrWdEENimEr1nLmomsFKVxljbiXQbirY24CxwVpQegYyMuKRYP4K3qdvJRSZ4AAAAASUVORK5CYII=" alt=""> Профиль</h2>
+                            <h2><img width="24" height="24" src="https://img.icons8.ru/ios-filled/50/user.png" alt="user"> Профиль</h2>
                             <div class="field"><label>Username</label><input id="profileUsername" placeholder="Username"></div>
                             <div class="field"><label>Имя</label><input id="profileName" placeholder="Имя"></div>
                             <div class="field"><label>О себе</label><textarea id="profileBio" placeholder="О себе"></textarea></div>
@@ -622,7 +634,7 @@
                 <section id="settingsView" class="view hidden">
                     <div class="profile-container">
                         <div class="card">
-                            <h2><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAAB8UlEQVR4nO1W3UpCQRD+8MoCyQt7AdMuCuopIgLtymfoKi3synqGnqK/B7B7QfEV+nmD0EBToTKzWPoWhmGPZ0+aQfTBwtnZmfl2Z8/sDPCPYCyoeRNAI0RnapQAjADkOM8C+OAw3wa71NmfJfExSfoA6gB6grhH2YDzyjRESZ4yBSAO4FoQhY0qbZYBHNCXN0p00gXQikBqR4u25rvoT/t10o7D4Q03tSFkG5TdOvQ79OWNuDrpM3ceEzp2zSLG0L6okxtfoSjxR5J3+gpgy6GriS22aSPv/IS+nVhkOuhwPQAoRCAu0Eb7eZuU53mmjFWWG6kB2ASwAuBKyM13mmu1ANu+eAMCURcGZQB74r5HKodlLluiFm3KYr0eRrqqHK9RbnLxlOEy8ncAZxxjEcpTkbframPZINKm4yQJpfNIuSG0OKfMrEkkHP4aLuKGB3F7AnHbg7gedOpMSKiHlI9JeCFCPQwJdQZz+rmOovxceY90Sqt0uvRIpwHL5q88ICNyOFFkPa2qJ3M7AvGO48ms+DYIukiYh//Qo0iUFWkrajuUCiiLd6xAuiyaTd079LtsCObaCHS+0wgkeScphuo7rU+KPpaiEGtUJjR7T5T1Z9HsaRSZDibPbTGxxPZFyv1EewtHDjYcL9LMG3r8GXwCWVtNc8Ye75UAAAAASUVORK5CYII=" alt=""> Настройки</h2>
+                            <h2><img width="24" height="24" src="https://img.icons8.ru/ios-filled/50/settings.png" alt="settings"> Настройки</h2>
                             <div class="settings-tabs">
                                 <button class="active" data-tab="general" onclick="switchSettingsTab('general')">Общие</button>
                                 <button data-tab="privacy" onclick="switchSettingsTab('privacy')">Приватность</button>
@@ -673,7 +685,7 @@
                 <section id="favoritesView" class="view hidden">
                     <div class="profile-container">
                         <div class="card">
-                            <h2><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAABWElEQVR4nO2Wu0oDURRFl4pNwPRi4wPB2BoUjJ02dtqohUbQD9BOW/0Df8HSLqUIprHwA0yXD1CQgIpgFeXCuTDFfXNnRHDDhhk4Z6+Z+5qBP6glcaVaBL7E6roSjQIPwLf4ERirAnxagGqflA2dBj4M4E9grizoCHBrgGrfS012HTug2kc5F1ITOAcGAeCB1DalN0qTQBu4AV4DYDa/A3ey8GZdQPWk/YjgVaAVUd8Hzkzgl8g30orpeTaBt4BhieAhsGMb7ssSwReueVYrseOYU59sc94JWeV1oGdoVqE+rRn6epIZpJmAraTl29fzoVCtzQxglRGtegbwRAp4yhPassxp0SojWo3Iw8HkhRTwSgbwcgp4IwN4PQW87Ql9ErtqVEa0Dg1Bb8C1jIaW+sW9sux79XmN1kHhcO/Kfc1RX5OabuFjs58CHgf2En/iVM+uZPzrd/UDjrQ/+7ZZv/QAAAAASUVORK5CYII=" alt=""> Избранные сообщения</h2>
+                            <h2><img width="24" height="24" src="https://img.icons8.ru/external-tanah-basah-basic-outline-tanah-basah/24/external-bookmark-social-media-ui-tanah-basah-basic-outline-tanah-basah.png" alt="bookmark"> Избранные сообщения</h2>
                             <div id="favorites"></div>
                         </div>
                     </div>
@@ -689,7 +701,7 @@
         <div id="incomingCallName" class="name">Звонок...</div>
         <div id="incomingCallSub" class="sub">Входящий вызов</div>
         <div class="actions">
-            <button class="decline" onclick="declineIncomingCall()">✕</button>
+            <button class="decline" onclick="declineIncomingCall()"><img width="36" height="36" src="https://img.icons8.ru/external-those-icons-lineal-color-those-icons/24/external-end-call-mobile-telephone-those-icons-lineal-color-those-icons.png" alt="end-call"></button>
             <button class="answer" onclick="answerIncomingCall()">✓</button>
         </div>
     </div>
@@ -702,9 +714,9 @@
         <video id="remoteVideo" class="remote-video" autoplay playsinline></video>
         <audio id="remoteAudio" autoplay></audio>
         <div class="actions">
-            <button class="mute" id="muteBtn" onclick="toggleMute()">🎤</button>
-            <button class="end" onclick="endCall()">✕</button>
-            <button class="speaker" id="speakerBtn" onclick="toggleSpeaker()">🔊</button>
+            <button class="mute" id="muteBtn" onclick="toggleMute()"><img width="32" height="32" src="https://img.icons8.ru/ios-filled/50/microphone--v1.png" alt="microphone"></button>
+            <button class="end" onclick="endCall()"><img width="36" height="36" src="https://img.icons8.ru/external-those-icons-lineal-color-those-icons/24/external-end-call-mobile-telephone-those-icons-lineal-color-those-icons.png" alt="end-call"></button>
+            <button class="speaker" id="speakerBtn" onclick="toggleSpeaker()"><img width="32" height="32" src="https://img.icons8.ru/ios-filled/50/speaker.png" alt="speaker"></button>
         </div>
     </div>
 
@@ -901,7 +913,7 @@
             name.innerHTML = withVerified(user.display_name || user.username, user);
             var sub = document.createElement("div"); sub.className = "sub";
             sub.textContent = "@" + user.username;
-            if (user.is_bot || user.username === "lumi") sub.textContent = "🤖 Бот";
+            if (user.is_bot || user.username === "lumi") sub.textContent = "Бот";
             else if (user.id === currentUser?.id) sub.textContent = "Это вы";
             else sub.textContent = isUserOnline(user.last_seen) ? "в сети" : "оффлайн";
             info.appendChild(name); info.appendChild(sub);
@@ -987,9 +999,9 @@
                 var lastText = "";
                 if (d.last_message) {
                     if (d.last_message.deleted) lastText = "Сообщение удалено";
-                    else if (d.last_message.media_type === "voice") lastText = "🎤 Голосовое";
-                    else if (d.last_message.media_type === "image") lastText = "📷 Фото";
-                    else if (d.last_message.media_type === "file") lastText = "📎 Файл";
+                    else if (d.last_message.media_type === "voice") lastText = "Голосовое";
+                    else if (d.last_message.media_type === "image") lastText = "Фото";
+                    else if (d.last_message.media_type === "file") lastText = "Файл";
                     else {
                         lastText = d.last_message.text || "";
                         if (Number(d.last_message.sender_id) === Number(currentUser?.id)) lastText = "Вы: " + lastText;
@@ -1019,7 +1031,7 @@
             selectedUserId = Number(user.id); selectedGroupId = null; selectedChannelId = null; selectedChannelIsOwner = false; selectedCommunityId = null; selectedCommunityChatId = null;
             currentChatPeer = user; favoritePickMode = false; setComposerEnabled(true);
             showOnly("chatView");
-            setPageTitle(null, "💬 " + (user.display_name || user.username));
+            setPageTitle("https://img.icons8.ru/ios-filled/50/chat.png", (user.display_name || user.username));
             document.getElementById("chatAvatar").src = user.avatar_url ? mediaUrl(user.avatar_url) : "";
             document.getElementById("chatName").innerHTML = withVerified(user.display_name || user.username, user);
             updateChatStatus(user);
@@ -1049,10 +1061,10 @@
             var el = document.getElementById("chatStatus");
             if (!el) return;
             if (!user) { el.textContent = ""; return; }
-            if (user.is_bot || user.username === "lumi") { el.textContent = "🤖 Бот"; return; }
+            if (user.is_bot || user.username === "lumi") { el.textContent = "Бот"; return; }
             if (Number(user.id) === Number(currentUser?.id)) { el.textContent = "Это вы"; return; }
             var online = isUserOnline(user.last_seen);
-            el.textContent = online ? "🟢 в сети" : "⚫ оффлайн";
+            el.textContent = online ? "в сети" : "оффлайн";
             el.className = "status " + (online ? "online" : "offline");
         }
         function applyChatWallpaper(url, blur) {
@@ -1099,13 +1111,13 @@
                 } else if (msg.media_type === "voice") {
                     var audio = document.createElement("audio"); audio.className = "media-audio"; audio.controls = true; audio.src = url; bubble.appendChild(audio);
                 } else {
-                    var a = document.createElement("a"); a.className = "media-file"; a.href = url; a.target = "_blank"; a.textContent = "📎 Файл"; bubble.appendChild(a);
+                    var a = document.createElement("a"); a.className = "media-file"; a.href = url; a.target = "_blank"; a.textContent = "Файл"; bubble.appendChild(a);
                 }
             }
             if (msg.forwarded_from) {
                 var fwd = document.createElement("div");
                 fwd.style.cssText = "font-size:11px;color:#8a8a9a;margin-bottom:4px";
-                fwd.textContent = "↗️ Переслано";
+                fwd.textContent = "Переслано";
                 bubble.appendChild(fwd);
             }
             if (msg.invite_id && msg.invite_status === "pending" && !mine) {
@@ -1117,7 +1129,7 @@
                 box.appendChild(acc); box.appendChild(dec); bubble.appendChild(box);
             } else if (msg.invite_status && msg.invite_status !== "pending") {
                 var st = document.createElement("div"); st.style.cssText = "font-size:12px;opacity:0.7;margin-top:4px";
-                st.textContent = msg.invite_status === "accepted" ? "✓ Принято" : "✗ Отклонено";
+                st.textContent = msg.invite_status === "accepted" ? "Принято" : "Отклонено";
                 bubble.appendChild(st);
             }
             var meta = document.createElement("div"); meta.className = "meta";
@@ -1148,10 +1160,10 @@
         function openMessageContext(msg, el) {
             closeContext();
             var menu = document.createElement("div"); menu.className = "context-menu";
-            var edit = document.createElement("button"); edit.textContent = "✏️ Изменить"; edit.onclick = function(){ closeContext(); openEditMessage(msg); };
-            var copy = document.createElement("button"); copy.textContent = "📋 Копировать"; copy.onclick = async function(){ try { await navigator.clipboard.writeText(msg.text || ""); } catch(ex) {} closeContext(); };
-            var forward = document.createElement("button"); forward.textContent = "↗️ Переслать"; forward.onclick = function(){ closeContext(); openForwardDialog(msg); };
-            var del = document.createElement("button"); del.className = "danger"; del.textContent = "🗑️ Удалить"; del.onclick = function(){ closeContext(); selectedMessageId = msg.id; deleteSelectedMessage(); };
+            var edit = document.createElement("button"); edit.textContent = "Изменить"; edit.onclick = function(){ closeContext(); openEditMessage(msg); };
+            var copy = document.createElement("button"); copy.textContent = "Копировать"; copy.onclick = async function(){ try { await navigator.clipboard.writeText(msg.text || ""); } catch(ex) {} closeContext(); };
+            var forward = document.createElement("button"); forward.textContent = "Переслать"; forward.onclick = function(){ closeContext(); openForwardDialog(msg); };
+            var del = document.createElement("button"); del.className = "danger"; del.textContent = "Удалить"; del.onclick = function(){ closeContext(); selectedMessageId = msg.id; deleteSelectedMessage(); };
             menu.appendChild(edit); menu.appendChild(copy); menu.appendChild(forward); menu.appendChild(del);
             document.body.appendChild(menu);
             var rect = el.getBoundingClientRect();
@@ -1166,7 +1178,7 @@
 
         // FORWARD DIALOG
         function openForwardDialog(msg) {
-            var html = '<h2>↗️ Переслать</h2><div style="max-height:300px;overflow-y:auto">';
+            var html = '<h2>Переслать</h2><div style="max-height:300px;overflow-y:auto">';
             req("/api/dialogs").then(function(r){
                 if (r.ok) {
                     r.json().then(function(dialogs){
@@ -1175,7 +1187,7 @@
                                 '<div class="info"><div class="name">'+escapeHtml(d.display_name||d.username)+'</div><div class="sub">@'+escapeHtml(d.username)+'</div></div></div>';
                         });
                         html += '<div class="user-item" onclick="forwardMessageTo('+msg.id+',0,\'favorites\')" style="cursor:pointer;padding:8px 0;border-bottom:1px solid #1a1a24">'+
-                            '<div class="info"><div class="name">⭐ Избранное</div></div></div>';
+                            '<div class="info"><div class="name">Избранное</div></div></div>';
                         html += '</div><button class="secondary" style="width:100%;margin-top:12px;padding:10px;border-radius:10px" onclick="closeModal()">Отмена</button>';
                         openModal(html);
                     });
@@ -1228,7 +1240,7 @@
         }
         function openEditMessage(msg) {
             selectedMessageId = msg.id;
-            openModal('<h2>✏️ Изменить сообщение</h2><textarea id="editText" style="width:100%;min-height:80px;border-radius:10px;background:#1a1a24;border:1px solid #2a2a38;padding:10px;color:#fff">'+escapeHtml(msg.text||"")+'</textarea><button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px" onclick="saveEditMessage()">Сохранить</button>');
+            openModal('<h2>Изменить сообщение</h2><textarea id="editText" style="width:100%;min-height:80px;border-radius:10px;background:#1a1a24;border:1px solid #2a2a38;padding:10px;color:#fff">'+escapeHtml(msg.text||"")+'</textarea><button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px" onclick="saveEditMessage()">Сохранить</button>');
         }
         async function saveEditMessage() {
             var text = document.getElementById("editText").value.trim();
@@ -1242,7 +1254,7 @@
         // FEED
         async function showFeed() {
             showOnly("feedView");
-            setPageTitle("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAzUlEQVR4nO3UzQqCQBSG4Re6i9rWNbjIhZsWXWlBXVG7omU/tOlHx4wgYQjFmXNGpPDAtxA5PsonA/30A3NgDxTC7ICZBN4q0DIbCWwCwNeu4FtX8P2n4Mx6wNRjL7L2Hlo48diLrb1UC0uT+hwYg891GgDOfA6MKljasfH5i6tgace5FpYm7wp+SmBT03HU0L19v9DCSU2HVd3HIeFCkcYx1ld8v3Wr8CkgVubiAq9agNcu8Bg4BESPwATHGQIL4KwA37tLYOSK9vNf8wLXNGJYzhg1tAAAAABJRU5ErkJggg==", "Лента");
+            setPageTitle("https://img.icons8.ru/ios-filled/50/home.png", "Лента");
             await loadFeed();
         }
         async function loadFeed() {
@@ -1275,22 +1287,22 @@
             }
             var actions = document.createElement("div"); actions.className = "actions";
             var like = document.createElement("button");
-            like.textContent = "❤️ " + (post.likes || 0);
+            like.innerHTML = '<img width="20" height="20" src="https://img.icons8.ru/external-tanah-basah-basic-outline-tanah-basah/24/external-love-social-media-ui-tanah-basah-basic-outline-tanah-basah.png" alt="like"> ' + (post.likes || 0);
             like.onclick = async function(){
                 var r2 = await req("/api/posts/" + post.id + "/like", { method: "POST" });
                 var d2 = await safeJson(r2);
-                if (r2.ok) like.textContent = "❤️ " + d2.likes;
+                if (r2.ok) like.innerHTML = '<img width="20" height="20" src="https://img.icons8.ru/fluency/48/filled-like--v1.png" alt="liked"> ' + d2.likes;
             };
             var comments = document.createElement("button");
-            comments.textContent = "💬 " + (post.comments_count || 0);
+            comments.innerHTML = '<img width="20" height="20" src="https://img.icons8.ru/external-tanah-basah-basic-outline-tanah-basah/24/external-comments-social-media-ui-tanah-basah-basic-outline-tanah-basah.png" alt="comments"> ' + (post.comments_count || 0);
             comments.onclick = function(){ toggleComments(post.id, div, comments); };
             var share = document.createElement("button");
-            share.textContent = "🔗 Поделиться";
+            share.innerHTML = '<img width="20" height="20" src="https://img.icons8.ru/external-tanah-basah-basic-outline-tanah-basah/24/external-Send-arrows-tanah-basah-basic-outline-tanah-basah.png" alt="share"> Поделиться';
             share.onclick = function(){ sharePost(post); };
             actions.appendChild(like); actions.appendChild(comments); actions.appendChild(share);
             if (Number(post.author_id) === Number(currentUser.id)) {
                 var del = document.createElement("button");
-                del.textContent = "🗑️";
+                del.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="20" height="20" viewBox="0 0 30 30"><path d="M 14.984375 2.4863281 A 1.0001 1.0001 0 0 0 14 3.5 L 14 4 L 8.5 4 A 1.0001 1.0001 0 0 0 7.4863281 5 L 6 5 A 1.0001 1.0001 0 1 0 6 7 L 24 7 A 1.0001 1.0001 0 1 0 24 5 L 22.513672 5 A 1.0001 1.0001 0 0 0 21.5 4 L 16 4 L 16 3.5 A 1.0001 1.0001 0 0 0 14.984375 2.4863281 z M 6 9 L 7.7929688 24.234375 C 7.9109687 25.241375 8.7633438 26 9.7773438 26 L 20.222656 26 C 21.236656 26 22.088031 25.241375 22.207031 24.234375 L 24 9 L 6 9 z"></path></svg>';
                 del.onclick = async function(){
                     if (!confirm("Удалить пост?")) return;
                     var r2 = await req("/api/posts/" + post.id, { method: "DELETE" });
@@ -1335,7 +1347,6 @@
                     };
                     d.appendChild(del);
                 }
-                // Ответы
                 if (c.replies && c.replies.length) {
                     var repliesDiv = document.createElement("div");
                     repliesDiv.className = "replies";
@@ -1352,13 +1363,11 @@
             form.innerHTML = '<input id="commentInput-'+postId+'" placeholder="Написать комментарий..."><button onclick="sendComment('+postId+')">➤</button>';
             box.appendChild(form);
         }
-        // Функция для ответа на комментарий
         function openReplyComment(postId, commentId, username) {
             var input = document.getElementById("commentInput-" + postId);
             if (input) {
                 input.value = "@" + username + " ";
                 input.focus();
-                // Сохраняем ID комментария для ответа
                 input.dataset.replyTo = commentId;
             }
         }
@@ -1407,16 +1416,14 @@
             try { await navigator.clipboard.writeText(url); alert("Ссылка скопирована!"); } catch(ex) { prompt("Скопируй ссылку:", url); }
         }
 
-        // REELS - скрываем полностью, но оставляем функцию для совместимости
-        async function showReels() {
-            showFeed();
-        }
+        // REELS - скрыты
+        async function showReels() { showFeed(); }
         async function loadReels() {}
 
-        // FAVORITES (сообщения)
+        // FAVORITES
         async function showFavorites() {
             showOnly("favoritesView");
-            setPageTitle("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAABWElEQVR4nO2Wu0oDURRFl4pNwPRi4wPB2BoUjJ02dtqohUbQD9BOW/0Df8HSLqUIprHwA0yXD1CQgIpgFeXCuTDFfXNnRHDDhhk4Z6+Z+5qBP6glcaVaBL7E6roSjQIPwLf4ERirAnxagGqflA2dBj4M4E9grizoCHBrgGrfS012HTug2kc5F1ITOAcGAeCB1DalN0qTQBu4AV4DYDa/A3ey8GZdQPWk/YjgVaAVUd8Hzkzgl8g30orpeTaBt4BhieAhsGMb7ssSwReueVYrseOYU59sc94JWeV1oGdoVqE+rRn6epIZpJmAraTl29fzoVCtzQxglRGtegbwRAp4yhPassxp0SojWo3Iw8HkhRTwSgbwcgp4IwN4PQW87Ql9ErtqVEa0Dg1Bb8C1jIaW+sW9sux79XmN1kHhcO/Kfc1RX5OabuFjs58CHgf2En/iVM+uZPzrd/UDjrQ/+7ZZv/QAAAAASUVORK5CYII=", "Избранное");
+            setPageTitle("https://img.icons8.ru/external-tanah-basah-basic-outline-tanah-basah/24/external-bookmark-social-media-ui-tanah-basah-basic-outline-tanah-basah.png", "Избранное");
             var r = await req("/api/favorites");
             if (!r.ok) return;
             var data = await safeJson(r);
@@ -1433,7 +1440,7 @@
         // PROFILE
         async function showProfile() {
             showOnly("profileView");
-            setPageTitle("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAAA7ElEQVR4nO2UPQrCQBBGHwhJIXgBGz1BSnsPIXgH41VEvZM/ldprJ1aiiBaKRWRhAiJods3ESMiDD5Zkdh+T7C6U/Ck+0AdmwEVixqG8y4Q6sASiN1lIjSp+gvRZrtp530Iap6cpnjuIp5ris4PY1KoROSaXjk+F+MdhXrvalzNqc449lKknyDO5uWI8+ZRT2XAmE3mm3mnJT6kAbSD4UBNIjalNTQMYAHvZuVdgBLSAqsSMx8BNavYyx8x1piaC+xf3dBwzdyhrWdEENimEr1nLmomsFKVxljbiXQbirY24CxwVpQegYyMuKRYP4K3qdvJRSZ4AAAAASUVORK5CYII=", "Профиль");
+            setPageTitle("https://img.icons8.ru/ios-filled/50/user.png", "Профиль");
             var r = await req("/api/me");
             if (!r.ok) return;
             var user = await safeJson(r);
@@ -1469,7 +1476,7 @@
         }
         async function showSettings() {
             showOnly("settingsView");
-            setPageTitle("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsTAAALEwEAmpwYAAAB8UlEQVR4nO1W3UpCQRD+8MoCyQt7AdMuCuopIgLtymfoKi3synqGnqK/B7B7QfEV+nmD0EBToTKzWPoWhmGPZ0+aQfTBwtnZmfl2Z8/sDPCPYCyoeRNAI0RnapQAjADkOM8C+OAw3wa71NmfJfExSfoA6gB6grhH2YDzyjRESZ4yBSAO4FoQhY0qbZYBHNCXN0p00gXQikBqR4u25rvoT/t10o7D4Q03tSFkG5TdOvQ79OWNuDrpM3ceEzp2zSLG0L6okxtfoSjxR5J3+gpgy6GriS22aSPv/IS+nVhkOuhwPQAoRCAu0Eb7eZuU53mmjFWWG6kB2ASwAuBKyM13mmu1ANu+eAMCURcGZQB74r5HKodlLluiFm3KYr0eRrqqHK9RbnLxlOEy8ncAZxxjEcpTkbframPZINKm4yQJpfNIuSG0OKfMrEkkHP4aLuKGB3F7AnHbg7gedOpMSKiHlI9JeCFCPQwJdQZz+rmOovxceY90Sqt0uvRIpwHL5q88ICNyOFFkPa2qJ3M7AvGO48ms+DYIukiYh//Qo0iUFWkrajuUCiiLd6xAuiyaTd079LtsCObaCHS+0wgkeScphuo7rU+KPpaiEGtUJjR7T5T1Z9HsaRSZDibPbTGxxPZFyv1EewtHDjYcL9LMG3r8GXwCWVtNc8Ye75UAAAAASUVORK5CYII=", "Настройки");
+            setPageTitle("https://img.icons8.ru/ios-filled/50/settings.png", "Настройки");
             switchSettingsTab("general");
             await loadSettings();
             await loadGroups(); await loadChannels(); await loadCommunities();
@@ -1563,7 +1570,7 @@
             selectedGroupId = Number(groupId); selectedUserId = null; selectedChannelId = null; selectedChannelIsOwner = false; selectedCommunityId = null; selectedCommunityChatId = null;
             currentChatPeer = null; setComposerEnabled(true);
             showOnly("chatView");
-            setPageTitle(null, "Группа: " + groupName);
+            setPageTitle("https://img.icons8.ru/ios-filled/50/group.png", "Группа: " + groupName);
             document.getElementById("chatAvatar").src = "";
             document.getElementById("chatName").textContent = "Группа: " + groupName;
             document.getElementById("chatStatus").textContent = "группа";
@@ -1659,7 +1666,7 @@
             selectedUserId = null; selectedGroupId = null; selectedCommunityId = null; selectedCommunityChatId = null;
             currentChatPeer = null; setComposerEnabled(isOwner);
             showOnly("chatView");
-            setPageTitle(null, "Канал: " + channelName);
+            setPageTitle("https://img.icons8.ru/ios-filled/50/megaphone.png", "Канал: " + channelName);
             document.getElementById("chatAvatar").src = "";
             document.getElementById("chatName").textContent = "Канал: " + channelName;
             document.getElementById("chatStatus").textContent = isOwner ? "Вы создатель" : "Канал";
@@ -1716,7 +1723,7 @@
             selectedUserId = null; selectedGroupId = null; selectedChannelId = null; selectedChannelIsOwner = false;
             currentChatPeer = null; setComposerEnabled(false);
             showOnly("chatView");
-            setPageTitle(null, "Сообщество: " + communityName);
+            setPageTitle("https://img.icons8.ru/ios-filled/50/globe.png", "Сообщество: " + communityName);
             document.getElementById("chatAvatar").src = "";
             document.getElementById("chatName").textContent = "Сообщество: " + communityName;
             document.getElementById("chatStatus").textContent = "сообщество";
@@ -1761,7 +1768,7 @@
             currentChatPeer = null; setComposerEnabled(true);
             showOnly("chatView");
             var full = communityName ? communityName + " · " + chatName : chatName;
-            setPageTitle(null, full);
+            setPageTitle("https://img.icons8.ru/ios-filled/50/chat.png", full);
             document.getElementById("chatAvatar").src = "";
             document.getElementById("chatName").textContent = full;
             document.getElementById("chatStatus").textContent = "чат сообщества";
@@ -1874,15 +1881,15 @@
             html += '<div style="background:#1a1a24;border-radius:12px;padding:12px;text-align:left;margin-bottom:12px"><div style="font-size:12px;color:#6a6a7a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">О себе</div><div style="font-size:14px;color:'+(user.bio ? '#fff' : '#6a6a7a')+'">'+(user.bio ? escapeHtml(user.bio) : "Нет описания")+'</div></div>';
             html += '<div style="background:#1a1a24;border-radius:12px;padding:12px;text-align:left;margin-bottom:16px">';
             if (!isBot) {
-                html += '<div style="display:flex;justify-content:space-between;padding:4px 0"><span>Статус</span><span style="color:'+(online ? '#2ecc71' : '#6a6a7a')+'">'+(online ? '🟢 в сети' : '⚫ оффлайн')+'</span></div>';
+                html += '<div style="display:flex;justify-content:space-between;padding:4px 0"><span>Статус</span><span style="color:'+(online ? '#2ecc71' : '#6a6a7a')+'">'+(online ? 'в сети' : 'оффлайн')+'</span></div>';
             } else {
-                html += '<div style="display:flex;justify-content:space-between;padding:4px 0"><span>🤖 Бот</span></div>';
+                html += '<div style="display:flex;justify-content:space-between;padding:4px 0"><span>Бот</span></div>';
             }
             html += '</div>';
             if (!isMe) {
-                html += '<button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-bottom:6px" onclick="closeModal();openChat({id:'+user.id+',username:\''+escapeHtml(user.username)+'\',display_name:\''+escapeHtml(user.display_name||user.username)+'\',last_seen:\''+(user.last_seen||'')+'\',is_bot:'+(!!user.is_bot)+',is_verified:'+(!!user.is_verified)+'})">💬 Написать</button>';
+                html += '<button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-bottom:6px" onclick="closeModal();openChat({id:'+user.id+',username:\''+escapeHtml(user.username)+'\',display_name:\''+escapeHtml(user.display_name||user.username)+'\',last_seen:\''+(user.last_seen||'')+'\',is_bot:'+(!!user.is_bot)+',is_verified:'+(!!user.is_verified)+'})">Написать</button>';
             } else {
-                html += '<button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-bottom:6px" onclick="closeModal();showProfile()">✏️ Редактировать</button>';
+                html += '<button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-bottom:6px" onclick="closeModal();showProfile()">Редактировать</button>';
             }
             html += '<button class="secondary" style="width:100%;padding:10px;border-radius:10px;background:#2a2a38;border:none;color:#fff" onclick="closeModal()">Закрыть</button></div>';
             openModal(html);
@@ -1902,9 +1909,9 @@
             if (chatKind === "channel" && selectedChannelId && Number(selectedChannelId) === Number(message.channel_id)) return;
             if (chatKind === "community" && selectedCommunityChatId && Number(selectedCommunityChatId) === Number(message.chat_id)) return;
             var preview = message.text || "";
-            if (message.media_type === "voice") preview = "🎤 Голосовое";
-            else if (message.media_type === "image") preview = "📷 Фото";
-            else if (message.media_type === "file") preview = "📎 Файл";
+            if (message.media_type === "voice") preview = "Голосовое";
+            else if (message.media_type === "image") preview = "Фото";
+            else if (message.media_type === "file") preview = "Файл";
             if (preview.length > 100) preview = preview.slice(0,100) + "…";
             var uname = message.sender_name || message.sender_username || "user";
             var title = "", body = "";
@@ -1938,7 +1945,7 @@
                 var url = URL.createObjectURL(file);
                 info.innerHTML = '<img src="'+url+'" style="max-height:80px;border-radius:6px">';
             } else {
-                info.textContent = "📎 " + file.name + " (" + Math.round(file.size/1024) + " KB)";
+                info.textContent = "Файл: " + file.name + " (" + Math.round(file.size/1024) + " KB)";
             }
         }
         function clearAttachPreview() {
@@ -2030,23 +2037,23 @@
                 menu.appendChild(b);
             }
             if (selectedUserId) {
-                addBtn("⭐ В избранное", function(){ favoritePickMode = true; alert("Нажмите на сообщение для добавления"); });
-                addBtn("✏️ Переименовать", function(){ renameContact(); });
-                addBtn("🖼️ Обои", function(){ setWallpaper(); });
-                addBtn("🚫 Заблокировать", function(){ blockPeer2(); }, true);
-                addBtn("🗑️ Удалить для себя", function(){ deleteChatMe(); });
-                addBtn("🗑️ Удалить для всех", function(){ deleteChatBoth(); }, true);
+                addBtn("В избранное", function(){ favoritePickMode = true; alert("Нажмите на сообщение для добавления"); });
+                addBtn("Переименовать", function(){ renameContact(); });
+                addBtn("Обои", function(){ setWallpaper(); });
+                addBtn("Заблокировать", function(){ blockPeer2(); }, true);
+                addBtn("Удалить для себя", function(){ deleteChatMe(); });
+                addBtn("Удалить для всех", function(){ deleteChatBoth(); }, true);
             } else if (selectedChannelId) {
-                addBtn("🔕 Уведомления", function(){ toggleChannelMute(); });
-                addBtn("🚪 Отписаться", function(){ leaveChannel(); }, true);
+                addBtn("Уведомления", function(){ toggleChannelMute(); });
+                addBtn("Отписаться", function(){ leaveChannel(); }, true);
                 if (selectedChannelIsOwner) {
-                    addBtn("✏️ Название", function(){ renameChannel(); });
-                    addBtn("🖼️ Аватар", function(){ setChannelAvatar(); });
+                    addBtn("Название", function(){ renameChannel(); });
+                    addBtn("Аватар", function(){ setChannelAvatar(); });
                 }
             } else if (selectedGroupId) {
-                addBtn("🚪 Выйти", function(){ leaveGroup(); }, true);
-                addBtn("✏️ Название", function(){ renameGroup(); });
-                addBtn("🖼️ Аватар", function(){ setGroupAvatar(); });
+                addBtn("Выйти", function(){ leaveGroup(); }, true);
+                addBtn("Название", function(){ renameGroup(); });
+                addBtn("Аватар", function(){ setGroupAvatar(); });
             }
             document.body.appendChild(menu);
             var rect = document.getElementById("chatActions").getBoundingClientRect();
@@ -2238,7 +2245,7 @@
                         var user = await safeJson(r);
                         document.getElementById("incomingCallName").textContent = user.display_name || user.username;
                         document.getElementById("incomingCallAvatar").src = user.avatar_url ? mediaUrl(user.avatar_url) : "";
-                        document.getElementById("incomingCallSub").textContent = (payload.video ? "📹 Видеозвонок" : "🎧 Аудиозвонок") + " от " + (user.display_name || user.username);
+                        document.getElementById("incomingCallSub").textContent = (payload.video ? "Видеозвонок" : "Аудиозвонок") + " от " + (user.display_name || user.username);
                     }
                 } catch(ex) {}
                 document.getElementById("incomingCallOverlay").classList.remove("hidden");
@@ -2332,7 +2339,9 @@
             micMuted = !micMuted;
             localStream.getAudioTracks().forEach(function(t){ t.enabled = !micMuted; });
             var btn = document.getElementById("muteBtn");
-            btn.textContent = micMuted ? "🔇" : "🎤";
+            btn.innerHTML = micMuted ? 
+                '<img width="32" height="32" src="https://img.icons8.ru/ios-filled/50/no-microphone--v1.png" alt="muted">' : 
+                '<img width="32" height="32" src="https://img.icons8.ru/ios-filled/50/microphone--v1.png" alt="microphone">';
             btn.classList.toggle("active", micMuted);
         }
         function toggleSpeaker() {
@@ -2340,7 +2349,9 @@
             var audio = document.getElementById("remoteAudio");
             if (audio) audio.muted = speakerMuted;
             var btn = document.getElementById("speakerBtn");
-            btn.textContent = speakerMuted ? "🔇" : "🔊";
+            btn.innerHTML = speakerMuted ? 
+                '<img width="32" height="32" src="https://img.icons8.ru/ios-filled/50/mute--v1.png" alt="muted">' : 
+                '<img width="32" height="32" src="https://img.icons8.ru/ios-filled/50/speaker.png" alt="speaker">';
             btn.classList.toggle("active", speakerMuted);
         }
         function declineIncomingCall() {
@@ -2389,9 +2400,9 @@
             document.getElementById("localVideo").style.display = "none";
             document.getElementById("remoteVideo").style.display = "none";
             callTargetId = null; callStartTime = null; incomingCallData = null; isCaller = false; micMuted = false; speakerMuted = false;
-            document.getElementById("muteBtn").textContent = "🎤";
+            document.getElementById("muteBtn").innerHTML = '<img width="32" height="32" src="https://img.icons8.ru/ios-filled/50/microphone--v1.png" alt="microphone">';
             document.getElementById("muteBtn").classList.remove("active");
-            document.getElementById("speakerBtn").textContent = "🔊";
+            document.getElementById("speakerBtn").innerHTML = '<img width="32" height="32" src="https://img.icons8.ru/ios-filled/50/speaker.png" alt="speaker">';
             document.getElementById("speakerBtn").classList.remove("active");
         }
 
