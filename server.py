@@ -46,7 +46,6 @@ SESSION_DAYS = 30
 
 connections = defaultdict(set)
 
-# Аватар для бота Lumi
 LUMI_AVATAR_URL = "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/5c/e5/f3/5ce5f3be-c924-0649-5dba-309206c42ba6/Placeholder.mill/1200x630wa.jpg"
 
 
@@ -68,18 +67,13 @@ app.add_middleware(
 # =========================================================
 
 def db():
-    connection = sqlite3.connect(
-        str(DB_PATH),
-        timeout=30,
-    )
+    connection = sqlite3.connect(str(DB_PATH), timeout=30)
     connection.row_factory = sqlite3.Row
     return connection
 
 
 def column_exists(connection, table, column):
-    rows = connection.execute(
-        f"PRAGMA table_info({table})"
-    ).fetchall()
+    rows = connection.execute(f"PRAGMA table_info({table})").fetchall()
     return any(row["name"] == column for row in rows)
 
 
@@ -127,7 +121,8 @@ def init_db():
             media_url TEXT,
             media_type TEXT,
             invite_id INTEGER,
-            invite_status TEXT
+            invite_status TEXT,
+            forwarded_from INTEGER
         );
 
         CREATE TABLE IF NOT EXISTS posts (
@@ -160,6 +155,14 @@ def init_db():
             user_id INTEGER NOT NULL,
             message_id INTEGER NOT NULL,
             UNIQUE(user_id, message_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS favorite_reels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            post_id INTEGER NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE(user_id, post_id)
         );
 
         CREATE TABLE IF NOT EXISTS settings (
@@ -322,7 +325,7 @@ def init_db():
         );
     """)
 
-    # Добавляем недостающие колонки (для совместимости)
+    # Добавляем недостающие колонки
     add_column_if_missing(connection, "users", "display_name", "TEXT")
     add_column_if_missing(connection, "users", "bio", "TEXT DEFAULT ''")
     add_column_if_missing(connection, "users", "avatar_url", "TEXT")
@@ -334,11 +337,11 @@ def init_db():
     add_column_if_missing(connection, "messages", "media_type", "TEXT")
     add_column_if_missing(connection, "messages", "invite_id", "INTEGER")
     add_column_if_missing(connection, "messages", "invite_status", "TEXT")
+    add_column_if_missing(connection, "messages", "forwarded_from", "INTEGER")
     add_column_if_missing(connection, "comments", "parent_id", "INTEGER")
     add_column_if_missing(connection, "groups", "avatar_url", "TEXT")
     add_column_if_missing(connection, "channels", "avatar_url", "TEXT")
 
-    # Добавляем колонки для настроек звонков
     try:
         connection.execute("ALTER TABLE settings ADD COLUMN auto_answer INTEGER DEFAULT 0")
     except sqlite3.OperationalError:
@@ -352,13 +355,11 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
-    # Обновляем display_name
     connection.execute("""
         UPDATE users SET display_name = username
         WHERE display_name IS NULL OR display_name = ''
     """)
 
-    # Создаём бота Lumi
     import hashlib as _hl
     from datetime import datetime as _dt
     _ts = _dt.utcnow().isoformat()
@@ -663,6 +664,11 @@ class CallSignalRequest(BaseModel):
     payload: dict = {}
 
 
+class ForwardRequest(BaseModel):
+    target_id: int
+    target_type: str = "user"
+
+
 # =========================================================
 # AUTH ENDPOINTS
 # =========================================================
@@ -780,9 +786,9 @@ def delete_account(data: DeleteAccountRequest, request: Request, response: Respo
         connection.close()
         raise HTTPException(403, "Неверный пароль")
 
-    # Удаляем всё
     connection.execute("DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?", (user_id, user_id))
     connection.execute("DELETE FROM favorites WHERE user_id = ?", (user_id,))
+    connection.execute("DELETE FROM favorite_reels WHERE user_id = ?", (user_id,))
     connection.execute("DELETE FROM posts WHERE author_id = ?", (user_id,))
     connection.execute("DELETE FROM comments WHERE user_id = ?", (user_id,))
     connection.execute("DELETE FROM post_likes WHERE user_id = ?", (user_id,))
@@ -888,17 +894,14 @@ def get_user_profile(user_id: int, request: Request):
 
     result = dict(user)
 
-    # Для ботов и Lumi НЕ показываем created_at и last_seen
     if user["is_bot"] or user["username"] == "lumi":
         result["created_at"] = None
         result["last_seen"] = None
         return result
 
-    # Для себя показываем всё
     if user_id == current_user_id:
         return result
 
-    # Проверяем настройки приватности
     connection = db()
     privacy = connection.execute(
         "SELECT last_seen_visibility FROM privacy_settings WHERE user_id = ?", (user_id,)
@@ -919,7 +922,6 @@ def get_user_profile(user_id: int, request: Request):
     elif visibility == "contacts" and not has_dialog:
         result["last_seen"] = None
 
-    # Никогда не показываем created_at другим пользователям
     result["created_at"] = None
 
     return result
@@ -940,13 +942,12 @@ def get_messages(other_user_id: int, request: Request):
             id, sender_id, receiver_id,
             CASE WHEN deleted = 1 THEN '' ELSE text END AS text,
             created_at, edited_at, deleted, is_read,
-            media_url, media_type, invite_id, invite_status
+            media_url, media_type, invite_id, invite_status, forwarded_from
         FROM messages
         WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
         ORDER BY id ASC
     """, (user_id, other_user_id, other_user_id, user_id)).fetchall()
 
-    # Помечаем сообщения как прочитанные
     connection.execute("""
         UPDATE messages SET is_read = 1
         WHERE sender_id = ? AND receiver_id = ? AND is_read = 0
@@ -987,7 +988,6 @@ async def send_message(data: MessageRequest, request: Request):
         connection.close()
         raise HTTPException(403, "Боту нельзя писать")
 
-    # Проверка на блокировку
     blocked = connection.execute("""
         SELECT 1 FROM blocks
         WHERE (user_id = ? AND blocked_id = ?) OR (user_id = ? AND blocked_id = ?)
@@ -1034,6 +1034,81 @@ async def send_message(data: MessageRequest, request: Request):
 
     return {"ok": True, "message": message}
 
+
+@app.post("/api/messages/{message_id}/forward")
+async def forward_message(message_id: int, data: ForwardRequest, request: Request):
+    user_id = get_auth_user(request)
+
+    connection = db()
+
+    original = connection.execute(
+        "SELECT * FROM messages WHERE id = ? AND (sender_id = ? OR receiver_id = ?)",
+        (message_id, user_id, user_id)
+    ).fetchone()
+
+    if not original:
+        connection.close()
+        raise HTTPException(404, "Сообщение не найдено")
+
+    if original["deleted"]:
+        connection.close()
+        raise HTTPException(400, "Сообщение удалено")
+
+    text = f"↗️ Переслано: {original['text']}"
+
+    if data.target_type == "user":
+        cursor = connection.execute("""
+            INSERT INTO messages (sender_id, receiver_id, text, created_at, forwarded_from)
+            VALUES (?, ?, ?, ?, ?)
+        """, (user_id, data.target_id, text, now(), message_id))
+        mid = cursor.lastrowid
+        connection.commit()
+        connection.close()
+
+        payload = {"type": "message", "message": {"id": mid, "sender_id": user_id, "receiver_id": data.target_id, "text": text, "created_at": now(), "deleted": 0, "is_read": 0, "forwarded_from": message_id, "chat_kind": "private"}}
+        await send_ws(user_id, payload)
+        await send_ws(data.target_id, payload)
+
+    elif data.target_type == "group":
+        cursor = connection.execute("""
+            INSERT INTO group_messages (group_id, sender_id, text, created_at)
+            VALUES (?, ?, ?, ?)
+        """, (data.target_id, user_id, text, now()))
+        mid = cursor.lastrowid
+        members = connection.execute("SELECT user_id FROM group_members WHERE group_id = ?", (data.target_id,)).fetchall()
+        connection.commit()
+        connection.close()
+
+        for row in members:
+            await send_ws(row["user_id"], {"type": "group_message", "message": {"id": mid, "group_id": data.target_id, "sender_id": user_id, "text": text, "created_at": now(), "deleted": 0, "forwarded_from": message_id, "chat_kind": "group"}})
+
+    elif data.target_type == "channel":
+        channel = connection.execute("SELECT owner_id FROM channels WHERE id = ?", (data.target_id,)).fetchone()
+        if not channel or channel["owner_id"] != user_id:
+            connection.close()
+            raise HTTPException(403, "Только создатель канала может пересылать")
+        cursor = connection.execute("""
+            INSERT INTO channel_messages (channel_id, sender_id, text, created_at)
+            VALUES (?, ?, ?, ?)
+        """, (data.target_id, user_id, text, now()))
+        mid = cursor.lastrowid
+        subscribers = connection.execute("SELECT user_id FROM channel_subscribers WHERE channel_id = ?", (data.target_id,)).fetchall()
+        connection.commit()
+        connection.close()
+
+        for row in subscribers:
+            await send_ws(row["user_id"], {"type": "channel_message", "message": {"id": mid, "channel_id": data.target_id, "sender_id": user_id, "text": text, "created_at": now(), "deleted": 0, "forwarded_from": message_id, "chat_kind": "channel"}})
+
+    else:
+        connection.close()
+        raise HTTPException(400, "Неверный тип получателя")
+
+    return {"ok": True}
+
+
+# =========================================================
+# EDIT / DELETE MESSAGES
+# =========================================================
 
 @app.put("/api/messages/{message_id}")
 async def edit_message(message_id: int, data: EditMessageRequest, request: Request):
@@ -1125,7 +1200,7 @@ async def delete_message(message_id: int, request: Request):
 
 
 # =========================================================
-# FAVORITES
+# FAVORITES (сообщения)
 # =========================================================
 
 @app.post("/api/messages/{message_id}/favorite")
@@ -1182,7 +1257,7 @@ def get_favorites(request: Request):
 
 
 # =========================================================
-# FEED
+# FEED / POSTS
 # =========================================================
 
 @app.get("/api/feed")
@@ -1243,7 +1318,6 @@ async def create_media_post(request: Request, text: str = "", file: UploadFile =
         "image/webp": (".webp", "image"),
         "video/mp4": (".mp4", "video"),
         "video/webm": (".webm", "video"),
-        "video/quicktime": (".mov", "video"),
     }
 
     if file.content_type not in allowed:
@@ -1300,6 +1374,100 @@ def like_post(post_id: int, request: Request):
     connection.close()
 
     return {"liked": liked, "likes": count}
+
+
+@app.delete("/api/posts/{post_id}")
+def delete_post(post_id: int, request: Request):
+    user_id = get_auth_user(request)
+
+    connection = db()
+
+    post = connection.execute("SELECT * FROM posts WHERE id = ?", (post_id,)).fetchone()
+
+    if not post:
+        connection.close()
+        raise HTTPException(404, "Пост не найден")
+
+    if post["author_id"] != user_id:
+        connection.close()
+        raise HTTPException(403, "Это не твой пост")
+
+    connection.execute("DELETE FROM comments WHERE post_id = ?", (post_id,))
+    connection.execute("DELETE FROM post_likes WHERE post_id = ?", (post_id,))
+    connection.execute("DELETE FROM favorite_reels WHERE post_id = ?", (post_id,))
+    connection.execute("DELETE FROM posts WHERE id = ?", (post_id,))
+
+    connection.commit()
+    connection.close()
+
+    if post["media_url"]:
+        path = UPLOAD_DIR / Path(post["media_url"]).name
+        if path.exists():
+            try:
+                path.unlink()
+            except Exception:
+                pass
+
+    return {"ok": True}
+
+
+# =========================================================
+# REELS FAVORITES
+# =========================================================
+
+@app.post("/api/reels/{post_id}/favorite")
+def favorite_reel(post_id: int, request: Request):
+    user_id = get_auth_user(request)
+
+    connection = db()
+
+    post = connection.execute("SELECT id FROM posts WHERE id = ?", (post_id,)).fetchone()
+
+    if not post:
+        connection.close()
+        raise HTTPException(404, "Рилс не найден")
+
+    existing = connection.execute("""
+        SELECT id FROM favorite_reels WHERE user_id = ? AND post_id = ?
+    """, (user_id, post_id)).fetchone()
+
+    if existing:
+        connection.execute("DELETE FROM favorite_reels WHERE user_id = ? AND post_id = ?",
+                           (user_id, post_id))
+        favorited = False
+    else:
+        connection.execute("INSERT INTO favorite_reels (user_id, post_id, created_at) VALUES (?, ?, ?)",
+                           (user_id, post_id, now()))
+        favorited = True
+
+    connection.commit()
+    connection.close()
+
+    return {"favorited": favorited}
+
+
+@app.get("/api/reels/favorites")
+def get_favorite_reels(request: Request):
+    user_id = get_auth_user(request)
+
+    connection = db()
+
+    rows = connection.execute("""
+        SELECT
+            p.id, p.author_id, p.text, p.media_url, p.media_type, p.created_at,
+            u.username, u.display_name, u.avatar_url,
+            (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) AS likes,
+            (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count
+        FROM favorite_reels fr
+        JOIN posts p ON p.id = fr.post_id
+        JOIN users u ON u.id = p.author_id
+        WHERE fr.user_id = ?
+        ORDER BY fr.id DESC
+    """, (user_id,)).fetchall()
+
+    connection.close()
+
+    return [dict(row) for row in rows]
 
 
 # =========================================================
@@ -1389,40 +1557,6 @@ def delete_comment(comment_id: int, request: Request):
 
     connection.commit()
     connection.close()
-
-    return {"ok": True}
-
-
-@app.delete("/api/posts/{post_id}")
-def delete_post(post_id: int, request: Request):
-    user_id = get_auth_user(request)
-
-    connection = db()
-
-    post = connection.execute("SELECT * FROM posts WHERE id = ?", (post_id,)).fetchone()
-
-    if not post:
-        connection.close()
-        raise HTTPException(404, "Пост не найден")
-
-    if post["author_id"] != user_id:
-        connection.close()
-        raise HTTPException(403, "Это не твой пост")
-
-    connection.execute("DELETE FROM comments WHERE post_id = ?", (post_id,))
-    connection.execute("DELETE FROM post_likes WHERE post_id = ?", (post_id,))
-    connection.execute("DELETE FROM posts WHERE id = ?", (post_id,))
-
-    connection.commit()
-    connection.close()
-
-    if post["media_url"]:
-        path = UPLOAD_DIR / Path(post["media_url"]).name
-        if path.exists():
-            try:
-                path.unlink()
-            except Exception:
-                pass
 
     return {"ok": True}
 
