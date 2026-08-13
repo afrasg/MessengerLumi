@@ -514,14 +514,14 @@
             filter: brightness(0) invert(1) !important;
             opacity: 1;
         }
-        /* Chat header: video icon (black) invert, phone (colored) leave */
-        body.theme-dark .chat-header .actions button img[src*="video-call"],
-        body.theme-dark .chat-header .actions button img[src*="ios-filled"] {
-            filter: brightness(0) invert(0.9) !important;
+        /* Chat header: все иконки звонка и меню — белые в тёмной теме */
+        body.theme-dark .chat-header .actions button img {
+            filter: brightness(0) invert(0.92) !important;
+            opacity: 0.95;
         }
-        body.theme-dark .chat-header .actions button img[src*="parakeet"],
-        body.theme-dark .chat-header .actions button img[src*="phone.png"] {
-            filter: none !important;
+        body.theme-dark .chat-header .actions button:hover img {
+            filter: brightness(0) invert(1) !important;
+            opacity: 1;
         }
         body.theme-dark .chat-header .actions button svg,
         body.theme-dark .chat-header .actions button svg path {
@@ -752,7 +752,37 @@
                                 <button data-tab="calls" onclick="switchSettingsTab('calls')">Звонки</button>
                             </div>
                             <div id="settingsTabGeneral" class="settings-tab active">
-                                <div class="setting"><label><span>Язык</span><select id="language" onchange="saveSettings()"><option value="ru">Русский</option><option value="en">English</option><option value="be">Беларуская</option><option value="kk">Қазақша</option></select></label></div>
+                                <div class="setting"><label><span>Язык</span><select id="language" onchange="saveSettings()">
+                                    <option value="ru">Русский</option>
+                                    <option value="en">English</option>
+                                    <option value="uk">Українська</option>
+                                    <option value="be">Беларуская</option>
+                                    <option value="kk">Қазақша</option>
+                                    <option value="uz">Oʻzbekcha</option>
+                                    <option value="ky">Кыргызча</option>
+                                    <option value="az">Azərbaycanca</option>
+                                    <option value="tr">Türkçe</option>
+                                    <option value="de">Deutsch</option>
+                                    <option value="fr">Français</option>
+                                    <option value="es">Español</option>
+                                    <option value="it">Italiano</option>
+                                    <option value="pt">Português</option>
+                                    <option value="pl">Polski</option>
+                                    <option value="nl">Nederlands</option>
+                                    <option value="cs">Čeština</option>
+                                    <option value="ro">Română</option>
+                                    <option value="ar">العربية</option>
+                                    <option value="he">עברית</option>
+                                    <option value="zh">中文</option>
+                                    <option value="ja">日本語</option>
+                                    <option value="ko">한국어</option>
+                                    <option value="hi">हिन्दी</option>
+                                    <option value="id">Bahasa Indonesia</option>
+                                    <option value="vi">Tiếng Việt</option>
+                                    <option value="th">ไทย</option>
+                                    <option value="fi">Suomi</option>
+                                    <option value="sv">Svenska</option>
+                                </select></label></div>
                                 <div class="setting"><label><span>Тема</span><select id="theme" onchange="saveSettings()"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="blue">Синяя</option></select></label></div>
                                 <div class="setting"><label>Уведомления <input id="notifications" type="checkbox" onchange="saveSettings()"></label></div>
                                 <div class="setting"><label>Показывать онлайн <input id="showOnline" type="checkbox" onchange="saveSettings()"></label></div>
@@ -839,6 +869,8 @@
         let selectedUserId = null, selectedGroupId = null, selectedChannelId = null, selectedChannelIsOwner = false, selectedCommunityId = null, selectedCommunityChatId = null, selectedMessageId = null, currentChatPeer = null, favoritePickMode = false;
         let notificationAudio = null, sendAudio = null, ringAudio = null;
         let pc = null, localStream = null, callTargetId = null, callIsVideo = false, micMuted = false, speakerMuted = false, callStartTime = null, callTimer = null, incomingCallData = null, isCaller = false;
+        let pendingIceCandidates = [];
+        let incomingCallTimeout = null;
         let mediaRecorder = null, voiceChunks = [], isRecording = false, voiceStream = null, voiceStart = 0;
         let currentLang = "ru";
 
@@ -959,15 +991,35 @@
                 no_fav: "Таңдаулы хабарламалар жоқ", no_messages: "Әзірге хабарлама жоқ", no_description: "Сипаттама жоқ",
                 about_me: "Өзім туралы", status: "Статус", call: "Қоңырау", connecting: "Қосылу...", incoming: "Кіріс қоңырау",
                 video_call: "Бейне қоңырау", audio_call: "Аудио қоңырау"
-            }
+            },
+            uk: {login:"Увійти",register:"Створити акаунт",or:"або",login_by_code:"Увійти за кодом",get_code:"Отримати код у бота",username:"Username",password:"Пароль",code:"Код від бота Lumi",feed:"Стрічка",favorites:"Обране",profile:"Профіль",settings:"Налаштування",whats_new:"Що нового?",publish:"Опублікувати",photo_video:"Фото / відео",message:"Повідомлення...",send:"Надіслати",search:"Пошук...",language:"Мова",theme:"Тема",notifications:"Сповіщення",show_online:"Показувати онлайн",show_last_seen:"Показувати статус",general:"Загальні",privacy:"Приватність",accounts:"Акаунти",calls:"Дзвінки",dark:"Темна",light:"Світла",blue:"Синя",who_sees_avatar:"Хто бачить аватар",who_sees_status:"Хто бачить статус",all:"Усі",contacts:"Контакти",none:"Ніхто",clear_chats:"Очистити всі чати",add_account:"Додати акаунт",switch_account:"Перемкнути",logout:"Вийти",delete_account:"Видалити акаунт",delete:"Видалити",groups:"Групи",channels:"Канали",communities:"Спільноти",create_group:"Створити групу",create_channel:"Створити канал",create_community:"Створити спільноту",auto_answer:"Автовідповідь на дзвінки",mute_on_join:"Вимикати мікрофон при вході",camera_on_join:"Вмикати камеру для відео",save:"Зберегти",name:"Ім'я",about:"Про себе",avatar:"Аватар",account:"Акаунт",online:"в мережі",offline:"офлайн",bot:"Бот",this_is_you:"Це ви",chats:"ЧАТИ",results:"Результати пошуку",nothing_found:"Нічого не знайдено",settings_saved:"Збережено",privacy_saved:"Збережено",chats_cleared:"Чати очищено",all_messages_deleted:"Усі повідомлення видалено",enter_username_password:"Введіть username і пароль",error:"Помилка",select_user:"Виберіть користувача",unblock:"Розблокувати",write:"Написати",edit:"Редагувати",close:"Закрити",cancel:"Скасувати",new_group:"Нова група",new_channel:"Новий канал",new_community:"Нова спільнота",description:"Опис",create:"Створити",invite:"Запросити",open:"Відкрити",no_fav:"Немає обраних повідомлень",no_messages:"Поки немає повідомлень",no_description:"Немає опису",about_me:"Про себе",status:"Статус",call:"Дзвінок",connecting:"З'єднання...",incoming:"Вхідний виклик",video_call:"Відеодзвінок",audio_call:"Аудіодзвінок"},
+            de: {login:"Anmelden",register:"Konto erstellen",or:"oder",login_by_code:"Mit Code anmelden",get_code:"Code vom Bot holen",username:"Username",password:"Passwort",code:"Code vom Lumi-Bot",feed:"Feed",favorites:"Favoriten",profile:"Profil",settings:"Einstellungen",whats_new:"Was gibt's Neues?",publish:"Veröffentlichen",photo_video:"Foto / Video",message:"Nachricht...",send:"Senden",search:"Suchen...",language:"Sprache",theme:"Design",notifications:"Benachrichtigungen",show_online:"Online anzeigen",show_last_seen:"Status anzeigen",general:"Allgemein",privacy:"Privatsphäre",accounts:"Konten",calls:"Anrufe",dark:"Dunkel",light:"Hell",blue:"Blau",who_sees_avatar:"Wer sieht Avatar",who_sees_status:"Wer sieht Status",all:"Alle",contacts:"Kontakte",none:"Niemand",clear_chats:"Alle Chats löschen",add_account:"Konto hinzufügen",switch_account:"Wechseln",logout:"Abmelden",delete_account:"Konto löschen",delete:"Löschen",groups:"Gruppen",channels:"Kanäle",communities:"Communitys",create_group:"Gruppe erstellen",create_channel:"Kanal erstellen",create_community:"Community erstellen",auto_answer:"Anrufe automatisch annehmen",mute_on_join:"Mikrofon beim Beitreten stumm",camera_on_join:"Kamera bei Video einschalten",save:"Speichern",name:"Name",about:"Über mich",avatar:"Avatar",account:"Konto",online:"online",offline:"offline",bot:"Bot",this_is_you:"Das bist du",chats:"CHATS",results:"Suchergebnisse",nothing_found:"Nichts gefunden",settings_saved:"Gespeichert",privacy_saved:"Gespeichert",chats_cleared:"Chats gelöscht",all_messages_deleted:"Alle Nachrichten gelöscht",enter_username_password:"Username und Passwort eingeben",error:"Fehler",select_user:"Benutzer auswählen",unblock:"Entsperren",write:"Schreiben",edit:"Bearbeiten",close:"Schließen",cancel:"Abbrechen",new_group:"Neue Gruppe",new_channel:"Neuer Kanal",new_community:"Neue Community",description:"Beschreibung",create:"Erstellen",invite:"Einladen",open:"Öffnen",no_fav:"Keine favorisierten Nachrichten",no_messages:"Noch keine Nachrichten",no_description:"Keine Beschreibung",about_me:"Über mich",status:"Status",call:"Anruf",connecting:"Verbinden...",incoming:"Eingehender Anruf",video_call:"Videoanruf",audio_call:"Sprachanruf"},
+            fr: {login:"Connexion",register:"Créer un compte",or:"ou",login_by_code:"Connexion par code",get_code:"Obtenir le code du bot",username:"Username",password:"Mot de passe",code:"Code du bot Lumi",feed:"Fil",favorites:"Favoris",profile:"Profil",settings:"Paramètres",whats_new:"Quoi de neuf ?",publish:"Publier",photo_video:"Photo / vidéo",message:"Message...",send:"Envoyer",search:"Rechercher...",language:"Langue",theme:"Thème",notifications:"Notifications",show_online:"Afficher en ligne",show_last_seen:"Afficher le statut",general:"Général",privacy:"Confidentialité",accounts:"Comptes",calls:"Appels",dark:"Sombre",light:"Clair",blue:"Bleu",who_sees_avatar:"Qui voit l'avatar",who_sees_status:"Qui voit le statut",all:"Tout le monde",contacts:"Contacts",none:"Personne",clear_chats:"Effacer tous les chats",add_account:"Ajouter un compte",switch_account:"Changer",logout:"Déconnexion",delete_account:"Supprimer le compte",delete:"Supprimer",groups:"Groupes",channels:"Chaînes",communities:"Communautés",create_group:"Créer un groupe",create_channel:"Créer une chaîne",create_community:"Créer une communauté",auto_answer:"Réponse auto aux appels",mute_on_join:"Couper le micro à l'entrée",camera_on_join:"Activer la caméra en vidéo",save:"Enregistrer",name:"Nom",about:"À propos",avatar:"Avatar",account:"Compte",online:"en ligne",offline:"hors ligne",bot:"Bot",this_is_you:"C'est vous",chats:"CHATS",results:"Résultats de recherche",nothing_found:"Rien trouvé",settings_saved:"Enregistré",privacy_saved:"Enregistré",chats_cleared:"Chats effacés",all_messages_deleted:"Tous les messages supprimés",enter_username_password:"Entrez username et mot de passe",error:"Erreur",select_user:"Sélectionnez un utilisateur",unblock:"Débloquer",write:"Écrire",edit:"Modifier",close:"Fermer",cancel:"Annuler",new_group:"Nouveau groupe",new_channel:"Nouvelle chaîne",new_community:"Nouvelle communauté",description:"Description",create:"Créer",invite:"Inviter",open:"Ouvrir",no_fav:"Aucun message favori",no_messages:"Pas encore de messages",no_description:"Pas de description",about_me:"À propos",status:"Statut",call:"Appel",connecting:"Connexion...",incoming:"Appel entrant",video_call:"Appel vidéo",audio_call:"Appel audio"},
+            es: {login:"Iniciar sesión",register:"Crear cuenta",or:"o",login_by_code:"Entrar con código",get_code:"Obtener código del bot",username:"Username",password:"Contraseña",code:"Código del bot Lumi",feed:"Feed",favorites:"Favoritos",profile:"Perfil",settings:"Ajustes",whats_new:"¿Qué hay de nuevo?",publish:"Publicar",photo_video:"Foto / video",message:"Mensaje...",send:"Enviar",search:"Buscar...",language:"Idioma",theme:"Tema",notifications:"Notificaciones",show_online:"Mostrar en línea",show_last_seen:"Mostrar estado",general:"General",privacy:"Privacidad",accounts:"Cuentas",calls:"Llamadas",dark:"Oscuro",light:"Claro",blue:"Azul",who_sees_avatar:"Quién ve el avatar",who_sees_status:"Quién ve el estado",all:"Todos",contacts:"Contactos",none:"Nadie",clear_chats:"Borrar todos los chats",add_account:"Añadir cuenta",switch_account:"Cambiar",logout:"Cerrar sesión",delete_account:"Eliminar cuenta",delete:"Eliminar",groups:"Grupos",channels:"Canales",communities:"Comunidades",create_group:"Crear grupo",create_channel:"Crear canal",create_community:"Crear comunidad",auto_answer:"Responder llamadas automáticamente",mute_on_join:"Silenciar micrófono al unirse",camera_on_join:"Activar cámara en video",save:"Guardar",name:"Nombre",about:"Sobre mí",avatar:"Avatar",account:"Cuenta",online:"en línea",offline:"desconectado",bot:"Bot",this_is_you:"Eres tú",chats:"CHATS",results:"Resultados de búsqueda",nothing_found:"No se encontró nada",settings_saved:"Guardado",privacy_saved:"Guardado",chats_cleared:"Chats borrados",all_messages_deleted:"Todos los mensajes eliminados",enter_username_password:"Introduce username y contraseña",error:"Error",select_user:"Selecciona un usuario",unblock:"Desbloquear",write:"Escribir",edit:"Editar",close:"Cerrar",cancel:"Cancelar",new_group:"Nuevo grupo",new_channel:"Nuevo canal",new_community:"Nueva comunidad",description:"Descripción",create:"Crear",invite:"Invitar",open:"Abrir",no_fav:"No hay mensajes favoritos",no_messages:"Aún no hay mensajes",no_description:"Sin descripción",about_me:"Sobre mí",status:"Estado",call:"Llamada",connecting:"Conectando...",incoming:"Llamada entrante",video_call:"Videollamada",audio_call:"Llamada de audio"},
+            tr: {login:"Giriş yap",register:"Hesap oluştur",or:"veya",login_by_code:"Kod ile giriş",get_code:"Bottan kod al",username:"Username",password:"Şifre",code:"Lumi bot kodu",feed:"Akış",favorites:"Favoriler",profile:"Profil",settings:"Ayarlar",whats_new:"Ne var ne yok?",publish:"Yayınla",photo_video:"Foto / video",message:"Mesaj...",send:"Gönder",search:"Ara...",language:"Dil",theme:"Tema",notifications:"Bildirimler",show_online:"Çevrimiçi göster",show_last_seen:"Durumu göster",general:"Genel",privacy:"Gizlilik",accounts:"Hesaplar",calls:"Aramalar",dark:"Koyu",light:"Açık",blue:"Mavi",who_sees_avatar:"Avatarı kim görür",who_sees_status:"Durumu kim görür",all:"Herkes",contacts:"Kişiler",none:"Hiç kimse",clear_chats:"Tüm sohbetleri temizle",add_account:"Hesap ekle",switch_account:"Değiştir",logout:"Çıkış",delete_account:"Hesabı sil",delete:"Sil",groups:"Gruplar",channels:"Kanallar",communities:"Topluluklar",create_group:"Grup oluştur",create_channel:"Kanal oluştur",create_community:"Topluluk oluştur",auto_answer:"Aramalara otomatik yanıt",mute_on_join:"Girişte mikrofonu kapat",camera_on_join:"Video için kamerayı aç",save:"Kaydet",name:"İsim",about:"Hakkımda",avatar:"Avatar",account:"Hesap",online:"çevrimiçi",offline:"çevrimdışı",bot:"Bot",this_is_you:"Bu sizsiniz",chats:"SOHBETLER",results:"Arama sonuçları",nothing_found:"Hiçbir şey bulunamadı",settings_saved:"Kaydedildi",privacy_saved:"Kaydedildi",chats_cleared:"Sohbetler temizlendi",all_messages_deleted:"Tüm mesajlar silindi",enter_username_password:"Username ve şifre girin",error:"Hata",select_user:"Kullanıcı seçin",unblock:"Engeli kaldır",write:"Yaz",edit:"Düzenle",close:"Kapat",cancel:"İptal",new_group:"Yeni grup",new_channel:"Yeni kanal",new_community:"Yeni topluluk",description:"Açıklama",create:"Oluştur",invite:"Davet et",open:"Aç",no_fav:"Favori mesaj yok",no_messages:"Henüz mesaj yok",no_description:"Açıklama yok",about_me:"Hakkımda",status:"Durum",call:"Arama",connecting:"Bağlanıyor...",incoming:"Gelen arama",video_call:"Görüntülü arama",audio_call:"Sesli arama"},
+            zh: {login:"登录",register:"创建账号",or:"或",login_by_code:"用验证码登录",get_code:"从机器人获取验证码",username:"Username",password:"密码",code:"Lumi 机器人验证码",feed:"动态",favorites:"收藏",profile:"个人资料",settings:"设置",whats_new:"有什么新鲜事？",publish:"发布",photo_video:"照片 / 视频",message:"消息...",send:"发送",search:"搜索...",language:"语言",theme:"主题",notifications:"通知",show_online:"显示在线",show_last_seen:"显示状态",general:"通用",privacy:"隐私",accounts:"账号",calls:"通话",dark:"深色",light:"浅色",blue:"蓝色",who_sees_avatar:"谁能看到头像",who_sees_status:"谁能看到状态",all:"所有人",contacts:"联系人",none:"无人",clear_chats:"清空所有聊天",add_account:"添加账号",switch_account:"切换",logout:"退出",delete_account:"删除账号",delete:"删除",groups:"群组",channels:"频道",communities:"社区",create_group:"创建群组",create_channel:"创建频道",create_community:"创建社区",auto_answer:"自动接听来电",mute_on_join:"加入时静音麦克风",camera_on_join:"视频时开启摄像头",save:"保存",name:"名称",about:"关于我",avatar:"头像",account:"账号",online:"在线",offline:"离线",bot:"机器人",this_is_you:"这是你",chats:"聊天",results:"搜索结果",nothing_found:"未找到",settings_saved:"已保存",privacy_saved:"已保存",chats_cleared:"聊天已清空",all_messages_deleted:"所有消息已删除",enter_username_password:"请输入用户名和密码",error:"错误",select_user:"选择用户",unblock:"取消屏蔽",write:"写消息",edit:"编辑",close:"关闭",cancel:"取消",new_group:"新群组",new_channel:"新频道",new_community:"新社区",description:"描述",create:"创建",invite:"邀请",open:"打开",no_fav:"没有收藏的消息",no_messages:"暂无消息",no_description:"暂无描述",about_me:"关于我",status:"状态",call:"通话",connecting:"连接中...",incoming:"来电",video_call:"视频通话",audio_call:"语音通话"},
+            ja: {login:"ログイン",register:"アカウント作成",or:"または",login_by_code:"コードでログイン",get_code:"ボットからコードを取得",username:"Username",password:"パスワード",code:"Lumiボットのコード",feed:"フィード",favorites:"お気に入り",profile:"プロフィール",settings:"設定",whats_new:"近況は？",publish:"投稿",photo_video:"写真 / 動画",message:"メッセージ...",send:"送信",search:"検索...",language:"言語",theme:"テーマ",notifications:"通知",show_online:"オンライン表示",show_last_seen:"ステータス表示",general:"一般",privacy:"プライバシー",accounts:"アカウント",calls:"通話",dark:"ダーク",light:"ライト",blue:"ブルー",who_sees_avatar:"アバターを見る人",who_sees_status:"ステータスを見る人",all:"全員",contacts:"連絡先",none:"誰も",clear_chats:"すべてのチャットを削除",add_account:"アカウント追加",switch_account:"切り替え",logout:"ログアウト",delete_account:"アカウント削除",delete:"削除",groups:"グループ",channels:"チャンネル",communities:"コミュニティ",create_group:"グループ作成",create_channel:"チャンネル作成",create_community:"コミュニティ作成",auto_answer:"通話の自動応答",mute_on_join:"参加時にマイクをミュート",camera_on_join:"ビデオでカメラをオン",save:"保存",name:"名前",about:"自己紹介",avatar:"アバター",account:"アカウント",online:"オンライン",offline:"オフライン",bot:"ボット",this_is_you:"あなたです",chats:"チャット",results:"検索結果",nothing_found:"見つかりませんでした",settings_saved:"保存しました",privacy_saved:"保存しました",chats_cleared:"チャットを削除しました",all_messages_deleted:"すべてのメッセージを削除しました",enter_username_password:"ユーザー名とパスワードを入力",error:"エラー",select_user:"ユーザーを選択",unblock:"ブロック解除",write:"書く",edit:"編集",close:"閉じる",cancel:"キャンセル",new_group:"新しいグループ",new_channel:"新しいチャンネル",new_community:"新しいコミュニティ",description:"説明",create:"作成",invite:"招待",open:"開く",no_fav:"お気に入りのメッセージはありません",no_messages:"まだメッセージがありません",no_description:"説明がありません",about_me:"自己紹介",status:"ステータス",call:"通話",connecting:"接続中...",incoming:"着信",video_call:"ビデオ通話",audio_call:"音声通話"},
+            ar: {login:"تسجيل الدخول",register:"إنشاء حساب",or:"أو",login_by_code:"الدخول بالكود",get_code:"الحصول على الكود من البوت",username:"Username",password:"كلمة المرور",code:"كود من بوت Lumi",feed:"الخلاصة",favorites:"المفضلة",profile:"الملف الشخصي",settings:"الإعدادات",whats_new:"ما الجديد؟",publish:"نشر",photo_video:"صورة / فيديو",message:"رسالة...",send:"إرسال",search:"بحث...",language:"اللغة",theme:"المظهر",notifications:"الإشعارات",show_online:"إظهار متصل",show_last_seen:"إظهار الحالة",general:"عام",privacy:"الخصوصية",accounts:"الحسابات",calls:"المكالمات",dark:"داكن",light:"فاتح",blue:"أزرق",who_sees_avatar:"من يرى الصورة",who_sees_status:"من يرى الحالة",all:"الجميع",contacts:"جهات الاتصال",none:"لا أحد",clear_chats:"مسح جميع المحادثات",add_account:"إضافة حساب",switch_account:"تبديل",logout:"تسجيل الخروج",delete_account:"حذف الحساب",delete:"حذف",groups:"المجموعات",channels:"القنوات",communities:"المجتمعات",create_group:"إنشاء مجموعة",create_channel:"إنشاء قناة",create_community:"إنشاء مجتمع",auto_answer:"الرد التلقائي على المكالمات",mute_on_join:"كتم الميكروفون عند الدخول",camera_on_join:"تشغيل الكاميرا للفيديو",save:"حفظ",name:"الاسم",about:"نبذة عني",avatar:"الصورة",account:"الحساب",online:"متصل",offline:"غير متصل",bot:"بوت",this_is_you:"هذا أنت",chats:"المحادثات",results:"نتائج البحث",nothing_found:"لم يتم العثور على شيء",settings_saved:"تم الحفظ",privacy_saved:"تم الحفظ",chats_cleared:"تم مسح المحادثات",all_messages_deleted:"تم حذف جميع الرسائل",enter_username_password:"أدخل اسم المستخدم وكلمة المرور",error:"خطأ",select_user:"اختر مستخدماً",unblock:"إلغاء الحظر",write:"كتابة",edit:"تعديل",close:"إغلاق",cancel:"إلغاء",new_group:"مجموعة جديدة",new_channel:"قناة جديدة",new_community:"مجتمع جديد",description:"الوصف",create:"إنشاء",invite:"دعوة",open:"فتح",no_fav:"لا توجد رسائل مفضلة",no_messages:"لا توجد رسائل بعد",no_description:"لا يوجد وصف",about_me:"نبذة عني",status:"الحالة",call:"مكالمة",connecting:"جارٍ الاتصال...",incoming:"مكالمة واردة",video_call:"مكالمة فيديو",audio_call:"مكالمة صوتية"},
+            pl: {login:"Zaloguj się",register:"Utwórz konto",or:"lub",login_by_code:"Zaloguj kodem",get_code:"Pobierz kod od bota",username:"Username",password:"Hasło",code:"Kod od bota Lumi",feed:"Aktualności",favorites:"Ulubione",profile:"Profil",settings:"Ustawienia",whats_new:"Co nowego?",publish:"Opublikuj",photo_video:"Zdjęcie / wideo",message:"Wiadomość...",send:"Wyślij",search:"Szukaj...",language:"Język",theme:"Motyw",notifications:"Powiadomienia",show_online:"Pokaż online",show_last_seen:"Pokaż status",general:"Ogólne",privacy:"Prywatność",accounts:"Konta",calls:"Połączenia",dark:"Ciemny",light:"Jasny",blue:"Niebieski",who_sees_avatar:"Kto widzi awatar",who_sees_status:"Kto widzi status",all:"Wszyscy",contacts:"Kontakty",none:"Nikt",clear_chats:"Wyczyść wszystkie czaty",add_account:"Dodaj konto",switch_account:"Przełącz",logout:"Wyloguj",delete_account:"Usuń konto",delete:"Usuń",groups:"Grupy",channels:"Kanały",communities:"Społeczności",create_group:"Utwórz grupę",create_channel:"Utwórz kanał",create_community:"Utwórz społeczność",auto_answer:"Autoodejmowanie połączeń",mute_on_join:"Wycisz mikrofon przy dołączaniu",camera_on_join:"Włącz kamerę przy wideo",save:"Zapisz",name:"Imię",about:"O mnie",avatar:"Awatar",account:"Konto",online:"online",offline:"offline",bot:"Bot",this_is_you:"To Ty",chats:"CZATY",results:"Wyniki wyszukiwania",nothing_found:"Nic nie znaleziono",settings_saved:"Zapisano",privacy_saved:"Zapisano",chats_cleared:"Czaty wyczyszczone",all_messages_deleted:"Wszystkie wiadomości usunięte",enter_username_password:"Wprowadź username i hasło",error:"Błąd",select_user:"Wybierz użytkownika",unblock:"Odblokuj",write:"Napisz",edit:"Edytuj",close:"Zamknij",cancel:"Anuluj",new_group:"Nowa grupa",new_channel:"Nowy kanał",new_community:"Nowa społeczność",description:"Opis",create:"Utwórz",invite:"Zaproś",open:"Otwórz",no_fav:"Brak ulubionych wiadomości",no_messages:"Brak wiadomości",no_description:"Brak opisu",about_me:"O mnie",status:"Status",call:"Połączenie",connecting:"Łączenie...",incoming:"Połączenie przychodzące",video_call:"Wideorozmowa",audio_call:"Rozmowa audio"},
+            it: {login:"Accedi",register:"Crea account",or:"o",login_by_code:"Accedi con codice",get_code:"Ottieni codice dal bot",username:"Username",password:"Password",code:"Codice dal bot Lumi",feed:"Feed",favorites:"Preferiti",profile:"Profilo",settings:"Impostazioni",whats_new:"Novità?",publish:"Pubblica",photo_video:"Foto / video",message:"Messaggio...",send:"Invia",search:"Cerca...",language:"Lingua",theme:"Tema",notifications:"Notifiche",show_online:"Mostra online",show_last_seen:"Mostra stato",general:"Generale",privacy:"Privacy",accounts:"Account",calls:"Chiamate",dark:"Scuro",light:"Chiaro",blue:"Blu",who_sees_avatar:"Chi vede l'avatar",who_sees_status:"Chi vede lo stato",all:"Tutti",contacts:"Contatti",none:"Nessuno",clear_chats:"Cancella tutte le chat",add_account:"Aggiungi account",switch_account:"Cambia",logout:"Esci",delete_account:"Elimina account",delete:"Elimina",groups:"Gruppi",channels:"Canali",communities:"Community",create_group:"Crea gruppo",create_channel:"Crea canale",create_community:"Crea community",auto_answer:"Risposta automatica alle chiamate",mute_on_join:"Disattiva microfono all'ingresso",camera_on_join:"Attiva fotocamera in video",save:"Salva",name:"Nome",about:"Su di me",avatar:"Avatar",account:"Account",online:"online",offline:"offline",bot:"Bot",this_is_you:"Sei tu",chats:"CHAT",results:"Risultati di ricerca",nothing_found:"Niente trovato",settings_saved:"Salvato",privacy_saved:"Salvato",chats_cleared:"Chat cancellate",all_messages_deleted:"Tutti i messaggi eliminati",enter_username_password:"Inserisci username e password",error:"Errore",select_user:"Seleziona un utente",unblock:"Sblocca",write:"Scrivi",edit:"Modifica",close:"Chiudi",cancel:"Annulla",new_group:"Nuovo gruppo",new_channel:"Nuovo canale",new_community:"Nuova community",description:"Descrizione",create:"Crea",invite:"Invita",open:"Apri",no_fav:"Nessun messaggio preferito",no_messages:"Ancora nessun messaggio",no_description:"Nessuna descrizione",about_me:"Su di me",status:"Stato",call:"Chiamata",connecting:"Connessione...",incoming:"Chiamata in arrivo",video_call:"Videochiamata",audio_call:"Chiamata audio"},
+            pt: {login:"Entrar",register:"Criar conta",or:"ou",login_by_code:"Entrar com código",get_code:"Obter código do bot",username:"Username",password:"Senha",code:"Código do bot Lumi",feed:"Feed",favorites:"Favoritos",profile:"Perfil",settings:"Configurações",whats_new:"O que há de novo?",publish:"Publicar",photo_video:"Foto / vídeo",message:"Mensagem...",send:"Enviar",search:"Pesquisar...",language:"Idioma",theme:"Tema",notifications:"Notificações",show_online:"Mostrar online",show_last_seen:"Mostrar status",general:"Geral",privacy:"Privacidade",accounts:"Contas",calls:"Chamadas",dark:"Escuro",light:"Claro",blue:"Azul",who_sees_avatar:"Quem vê o avatar",who_sees_status:"Quem vê o status",all:"Todos",contacts:"Contatos",none:"Ninguém",clear_chats:"Limpar todos os chats",add_account:"Adicionar conta",switch_account:"Trocar",logout:"Sair",delete_account:"Excluir conta",delete:"Excluir",groups:"Grupos",channels:"Canais",communities:"Comunidades",create_group:"Criar grupo",create_channel:"Criar canal",create_community:"Criar comunidade",auto_answer:"Atender chamadas automaticamente",mute_on_join:"Silenciar microfone ao entrar",camera_on_join:"Ligar câmera no vídeo",save:"Salvar",name:"Nome",about:"Sobre mim",avatar:"Avatar",account:"Conta",online:"online",offline:"offline",bot:"Bot",this_is_you:"É você",chats:"CHATS",results:"Resultados da pesquisa",nothing_found:"Nada encontrado",settings_saved:"Salvo",privacy_saved:"Salvo",chats_cleared:"Chats limpos",all_messages_deleted:"Todas as mensagens excluídas",enter_username_password:"Digite username e senha",error:"Erro",select_user:"Selecione um usuário",unblock:"Desbloquear",write:"Escrever",edit:"Editar",close:"Fechar",cancel:"Cancelar",new_group:"Novo grupo",new_channel:"Novo canal",new_community:"Nova comunidade",description:"Descrição",create:"Criar",invite:"Convidar",open:"Abrir",no_fav:"Sem mensagens favoritas",no_messages:"Ainda sem mensagens",no_description:"Sem descrição",about_me:"Sobre mim",status:"Status",call:"Chamada",connecting:"Conectando...",incoming:"Chamada recebida",video_call:"Videochamada",audio_call:"Chamada de áudio"},
+            uz: {login:"Kirish",register:"Hisob yaratish",or:"yoki",login_by_code:"Kod bilan kirish",get_code:"Botdan kod olish",username:"Username",password:"Parol",code:"Lumi bot kodi",feed:"Lenta",favorites:"Sevimlilar",profile:"Profil",settings:"Sozlamalar",whats_new:"Nima yangilik?",publish:"Chop etish",photo_video:"Foto / video",message:"Xabar...",send:"Yuborish",search:"Qidirish...",language:"Til",theme:"Mavzu",notifications:"Bildirishnomalar",show_online:"Onlayn ko'rsatish",show_last_seen:"Holatni ko'rsatish",general:"Umumiy",privacy:"Maxfiylik",accounts:"Hisoblar",calls:"Qo'ng'iroqlar",dark:"Qorong'u",light:"Yorug'",blue:"Ko'k",who_sees_avatar:"Avatar kimga ko'rinadi",who_sees_status:"Holat kimga ko'rinadi",all:"Hammaga",contacts:"Kontaktlar",none:"Hech kim",clear_chats:"Barcha chatlarni tozalash",add_account:"Hisob qo'shish",switch_account:"Almashtirish",logout:"Chiqish",delete_account:"Hisobni o'chirish",delete:"O'chirish",groups:"Guruhlar",channels:"Kanallar",communities:"Hamjamiyatlar",create_group:"Guruh yaratish",create_channel:"Kanal yaratish",create_community:"Hamjamiyat yaratish",auto_answer:"Qo'ng'iroqqa avtojavob",mute_on_join:"Kirganda mikrofonni o'chirish",camera_on_join:"Video uchun kamerani yoqish",save:"Saqlash",name:"Ism",about:"O'zim haqida",avatar:"Avatar",account:"Hisob",online:"onlayn",offline:"oflayn",bot:"Bot",this_is_you:"Bu siz",chats:"CHATLAR",results:"Qidiruv natijalari",nothing_found:"Hech narsa topilmadi",settings_saved:"Saqlandi",privacy_saved:"Saqlandi",chats_cleared:"Chatlar tozalandi",all_messages_deleted:"Barcha xabarlar o'chirildi",enter_username_password:"Username va parolni kiriting",error:"Xato",select_user:"Foydalanuvchini tanlang",unblock:"Blokdan chiqarish",write:"Yozish",edit:"Tahrirlash",close:"Yopish",cancel:"Bekor qilish",new_group:"Yangi guruh",new_channel:"Yangi kanal",new_community:"Yangi hamjamiyat",description:"Tavsif",create:"Yaratish",invite:"Taklif qilish",open:"Ochish",no_fav:"Sevimli xabarlar yo'q",no_messages:"Hali xabarlar yo'q",no_description:"Tavsif yo'q",about_me:"O'zim haqida",status:"Holat",call:"Qo'ng'iroq",connecting:"Ulanmoqda...",incoming:"Kiruvchi qo'ng'iroq",video_call:"Video qo'ng'iroq",audio_call:"Audio qo'ng'iroq"},
+            ko: {login:"로그인",register:"계정 만들기",or:"또는",login_by_code:"코드로 로그인",get_code:"봇에서 코드 받기",username:"Username",password:"비밀번호",code:"Lumi 봇 코드",feed:"피드",favorites:"즐겨찾기",profile:"프로필",settings:"설정",whats_new:"무슨 일 있나요?",publish:"게시",photo_video:"사진 / 동영상",message:"메시지...",send:"보내기",search:"검색...",language:"언어",theme:"테마",notifications:"알림",show_online:"온라인 표시",show_last_seen:"상태 표시",general:"일반",privacy:"개인정보",accounts:"계정",calls:"통화",dark:"어두운",light:"밝은",blue:"파란색",who_sees_avatar:"아바타를 볼 수 있는 사람",who_sees_status:"상태를 볼 수 있는 사람",all:"모두",contacts:"연락처",none:"아무도",clear_chats:"모든 채팅 삭제",add_account:"계정 추가",switch_account:"전환",logout:"로그아웃",delete_account:"계정 삭제",delete:"삭제",groups:"그룹",channels:"채널",communities:"커뮤니티",create_group:"그룹 만들기",create_channel:"채널 만들기",create_community:"커뮤니티 만들기",auto_answer:"통화 자동 응답",mute_on_join:"입장 시 마이크 음소거",camera_on_join:"영상 통화 시 카메라 켜기",save:"저장",name:"이름",about:"소개",avatar:"아바타",account:"계정",online:"온라인",offline:"오프라인",bot:"봇",this_is_you:"나",chats:"채팅",results:"검색 결과",nothing_found:"결과 없음",settings_saved:"저장됨",privacy_saved:"저장됨",chats_cleared:"채팅 삭제됨",all_messages_deleted:"모든 메시지 삭제됨",enter_username_password:"사용자 이름과 비밀번호 입력",error:"오류",select_user:"사용자 선택",unblock:"차단 해제",write:"쓰기",edit:"수정",close:"닫기",cancel:"취소",new_group:"새 그룹",new_channel:"새 채널",new_community:"새 커뮤니티",description:"설명",create:"만들기",invite:"초대",open:"열기",no_fav:"즐겨찾기 메시지 없음",no_messages:"아직 메시지 없음",no_description:"설명 없음",about_me:"소개",status:"상태",call:"통화",connecting:"연결 중...",incoming:"수신 통화",video_call:"영상 통화",audio_call:"음성 통화"},
+            hi: {login:"लॉग इन",register:"खाता बनाएँ",or:"या",login_by_code:"कोड से लॉग इन",get_code:"बॉट से कोड लें",username:"Username",password:"पासवर्ड",code:"Lumi बॉट का कोड",feed:"फ़ीड",favorites:"पसंदीदा",profile:"प्रोफ़ाइल",settings:"सेटिंग्स",whats_new:"क्या नया है?",publish:"पोस्ट करें",photo_video:"फ़ोटो / वीडियो",message:"संदेश...",send:"भेजें",search:"खोजें...",language:"भाषा",theme:"थीम",notifications:"सूचनाएँ",show_online:"ऑनलाइन दिखाएँ",show_last_seen:"स्थिति दिखाएँ",general:"सामान्य",privacy:"गोपनीयता",accounts:"खाते",calls:"कॉल",dark:"डार्क",light:"लाइट",blue:"नीला",who_sees_avatar:"अवतार कौन देखे",who_sees_status:"स्थिति कौन देखे",all:"सभी",contacts:"संपर्क",none:"कोई नहीं",clear_chats:"सभी चैट साफ़ करें",add_account:"खाता जोड़ें",switch_account:"बदलें",logout:"लॉग आउट",delete_account:"खाता हटाएँ",delete:"हटाएँ",groups:"समूह",channels:"चैनल",communities:"समुदाय",create_group:"समूह बनाएँ",create_channel:"चैनल बनाएँ",create_community:"समुदाय बनाएँ",auto_answer:"कॉल का स्वतः जवाब",mute_on_join:"शामिल होने पर माइक म्यूट",camera_on_join:"वीडियो पर कैमरा चालू",save:"सहेजें",name:"नाम",about:"मेरे बारे में",avatar:"अवतार",account:"खाता",online:"ऑनलाइन",offline:"ऑफ़लाइन",bot:"बॉट",this_is_you:"यह आप हैं",chats:"चैट",results:"खोज परिणाम",nothing_found:"कुछ नहीं मिला",settings_saved:"सहेजा गया",privacy_saved:"सहेजा गया",chats_cleared:"चैट साफ़ की गईं",all_messages_deleted:"सभी संदेश हटाए गए",enter_username_password:"यूज़रनेम और पासवर्ड दर्ज करें",error:"त्रुटि",select_user:"उपयोगकर्ता चुनें",unblock:"अनब्लॉक",write:"लिखें",edit:"संपादित करें",close:"बंद करें",cancel:"रद्द करें",new_group:"नया समूह",new_channel:"नया चैनल",new_community:"नया समुदाय",description:"विवरण",create:"बनाएँ",invite:"आमंत्रित करें",open:"खोलें",no_fav:"कोई पसंदीदा संदेश नहीं",no_messages:"अभी कोई संदेश नहीं",no_description:"कोई विवरण नहीं",about_me:"मेरे बारे में",status:"स्थिति",call:"कॉल",connecting:"कनेक्ट हो रहा है...",incoming:"आने वाली कॉल",video_call:"वीडियो कॉल",audio_call:"ऑडियो कॉल"}
         };
         function t(key) {
-            var dict = I18N[currentLang] || I18N.ru;
-            return dict[key] || I18N.ru[key] || key;
+            var dict = I18N[currentLang] || I18N.en || I18N.ru;
+            return (dict && dict[key]) || (I18N.en && I18N.en[key]) || (I18N.ru && I18N.ru[key]) || key;
         }
         function applyLanguage(lang) {
-            if (!I18N[lang]) lang = "ru";
-            currentLang = lang;
+            if (!lang) lang = "ru";
+            // если полного перевода нет — используем английский
+            if (!I18N[lang]) {
+                if (I18N.en) { currentLang = "en"; lang = "en"; }
+                else { currentLang = "ru"; lang = "ru"; }
+            } else {
+                currentLang = lang;
+            }
             document.documentElement.lang = lang;
             // Auth
             var authPrimary = document.querySelector("#auth .primary");
@@ -1030,16 +1082,20 @@
             if (labels[1]) labels[1].textContent = t("name");
             if (labels[2]) labels[2].textContent = t("about");
             if (labels[3]) labels[3].textContent = t("avatar");
-            var saveProf = document.querySelector("#profileView .btn-row .primary");
+            var saveProf = document.querySelector("#profileView .card:first-child .btn-row .primary");
             if (saveProf) saveProf.textContent = t("save");
             var accH3 = document.querySelector("#profileView .card h3");
             if (accH3) accH3.textContent = t("account");
-            var profBtns = document.querySelectorAll("#profileView .btn-row button");
-            // 0 secondary add, 1 secondary switch, 2 danger logout, 3 danger delete
-            if (profBtns[0]) profBtns[0].textContent = t("add_account");
-            if (profBtns[1]) profBtns[1].textContent = t("switch_account");
-            if (profBtns[2]) profBtns[2].textContent = t("logout");
-            if (profBtns[3]) profBtns[3].textContent = t("delete");
+            // Кнопки во второй карточке (Аккаунт)
+            var accCard = document.querySelector("#profileView .card:nth-child(2)");
+            if (accCard) {
+                var secBtns = accCard.querySelectorAll("button.secondary");
+                var dangBtns = accCard.querySelectorAll("button.danger");
+                if (secBtns[0]) secBtns[0].textContent = t("add_account");
+                if (secBtns[1]) secBtns[1].textContent = t("switch_account");
+                if (dangBtns[0]) dangBtns[0].textContent = t("logout");
+                if (dangBtns[1]) dangBtns[1].textContent = t("delete");
+            }
             // Settings
             var setH2 = document.querySelector("#settingsView h2");
             if (setH2) {
@@ -2667,11 +2723,12 @@
             var payload = data.payload || {};
             if (fromId === currentUser?.id) return;
             if (type === "offer-request") {
-                if (callTargetId) {
+                if (callTargetId || incomingCallData) {
                     await req("/api/calls/signal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ target_id: fromId, signal_type: "busy", payload: {} }) });
                     return;
                 }
-                incomingCallData = { fromId: fromId, video: payload.video || false };
+                incomingCallData = { fromId: fromId, video: payload.video || false, sdp: null };
+                pendingIceCandidates = [];
                 try {
                     var r = await req("/api/users/" + fromId);
                     if (r.ok) {
@@ -2683,7 +2740,8 @@
                 } catch(ex) {}
                 document.getElementById("incomingCallOverlay").classList.remove("hidden");
                 playRing();
-                setTimeout(function(){
+                if (incomingCallTimeout) clearTimeout(incomingCallTimeout);
+                incomingCallTimeout = setTimeout(function(){
                     if (document.getElementById("incomingCallOverlay").classList.contains("hidden")) return;
                     declineIncomingCall();
                 }, 30000);
@@ -2696,28 +2754,46 @@
                 return;
             }
             if (type === "offer") {
-                if (!incomingCallData) return;
-                isCaller = false; callTargetId = fromId; callIsVideo = payload.video || false;
-                document.getElementById("incomingCallOverlay").classList.add("hidden");
-                stopRing();
-                showCallOverlay();
-                try {
-                    var r = await req("/api/users/" + fromId);
-                    if (r.ok) {
-                        var user = await safeJson(r);
-                        document.getElementById("callName").textContent = user.display_name || user.username;
-                        document.getElementById("callAvatar").src = user.avatar_url ? mediaUrl(user.avatar_url) : "";
-                    }
-                } catch(ex) {}
-                document.getElementById("callStatus").textContent = "Соединение...";
-                await setupCall(false);
-                if (pc && payload.sdp) {
+                // Сохраняем SDP, НЕ скрываем меню принятия
+                if (!incomingCallData && !callTargetId) {
+                    incomingCallData = { fromId: fromId, video: payload.video || false, sdp: payload.sdp || null };
+                    pendingIceCandidates = [];
                     try {
-                        await pc.setRemoteDescription(payload.sdp);
-                        var answer = await pc.createAnswer();
-                        await pc.setLocalDescription(answer);
-                        await req("/api/calls/signal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ target_id: fromId, signal_type: "answer", payload: { sdp: answer } }) });
-                    } catch(err) { console.error(err); }
+                        var r2 = await req("/api/users/" + fromId);
+                        if (r2.ok) {
+                            var user2 = await safeJson(r2);
+                            document.getElementById("incomingCallName").textContent = user2.display_name || user2.username;
+                            document.getElementById("incomingCallAvatar").src = user2.avatar_url ? mediaUrl(user2.avatar_url) : "";
+                            document.getElementById("incomingCallSub").textContent = (payload.video ? "Видеозвонок" : "Аудиозвонок") + " от " + (user2.display_name || user2.username);
+                        }
+                    } catch(ex) {}
+                    document.getElementById("incomingCallOverlay").classList.remove("hidden");
+                    playRing();
+                    if (incomingCallTimeout) clearTimeout(incomingCallTimeout);
+                    incomingCallTimeout = setTimeout(function(){
+                        if (document.getElementById("incomingCallOverlay").classList.contains("hidden")) return;
+                        declineIncomingCall();
+                    }, 30000);
+                    return;
+                }
+                if (incomingCallData && Number(incomingCallData.fromId) === Number(fromId)) {
+                    if (payload.sdp) incomingCallData.sdp = payload.sdp;
+                    if (payload.video !== undefined) incomingCallData.video = payload.video;
+                    // если пользователь уже нажал «Принять», а SDP только сейчас пришёл
+                    if (incomingCallData.answered && pc && payload.sdp) {
+                        try {
+                            await pc.setRemoteDescription(payload.sdp);
+                            for (var j = 0; j < pendingIceCandidates.length; j++) {
+                                try { await pc.addIceCandidate(pendingIceCandidates[j]); } catch(e) {}
+                            }
+                            pendingIceCandidates = [];
+                            var ans = await pc.createAnswer();
+                            await pc.setLocalDescription(ans);
+                            await req("/api/calls/signal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ target_id: fromId, signal_type: "answer", payload: { sdp: ans } }) });
+                            document.getElementById("callStatus").textContent = "Соединено";
+                            incomingCallData = null;
+                        } catch(err) { console.error(err); }
+                    }
                 }
                 return;
             }
@@ -2726,6 +2802,11 @@
                 if (pc && payload.sdp) {
                     try {
                         await pc.setRemoteDescription(payload.sdp);
+                        // добавить отложенные ICE
+                        for (var i = 0; i < pendingIceCandidates.length; i++) {
+                            try { await pc.addIceCandidate(pendingIceCandidates[i]); } catch(e) {}
+                        }
+                        pendingIceCandidates = [];
                         document.getElementById("callStatus").textContent = "Соединено";
                         startCallTimer();
                     } catch(err) { console.error(err); }
@@ -2733,18 +2814,27 @@
                 return;
             }
             if (type === "ice") {
-                if (pc && payload.candidate) {
-                    try { await pc.addIceCandidate(payload.candidate); } catch(err) { console.error(err); }
+                if (payload.candidate) {
+                    if (pc && pc.remoteDescription) {
+                        try { await pc.addIceCandidate(payload.candidate); } catch(err) { console.error(err); }
+                    } else {
+                        pendingIceCandidates.push(payload.candidate);
+                    }
                 }
                 return;
             }
             if (type === "hangup") {
+                if (incomingCallTimeout) { clearTimeout(incomingCallTimeout); incomingCallTimeout = null; }
                 if (!document.getElementById("incomingCallOverlay").classList.contains("hidden")) {
                     document.getElementById("incomingCallOverlay").classList.add("hidden");
                     stopRing();
+                    incomingCallData = null;
+                    pendingIceCandidates = [];
                 }
-                document.getElementById("callStatus").textContent = "Собеседник завершил звонок";
-                setTimeout(function(){ endCall(); }, 2000);
+                if (callTargetId || pc) {
+                    document.getElementById("callStatus").textContent = "Собеседник завершил звонок";
+                    setTimeout(function(){ endCall(); }, 1500);
+                }
                 return;
             }
         }
@@ -2789,35 +2879,64 @@
         }
         function declineIncomingCall() {
             if (!incomingCallData) return;
+            if (incomingCallTimeout) { clearTimeout(incomingCallTimeout); incomingCallTimeout = null; }
             document.getElementById("incomingCallOverlay").classList.add("hidden");
             stopRing();
-            req("/api/calls/signal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ target_id: incomingCallData.fromId, signal_type: "hangup", payload: {} }) }).catch(function(){});
+            var fromId = incomingCallData.fromId;
+            req("/api/calls/signal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ target_id: fromId, signal_type: "hangup", payload: {} }) }).catch(function(){});
             incomingCallData = null;
+            pendingIceCandidates = [];
         }
-        function answerIncomingCall() {
+        async function answerIncomingCall() {
             if (!incomingCallData) return;
+            if (incomingCallTimeout) { clearTimeout(incomingCallTimeout); incomingCallTimeout = null; }
+            var data = incomingCallData;
+            var fromId = data.fromId;
+            var sdp = data.sdp;
             document.getElementById("incomingCallOverlay").classList.add("hidden");
             stopRing();
-            if (incomingCallData) {
-                callTargetId = incomingCallData.fromId;
-                callIsVideo = incomingCallData.video || false;
-                isCaller = false;
-                showCallOverlay();
-                try {
-                    req("/api/users/" + incomingCallData.fromId).then(async function(r){
-                        if (r.ok) {
-                            var user = await safeJson(r);
-                            document.getElementById("callName").textContent = user.display_name || user.username;
-                            document.getElementById("callAvatar").src = user.avatar_url ? mediaUrl(user.avatar_url) : "";
-                        }
-                    });
-                } catch(ex) {}
-                document.getElementById("callStatus").textContent = "Соединение...";
+            callTargetId = fromId;
+            callIsVideo = data.video || false;
+            isCaller = false;
+            showCallOverlay();
+            try {
+                var r = await req("/api/users/" + fromId);
+                if (r.ok) {
+                    var user = await safeJson(r);
+                    document.getElementById("callName").textContent = user.display_name || user.username;
+                    document.getElementById("callAvatar").src = user.avatar_url ? mediaUrl(user.avatar_url) : "";
+                }
+            } catch(ex) {}
+            document.getElementById("callStatus").textContent = "Соединение...";
+            try {
+                await setupCall(false);
+                // SDP мог обновиться пока setupCall работал
+                if (incomingCallData && incomingCallData.sdp) sdp = incomingCallData.sdp;
+                if (pc && sdp) {
+                    await pc.setRemoteDescription(sdp);
+                    for (var i = 0; i < pendingIceCandidates.length; i++) {
+                        try { await pc.addIceCandidate(pendingIceCandidates[i]); } catch(e) {}
+                    }
+                    pendingIceCandidates = [];
+                    var answer = await pc.createAnswer();
+                    await pc.setLocalDescription(answer);
+                    await req("/api/calls/signal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ target_id: fromId, signal_type: "answer", payload: { sdp: answer } }) });
+                    document.getElementById("callStatus").textContent = "Соединено";
+                    incomingCallData = null;
+                } else {
+                    // SDP ещё не пришёл — пометим, что уже ответили, handleCallSignal доделает
+                    incomingCallData = { fromId: fromId, video: data.video, sdp: null, answered: true };
+                    document.getElementById("callStatus").textContent = "Ожидание соединения...";
+                }
+            } catch(err) {
+                console.error(err);
+                alert("Ошибка при ответе на звонок");
+                endCall();
             }
-            incomingCallData = null;
         }
         function endCall() {
             stopRing();
+            if (incomingCallTimeout) { clearTimeout(incomingCallTimeout); incomingCallTimeout = null; }
             document.getElementById("incomingCallOverlay").classList.add("hidden");
             document.getElementById("callOverlay").classList.add("hidden");
             stopCallTimer();
@@ -2833,6 +2952,7 @@
             document.getElementById("localVideo").style.display = "none";
             document.getElementById("remoteVideo").style.display = "none";
             callTargetId = null; callStartTime = null; incomingCallData = null; isCaller = false; micMuted = false; speakerMuted = false;
+            pendingIceCandidates = [];
             document.getElementById("muteBtn").innerHTML = '<img width="32" height="32" src="https://img.icons8.ru/ios-filled/50/microphone--v1.png" alt="microphone">';
             document.getElementById("muteBtn").classList.remove("active");
             document.getElementById("speakerBtn").innerHTML = '<img width="32" height="32" src="https://img.icons8.ru/ios-filled/50/speaker.png" alt="speaker">';
