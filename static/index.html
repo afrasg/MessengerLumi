@@ -1022,6 +1022,9 @@
             share: {ru:"Поделиться",en:"Share",be:"Падзяліцца",kk:"Бөлісу",uk:"Поділитися",de:"Teilen",fr:"Partager",es:"Compartir",tr:"Paylaş",zh:"分享",ja:"シェア",ar:"مشاركة",pl:"Udostępnij",it:"Condividi",pt:"Compartilhar",uz:"Ulashish",ko:"공유",hi:"शेयर",ky:"Бөлүшүү",az:"Paylaş",nl:"Delen",cs:"Sdílet",ro:"Distribuie",he:"שיתוף",id:"Bagikan",vi:"Chia sẻ",th:"แชร์",fi:"Jaa",sv:"Dela"},
             forward: {ru:"Переслать",en:"Forward",be:"Пераслаць",kk:"Қайта жіберу",uk:"Переслати",de:"Weiterleiten",fr:"Transférer",es:"Reenviar",tr:"İlet",zh:"转发",ja:"転送",ar:"إعادة توجيه",pl:"Przekaż",it:"Inoltra",pt:"Encaminhar",uz:"Yuborish",ko:"전달",hi:"फॉरवर्ड",ky:"Жөнөтүү",az:"Yönləndir",nl:"Doorsturen",cs:"Přeposlat",ro:"Redirecționează",he:"העברה",id:"Teruskan",vi:"Chuyển tiếp",th:"ส่งต่อ",fi:"Välitä",sv:"Vidarebefordra"},
             comments: {ru:"Комментарии",en:"Comments",be:"Каментарыі",kk:"Пікірлер",uk:"Коментарі",de:"Kommentare",fr:"Commentaires",es:"Comentarios",tr:"Yorumlar",zh:"评论",ja:"コメント",ar:"تعليقات",pl:"Komentarze",it:"Commenti",pt:"Comentários",uz:"Izohlar",ko:"댓글",hi:"टिप्पणियाँ",ky:"Комментарийлер",az:"Şərhlər",nl:"Reacties",cs:"Komentáře",ro:"Comentarii",he:"תגובות",id:"Komentar",vi:"Bình luận",th:"ความคิดเห็น",fi:"Kommentit",sv:"Kommentarer"},
+            reply: {ru:"Ответить",en:"Reply",be:"Адказаць",kk:"Жауап беру",uk:"Відповісти",de:"Antworten",fr:"Répondre",es:"Responder",tr:"Yanıtla",zh:"回复",ja:"返信",ar:"رد",pl:"Odpowiedz",it:"Rispondi",pt:"Responder",uz:"Javob",ko:"답글",hi:"जवाब",ky:"Жооп берүү",az:"Cavab ver",nl:"Beantwoorden",cs:"Odpovědět",ro:"Răspunde",he:"הגב",id:"Balas",vi:"Trả lời",th:"ตอบกลับ",fi:"Vastaa",sv:"Svara"},
+            replies: {ru:"ответов",en:"replies",be:"адказаў",kk:"жауап",uk:"відповідей",de:"Antworten",fr:"réponses",es:"respuestas",tr:"yanıt",zh:"回复",ja:"返信",ar:"ردود",pl:"odpowiedzi",it:"risposte",pt:"respostas",uz:"javoblar",ko:"답글",hi:"जवाब",ky:"жооптор",az:"cavab",nl:"reacties",cs:"odpovědí",ro:"răspunsuri",he:"תגובות",id:"balasan",vi:"phản hồi",th:"การตอบกลับ",fi:"vastausta",sv:"svar"},
+            no_comments: {ru:"Комментариев пока нет",en:"No comments yet",be:"Пакуль няма каментарыяў",kk:"Пікірлер әзірге жоқ",uk:"Коментарів поки немає",de:"Noch keine Kommentare",fr:"Pas encore de commentaires",es:"Aún no hay comentarios",tr:"Henüz yorum yok",zh:"暂无评论",ja:"まだコメントはありません",ar:"لا تعليقات بعد",pl:"Brak komentarzy",it:"Ancora nessun commento",pt:"Ainda sem comentários",uz:"Hali izohlar yo'q",ko:"아직 댓글 없음",hi:"अभी कोई टिप्पणी नहीं",ky:"Азырынча комментарий жок",az:"Hələ şərh yoxdur",nl:"Nog geen reacties",cs:"Zatím žádné komentáře",ro:"Încă nu sunt comentarii",he:"עדיין אין תגובות",id:"Belum ada komentar",vi:"Chưa có bình luận",th:"ยังไม่มีความคิดเห็น",fi:"Ei vielä kommentteja",sv:"Inga kommentarer ännu"},
             copy: {ru:"Копировать",en:"Copy",be:"Капіяваць",kk:"Көшіру",uk:"Копіювати",de:"Kopieren",fr:"Copier",es:"Copiar",tr:"Kopyala",zh:"复制",ja:"コピー",ar:"نسخ",pl:"Kopiuj",it:"Copia",pt:"Copiar",uz:"Nusxa",ko:"복사",hi:"कॉपी",ky:"Көчүрүү",az:"Kopyala",nl:"Kopiëren",cs:"Kopírovat",ro:"Copiază",he:"העתק",id:"Salin",vi:"Sao chép",th:"คัดลอก",fi:"Kopioi",sv:"Kopiera"},
             confirm_delete: {ru:"Удалить?",en:"Delete?",be:"Выдаліць?",kk:"Жою?",uk:"Видалити?",de:"Löschen?",fr:"Supprimer ?",es:"¿Eliminar?",tr:"Silinsin mi?",zh:"删除？",ja:"削除しますか？",ar:"حذف؟",pl:"Usunąć?",it:"Eliminare?",pt:"Excluir?",uz:"O'chirilsinmi?",ko:"삭제할까요?",hi:"हटाएँ?",ky:"Жок кылынсынбы?",az:"Silinsin?",nl:"Verwijderen?",cs:"Smazat?",ro:"Șterge?",he:"למחוק?",id:"Hapus?",vi:"Xóa?",th:"ลบ?",fi:"Poista?",sv:"Radera?"}
         };
@@ -1852,20 +1855,20 @@
             box.style.display = "block";
             box.innerHTML = "<div style='color:#6a6a7a;padding:8px 0'>Загрузка...</div>";
             var r = await req("/api/posts/" + postId + "/comments");
-            if (!r.ok) { box.innerHTML = "<div style='color:#e74c4c'>Ошибка</div>"; return; }
+            if (!r.ok) { box.innerHTML = "<div style='color:#e74c4c'>"+t("error")+"</div>"; return; }
             var comments = await safeJson(r);
             box.innerHTML = "";
-            if (!comments.length) { box.innerHTML = "<div style='color:#6a6a7a;padding:8px 0'>Комментариев пока нет</div>"; }
+            if (!comments.length) { box.innerHTML = "<div style='color:#6a6a7a;padding:8px 0'>"+t("no_comments")+"</div>"; }
             comments.forEach(function(c){
                 var d = document.createElement("div"); d.className = "comment"; d.dataset.id = c.id;
                 var reply = c.reply_to_username ? '<span style="color:#5865f2">@'+escapeHtml(c.reply_to_username)+'</span> ' : "";
                 d.innerHTML = '<span class="cname" onclick="openUserProfile('+c.user_id+')">'+escapeHtml(c.display_name||c.username)+'</span><span class="ctime">'+new Date(c.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})+'</span>'+
-                    (c.reply_count ? ' <span style="color:#6a6a7a;font-size:12px">('+c.reply_count+' ответов)</span>' : '') +
+                    (c.reply_count ? ' <span style="color:#6a6a7a;font-size:12px">('+c.reply_count+' '+t("replies")+')</span>' : '') +
                     '<br>'+reply+escapeHtml(c.text) +
-                    ' <span class="reply-btn" onclick="openReplyComment('+postId+','+c.id+',\''+escapeHtml(c.username)+'\')">Ответить</span>';
+                    ' <span class="reply-btn" onclick="openReplyComment('+postId+','+c.id+',\''+escapeHtml(c.username)+'\')">'+t("reply")+'</span>';
                 if (Number(c.user_id) === Number(currentUser.id)) {
-                    var del = document.createElement("button"); del.textContent = "🗑️";
-                    del.style.cssText = "background:none;border:none;color:#e74c4c;cursor:pointer;font-size:12px;margin-left:8px";
+                    var del = document.createElement("button"); del.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 30 30" style="vertical-align:middle"><path fill="currentColor" d="M 14.984375 2.4863281 A 1.0001 1.0001 0 0 0 14 3.5 L 14 4 L 8.5 4 A 1.0001 1.0001 0 0 0 7.4863281 5 L 6 5 A 1.0001 1.0001 0 1 0 6 7 L 24 7 A 1.0001 1.0001 0 1 0 24 5 L 22.513672 5 A 1.0001 1.0001 0 0 0 21.5 4 L 16 4 L 16 3.5 A 1.0001 1.0001 0 0 0 14.984375 2.4863281 z M 6 9 L 7.7929688 24.234375 C 7.9109687 25.241375 8.7633438 26 9.7773438 26 L 20.222656 26 C 21.236656 26 22.088031 25.241375 22.207031 24.234375 L 24 9 L 6 9 z"></path></svg>';
+                    del.style.cssText = "background:none;border:none;color:#e74c4c;cursor:pointer;padding:2px 6px;margin-left:8px;display:inline-flex;align-items:center";
                     del.onclick = async function(){
                         if (!confirm(t("confirm_delete"))) return;
                         await req("/api/comments/" + c.id, { method: "DELETE" });
@@ -1882,6 +1885,18 @@
                     c.replies.forEach(function(rp){
                         var rd = document.createElement("div"); rd.className = "comment";
                         rd.innerHTML = '<span class="cname" onclick="openUserProfile('+rp.user_id+')">'+escapeHtml(rp.display_name||rp.username)+'</span><span class="ctime">'+new Date(rp.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})+'</span><br>'+escapeHtml(rp.text);
+                        if (Number(rp.user_id) === Number(currentUser.id)) {
+                            var rdel = document.createElement("button");
+                            rdel.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 30 30" style="vertical-align:middle"><path fill="currentColor" d="M 14.984375 2.4863281 A 1.0001 1.0001 0 0 0 14 3.5 L 14 4 L 8.5 4 A 1.0001 1.0001 0 0 0 7.4863281 5 L 6 5 A 1.0001 1.0001 0 1 0 6 7 L 24 7 A 1.0001 1.0001 0 1 0 24 5 L 22.513672 5 A 1.0001 1.0001 0 0 0 21.5 4 L 16 4 L 16 3.5 A 1.0001 1.0001 0 0 0 14.984375 2.4863281 z M 6 9 L 7.7929688 24.234375 C 7.9109687 25.241375 8.7633438 26 9.7773438 26 L 20.222656 26 C 21.236656 26 22.088031 25.241375 22.207031 24.234375 L 24 9 L 6 9 z"></path></svg>';
+                            rdel.style.cssText = "background:none;border:none;color:#e74c4c;cursor:pointer;padding:2px 6px;margin-left:8px;display:inline-flex;align-items:center";
+                            rdel.onclick = async function(){
+                                if (!confirm(t("confirm_delete"))) return;
+                                await req("/api/comments/" + rp.id, { method: "DELETE" });
+                                box.style.display = "none";
+                                toggleComments(postId, article, btn);
+                            };
+                            rd.appendChild(rdel);
+                        }
                         repliesDiv.appendChild(rd);
                     });
                     d.appendChild(repliesDiv);
