@@ -1490,7 +1490,7 @@
                 var el = document.getElementById(id);
                 if (el) { el.readOnly = on; el.disabled = on; }
             });
-            var avatarInp = document.getElementById("profileAvatar");
+            var avatarInp = document.getElementById("avatarFile");
             if (avatarInp) avatarInp.disabled = on;
             var saveProf = document.querySelector("#profileView .card:first-child .btn-row .primary");
             if (saveProf) saveProf.style.display = on ? "none" : "";
@@ -2191,7 +2191,16 @@
             document.getElementById("profileName").value = user.display_name || "";
             document.getElementById("profileBio").value = user.bio || "";
             var avatar = document.getElementById("bigAvatar");
-            avatar.src = avatarSrc(user.avatar_url);
+            if (avatar) avatar.src = avatarSrc(user.avatar_url);
+            // разблокируем поля если не гость
+            ["profileUsername","profileName","profileBio"].forEach(function(id){
+                var el = document.getElementById(id);
+                if (el) { el.readOnly = !!isGuest; el.disabled = !!isGuest; }
+            });
+            var af = document.getElementById("avatarFile");
+            if (af) af.disabled = !!isGuest;
+            var saveProf = document.querySelector("#profileView .card:first-child .btn-row .primary");
+            if (saveProf) saveProf.style.display = isGuest ? "none" : "";
             if (user.theme) applyTheme(user.theme);
         }
         async function saveProfile() {
@@ -2199,15 +2208,98 @@
             var username = document.getElementById("profileUsername").value.trim();
             var display_name = document.getElementById("profileName").value.trim();
             var bio = document.getElementById("profileBio").value.trim();
-            var r = await req("/api/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: username, display_name: display_name, bio: bio }) });
-            if (!r.ok) { var d = await safeJson(r); alert(d.detail || "Ошибка"); return; }
-            var file = document.getElementById("avatarFile").files[0];
-            if (file) {
-                var form = new FormData(); form.append("file", file);
-                var ar = await req("/api/avatar", { method: "POST", body: form });
-                if (!ar.ok) { var ad = await safeJson(ar); alert(ad.detail || "Ошибка аватара"); return; }
+            if (!username) { alert(t("enter_username_password") || "Username required"); return; }
+
+            var payload = { username: username, display_name: display_name, bio: bio, name: display_name };
+            var endpoints = [
+                { url: "/api/profile", method: "PUT" },
+                { url: "/api/profile", method: "PATCH" },
+                { url: "/api/me", method: "PUT" },
+                { url: "/api/me", method: "PATCH" },
+                { url: "/api/users/me", method: "PUT" },
+                { url: "/api/users/me", method: "PATCH" }
+            ];
+            var r = null, d = {}, ok = false;
+            for (var i = 0; i < endpoints.length; i++) {
+                try {
+                    r = await req(endpoints[i].url, {
+                        method: endpoints[i].method,
+                        body: JSON.stringify(payload)
+                    });
+                    d = await safeJson(r);
+                    if (r.ok) { ok = true; break; }
+                    // 404/405 — пробуем следующий
+                    if (r.status === 404 || r.status === 405 || r.status === 501) continue;
+                    // другая ошибка — показываем
+                    break;
+                } catch (e) { continue; }
             }
-            alert("Профиль сохранён"); location.reload();
+            if (!ok) {
+                var msg = (d && (d.detail || d.message || d.error)) || t("error");
+                if (typeof msg === "object") msg = JSON.stringify(msg);
+                alert(msg);
+                return;
+            }
+
+            // Аватар
+            var fileInput = document.getElementById("avatarFile");
+            var file = fileInput && fileInput.files && fileInput.files[0];
+            if (file) {
+                var form = new FormData();
+                form.append("file", file);
+                form.append("avatar", file);
+                var avatarEndpoints = ["/api/avatar", "/api/me/avatar", "/api/profile/avatar", "/api/users/me/avatar"];
+                var aok = false, ad = {};
+                for (var j = 0; j < avatarEndpoints.length; j++) {
+                    try {
+                        var ar = await req(avatarEndpoints[j], { method: "POST", body: form });
+                        ad = await safeJson(ar);
+                        if (ar.ok) {
+                            aok = true;
+                            if (ad.avatar_url) {
+                                if (currentUser) currentUser.avatar_url = ad.avatar_url;
+                                var big = document.getElementById("bigAvatar");
+                                if (big) big.src = avatarSrc(ad.avatar_url);
+                            }
+                            break;
+                        }
+                        if (ar.status === 404 || ar.status === 405) continue;
+                        break;
+                    } catch (e) { continue; }
+                }
+                if (!aok && file) {
+                    alert((ad && (ad.detail || ad.message)) || t("error"));
+                    // профиль уже мог сохраниться — не return жёстко, обновим UI
+                }
+                if (fileInput) fileInput.value = "";
+            }
+
+            // Мгновенно обновляем локального пользователя и UI (без reload)
+            if (currentUser) {
+                currentUser.username = username;
+                currentUser.display_name = display_name;
+                currentUser.bio = bio;
+                if (d.username) currentUser.username = d.username;
+                if (d.display_name) currentUser.display_name = d.display_name;
+                if (d.bio !== undefined) currentUser.bio = d.bio;
+                if (d.avatar_url) currentUser.avatar_url = d.avatar_url;
+            }
+            // подтянуть свежие данные с /api/me
+            try {
+                var me = await req("/api/me");
+                if (me.ok) {
+                    var meData = await safeJson(me);
+                    currentUser = Object.assign(currentUser || {}, meData);
+                    document.getElementById("profileUsername").value = currentUser.username || username;
+                    document.getElementById("profileName").value = currentUser.display_name || display_name;
+                    document.getElementById("profileBio").value = currentUser.bio || bio || "";
+                    var big2 = document.getElementById("bigAvatar");
+                    if (big2) big2.src = avatarSrc(currentUser.avatar_url);
+                }
+            } catch (e) {}
+
+            if (typeof showToast === "function") showToast(t("settings_saved") || "Saved");
+            else alert(t("settings_saved") || "Saved");
         }
 
         // SETTINGS
