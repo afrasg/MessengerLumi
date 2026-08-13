@@ -442,68 +442,120 @@
         body.theme-blue .reels-container .reel .reel-info .author{color:#fff}
         body.theme-blue .reels-container .reel .reel-info .text{color:#fff}
 
-      /* ===== ТЁМНАЯ ТЕМА — ВСЕ ИКОНКИ ЦВЕТА КНОПОК ===== */
-body.theme-dark .icon-btn,
-body.theme-dark .top-actions .icon-btn,
-body.theme-dark .chat-header .actions button,
-body.theme-dark .composer .icon-btn,
-body.theme-dark .post .actions button,
-body.theme-dark .settings-tabs button,
-body.theme-dark .modal .close-btn,
-body.theme-dark .context-menu button {
-    color: #b0b0c0 !important;
-}
-
-body.theme-dark .icon-btn img,
-body.theme-dark .top-actions .icon-btn img,
-body.theme-dark .chat-header .actions button img,
-body.theme-dark .composer .icon-btn img,
-body.theme-dark .post .actions button img,
-body.theme-dark .settings-tabs button img,
-body.theme-dark .modal .close-btn img,
-body.theme-dark .context-menu button img,
-body.theme-dark .icon-btn svg,
-body.theme-dark .top-actions .icon-btn svg,
-body.theme-dark .chat-header .actions button svg,
-body.theme-dark .composer .icon-btn svg,
-body.theme-dark .post .actions button svg,
-body.theme-dark .settings-tabs button svg,
-body.theme-dark .modal .close-btn svg,
-body.theme-dark .context-menu button svg {
-    filter: brightness(0.7) invert(0.8) !important;
-    /* Даёт цвет ~ #b0b0c0 как у кнопок */
-}
-
-/* При наведении — становятся белыми (как кнопки при ховере) */
-body.theme-dark .icon-btn:hover,
-body.theme-dark .top-actions .icon-btn:hover,
-body.theme-dark .chat-header .actions button:hover,
-body.theme-dark .composer .icon-btn:hover,
-body.theme-dark .post .actions button:hover,
-body.theme-dark .settings-tabs button:hover,
-body.theme-dark .modal .close-btn:hover,
-body.theme-dark .context-menu button:hover {
-    color: #fff !important;
-}
-
-body.theme-dark .icon-btn:hover img,
-body.theme-dark .top-actions .icon-btn:hover img,
-body.theme-dark .chat-header .actions button:hover img,
-body.theme-dark .composer .icon-btn:hover img,
-body.theme-dark .post .actions button:hover img,
-body.theme-dark .settings-tabs button:hover img,
-body.theme-dark .modal .close-btn:hover img,
-body.theme-dark .context-menu button:hover img,
-body.theme-dark .icon-btn:hover svg,
-body.theme-dark .top-actions .icon-btn:hover svg,
-body.theme-dark .chat-header .actions button:hover svg,
-body.theme-dark .composer .icon-btn:hover svg,
-body.theme-dark .post .actions button:hover svg,
-body.theme-dark .settings-tabs button:hover svg,
-body.theme-dark .modal .close-btn:hover svg,
-body.theme-dark .context-menu button:hover svg {
-    filter: brightness(0) invert(1) !important;
-}
+        /* ----- ТЕМНАЯ ТЕМА (кнопки белые) ----- */
+        body.theme-dark .primary,
+        body.theme-dark button.primary,
+        body.theme-dark .primary-btn,
+        body.theme-dark .post-box .tools .primary-btn,
+        body.theme-dark .composer .send-btn,
+        body.theme-dark .modal .primary,
+        body.theme-dark .card .btn-row .primary,
+        body.theme-dark .auth-card .primary,
+        body.theme-dark .comment-form button {
+            background: #fff !important;
+            color: #111 !important;
+        }
+        body.theme-dark .primary:hover,
+        body.theme-dark button.primary:hover,
+        body.theme-dark .primary-btn:hover,
+        body.theme-dark .post-box .tools .primary-btn:hover,
+        body.theme-dark .composer .send-btn:hover,
+        body.theme-dark .modal .primary:hover,
+        body.theme-dark .card .btn-row .primary:hover,
+        body.theme-dark .auth-card .primary:hover {
+            background: #e8eaed !important;
+            color: #111 !important;
+        }
+        body.theme-dark .secondary,
+        body.theme-dark button.secondary,
+        body.theme-dark .modal .secondary,
+        body.theme-dark .card .btn-row .secondary,
+        body.theme-dark .auth-card .secondary {
+            background: #fff !important;
+            color: #111 !important;
+        }
+        body.theme-dark .secondary:hover,
+        body.theme-dark button.secondary:hover,
+        body.theme-dark .modal .secondary:hover,
+        body.theme-dark .card .btn-row .secondary:hover,
+        body.theme-dark .auth-card .secondary:hover {
+            background: #e8eaed !important;
+            color: #111 !important;
+        }
+        body.theme-dark .danger-button,
+        body.theme-dark .card .btn-row .danger {
+            background: #e74c4c !important;
+            color: #fff !important;
+        }
+        body.theme-dark .danger-button:hover,
+        body.theme-dark .card .btn-row .danger:hover {
+            background: #c0392b !important;
+            color: #fff !important;
+        }
+        body.theme-dark .icon-btn { background: transparent !important; color: #b0b0c0 !important; }
+        body.theme-dark .icon-btn:hover { background: rgba(255,255,255,0.12) !important; color: #fff !important; }
+        /* Иконки в тёмной теме — делаем белыми */
+        body.theme-dark .icon-btn img,
+        body.theme-dark .top-actions .icon-btn img,
+        body.theme-dark .composer .icon-btn img,
+        body.theme-dark .sidebar-header .icon-btn img,
+        body.theme-dark .topbar .title img,
+        body.theme-dark #pageTitle img,
+        body.theme-dark .card h2 img,
+        body.theme-dark .post .actions button img,
+        body.theme-dark #attachPreview button img {
+            filter: brightness(0) invert(0.92) !important;
+            opacity: 0.95;
+        }
+        body.theme-dark .icon-btn:hover img,
+        body.theme-dark .top-actions .icon-btn:hover img,
+        body.theme-dark .composer .icon-btn:hover img,
+        body.theme-dark .sidebar-header .icon-btn:hover img {
+            filter: brightness(0) invert(1) !important;
+            opacity: 1;
+        }
+        /* Chat header: video icon (black) invert, phone (colored) leave */
+        body.theme-dark .chat-header .actions button img[src*="video-call"],
+        body.theme-dark .chat-header .actions button img[src*="ios-filled"] {
+            filter: brightness(0) invert(0.9) !important;
+        }
+        body.theme-dark .chat-header .actions button img[src*="parakeet"],
+        body.theme-dark .chat-header .actions button img[src*="phone.png"] {
+            filter: none !important;
+        }
+        body.theme-dark .chat-header .actions button svg,
+        body.theme-dark .chat-header .actions button svg path {
+            fill: #c0c0d0 !important;
+        }
+        body.theme-dark .chat-header .actions button:hover svg path {
+            fill: #fff !important;
+        }
+        /* Call overlay — оставляем цветные иконки */
+        body.theme-dark #callOverlay .actions button img,
+        body.theme-dark #incomingCallOverlay .actions button img {
+            filter: none !important;
+        }
+        body.theme-dark .post .actions button.liked img {
+            filter: none !important; /* цветной лайк */
+        }
+        body.theme-dark .post-box .tools button:not(.primary-btn),
+        body.theme-dark .post-box .tools label {
+            background: #2a2a38 !important;
+            color: #fff !important;
+        }
+        body.theme-dark .post-box .tools button:not(.primary-btn):hover,
+        body.theme-dark .post-box .tools label:hover {
+            background: #3a3a4a !important;
+        }
+        body.theme-dark .post .actions button {
+            color: #c0c0d0 !important;
+        }
+        body.theme-dark .post .actions button.liked {
+            color: #ff6b6b !important;
+        }
+        body.theme-dark .post .actions button.liked img {
+            filter: none !important;
+        }
 
         /* ----- СВЕТЛАЯ ТЕМА (кнопки черные) ----- */
         body.theme-light .primary,
