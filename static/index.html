@@ -638,6 +638,7 @@
             <button class="secondary" onclick="register()">Создать аккаунт</button>
             <div class="auth-divider">или</div>
             <button class="secondary" onclick="showCodeLogin()">Войти по коду</button>
+            <button class="secondary" id="guestBtn" onclick="enterGuestMode()" style="margin-top:8px;opacity:.9">Войти как гость</button>
             <div id="codeLoginBox" class="hidden" style="margin-top:12px">
                 <input id="codeUsername" placeholder="Username">
                 <input id="codeValue" placeholder="Код от бота Lumi">
@@ -689,7 +690,7 @@
                     <div class="chat-container">
                         <div id="chatHeader" class="chat-header" onclick="openCurrentUserProfile()">
                             <div class="left">
-                                <img id="chatAvatar" class="avatar" src="" alt="">
+                                <img id="chatAvatar" class="avatar" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIbLnr8-3ZlGD7AB7TwXHhHdgujtsrXLmdI8laFLml5w&s=10" alt="">
                                 <div class="info">
                                     <div class="name" id="chatName">Выберите пользователя</div>
                                     <div class="status" id="chatStatus"></div>
@@ -720,7 +721,7 @@
                 <section id="profileView" class="view hidden">
                     <div class="profile-container">
                         <div class="card">
-                            <img id="bigAvatar" class="big-avatar" alt="">
+                            <img id="bigAvatar" class="big-avatar" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIbLnr8-3ZlGD7AB7TwXHhHdgujtsrXLmdI8laFLml5w&s=10" alt="">
                             <h2><img width="24" height="24" src="https://img.icons8.ru/ios-filled/50/user.png" alt="user"> Профиль</h2>
                             <div class="field"><label>Username</label><input id="profileUsername" placeholder="Username"></div>
                             <div class="field"><label>Имя</label><input id="profileName" placeholder="Имя"></div>
@@ -837,7 +838,7 @@
         <div class="modal" onclick="event.stopPropagation()" id="modalContent"></div>
     </div>
     <div id="incomingCallOverlay" class="hidden">
-        <img id="incomingCallAvatar" class="avatar" src="" alt="">
+        <img id="incomingCallAvatar" class="avatar" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIbLnr8-3ZlGD7AB7TwXHhHdgujtsrXLmdI8laFLml5w&s=10" alt="">
         <div id="incomingCallName" class="name">Звонок...</div>
         <div id="incomingCallSub" class="sub">Входящий вызов</div>
         <div class="actions">
@@ -846,7 +847,7 @@
         </div>
     </div>
     <div id="callOverlay" class="hidden">
-        <img id="callAvatar" class="avatar" src="" alt="">
+        <img id="callAvatar" class="avatar" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIbLnr8-3ZlGD7AB7TwXHhHdgujtsrXLmdI8laFLml5w&s=10" alt="">
         <div id="callName" class="name">Звонок</div>
         <div id="callStatus" class="status">Соединение...</div>
         <div id="callDuration" class="duration">00:00</div>
@@ -865,6 +866,7 @@
         const VERIFIED_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" style="width:16px;height:16px"><path fill="#32BEA6" d="M504.1,256C504.1,119,393,7.9,256,7.9C119,7.9,7.9,119,7.9,256C7.9,393,119,504.1,256,504.1C393,504.1,504.1,393,504.1,256z"/><path fill="#FFF" d="M392.6,172.9c-5.8-15.1-17.7-12.7-30.6-10.1c-7.7,1.6-42,11.6-96.1,68.8c-22.5,23.7-37.3,42.6-47.1,57c-6-7.3-12.8-15.2-20-22.3C176.7,244.2,152,229,151,228.4c-10.3-6.3-23.8-3.1-30.2,7.3c-6.3,10.3-3.1,23.8,7.2,30.2c0.2,0.1,21.4,13.2,39.6,31.5c18.6,18.6,35.5,43.8,35.7,44.1c4.1,6.2,11,9.8,18.3,9.8c1.2,0,2.5-0.1,3.8-0.3c8.6-1.5,15.4-7.9,17.5-16.3c0.1-0.2,8.8-24.3,54.7-72.7c37-39.1,61.7-51.5,70.3-54.9c0.1,0,0.1,0,0.3,0c0,0,0.3-0.1,0.8-0.4c1.5-0.6,2.3-0.8,2.3-0.8c-0.4,0.1-0.6,0.1-0.6,0.1l0-0.1c4-1.7,11.4-4.9,11.5-5C393.3,196.1,397,184.1,392.6,172.9z"/></svg>';
         let token = localStorage.getItem("token") || "";
         let currentUser = null;
+        let isGuest = sessionStorage.getItem("lumi_guest") === "1";
         let ws = null;
         let selectedUserId = null, selectedGroupId = null, selectedChannelId = null, selectedChannelIsOwner = false, selectedCommunityId = null, selectedCommunityChatId = null, selectedMessageId = null, currentChatPeer = null, favoritePickMode = false;
         let notificationAudio = null, sendAudio = null, ringAudio = null;
@@ -1078,6 +1080,10 @@
             invite: {ru:"Пригласить",en:"Invite",be:"Запрасіць",kk:"Шақыру",uk:"Запросити",de:"Einladen",fr:"Inviter",es:"Invitar",tr:"Davet et",zh:"邀请",ja:"招待",ar:"دعوة",pl:"Zaproś",it:"Invita",pt:"Convidar",uz:"Taklif qilish",ko:"초대",hi:"आमंत्रित करें",ky:"Чакыруу",az:"Dəvət et",nl:"Uitnodigen",cs:"Pozvat",ro:"Invită",he:"הזמן",id:"Undang",vi:"Mời",th:"เชิญ",fi:"Kutsu",sv:"Bjud in"},
             enter_username: {ru:"Введите username",en:"Enter username",be:"Увядзіце username",kk:"Username енгізіңіз",uk:"Введіть username",de:"Username eingeben",fr:"Entrez le username",es:"Introduce username",tr:"Username girin",zh:"输入用户名",ja:"ユーザー名を入力",ar:"أدخل اسم المستخدم",pl:"Wprowadź username",it:"Inserisci username",pt:"Digite o username",uz:"Username kiriting",ko:"사용자 이름 입력",hi:"यूज़रनेम दर्ज करें",ky:"Username киргизиңиз",az:"Username daxil edin",nl:"Voer username in",cs:"Zadejte username",ro:"Introdu username",he:"הזן שם משתמש",id:"Masukkan username",vi:"Nhập username",th:"กรอกชื่อผู้ใช้",fi:"Syötä käyttäjänimi",sv:"Ange användarnamn"},
             no_chats_fwd: {ru:"Нет чатов для пересылки",en:"No chats to forward to",be:"Няма чатаў для перасылкі",kk:"Қайта жіберуге чаттар жоқ",uk:"Немає чатів для пересилання",de:"Keine Chats zum Weiterleiten",fr:"Pas de chats pour transférer",es:"No hay chats para reenviar",tr:"İletilecek sohbet yok",zh:"没有可转发的聊天",ja:"転送先のチャットがありません",ar:"لا توجد محادثات لإعادة التوجيه",pl:"Brak czatów do przekazania",it:"Nessuna chat a cui inoltrare",pt:"Sem chats para encaminhar",uz:"Yuborish uchun chatlar yo'q",ko:"전달할 채팅 없음",hi:"फॉरवर्ड करने के लिए कोई चैट नहीं",ky:"Жөнөтүүгө чаттар жок",az:"Yönləndirmək üçün çat yoxdur",nl:"Geen chats om door te sturen",cs:"Žádné chaty k přeposlání",ro:"Niciun chat de redirecționat",he:"אין צ'אטים להעברה",id:"Tidak ada chat untuk diteruskan",vi:"Không có trò chuyện để chuyển",th:"ไม่มีแชทที่จะส่งต่อ",fi:"Ei chatteja välitettäväksi",sv:"Inga chattar att vidarebefordra till"},
+            guest_enter: {ru:"Войти как гость",en:"Continue as guest",be:"Увайсці як госць",kk:"Қонақ ретінде кіру",uk:"Увійти як гість",de:"Als Gast fortfahren",fr:"Continuer en invité",es:"Continuar como invitado",tr:"Misafir olarak devam et",zh:"以访客身份继续",ja:"ゲストとして続ける",ar:"المتابعة كزائر",pl:"Kontynuuj jako gość",it:"Continua come ospite",pt:"Continuar como convidado",uz:"Mehmon sifatida davom etish",ko:"게스트로 계속",hi:"अतिथि के रूप में जारी रखें",ky:"Конок катары улантуу",az:"Qonaq kimi davam et",nl:"Doorgaan als gast",cs:"Pokračovat jako host",ro:"Continuă ca oaspete",he:"המשך כאורח",id:"Lanjutkan sebagai tamu",vi:"Tiếp tục với tư cách khách",th:"ดำเนินการในฐานะผู้เยี่ยมชม",fi:"Jatka vieraana",sv:"Fortsätt som gäst"},
+            guest_banner: {ru:"Вы в гостевом режиме. Зарегистрируйтесь, чтобы писать, лайкать и комментировать.",en:"You are in guest mode. Sign up to write, like and comment.",be:"Вы ў гасцявым рэжыме. Зарэгіструйцеся, каб пісаць, лайкаць і каментаваць.",kk:"Сіз қонақ режиміндесіз. Жазу, лайк және пікір үшін тіркеліңіз.",uk:"Ви в гостьовому режимі. Зареєструйтесь, щоб писати, лайкати й коментувати.",de:"Sie sind im Gastmodus. Registrieren Sie sich, um zu schreiben, zu liken und zu kommentieren.",fr:"Mode invité. Inscrivez-vous pour écrire, aimer et commenter.",es:"Modo invitado. Regístrate para escribir, dar like y comentar.",tr:"Misafir modundasınız. Yazmak, beğenmek ve yorum yapmak için kaydolun.",zh:"您处于访客模式。注册后即可发帖、点赞和评论。",ja:"ゲストモードです。投稿・いいね・コメントには登録が必要です。",ar:"أنت في وضع الزائر. سجّل للكتابة والإعجاب والتعليق.",pl:"Tryb gościa. Zarejestruj się, aby pisać, lajkować i komentować.",it:"Modalità ospite. Registrati per scrivere, mettere like e commentare.",pt:"Modo convidado. Registre-se para escrever, curtir e comentar.",uz:"Mehmon rejimidasiz. Yozish, layk va izoh uchun ro'yxatdan o'ting.",ko:"게스트 모드입니다. 글쓰기·좋아요·댓글은 가입 후 가능합니다.",hi:"आप अतिथि मोड में हैं। लिखने, लाइक और टिप्पणी के लिए साइन अप करें।",ky:"Сиз конок режиминдесиз. Жазуу, лайк жана комментарий үчүн катталыңыз.",az:"Qonaq rejimindəsiniz. Yazmaq, bəyənmək və şərh üçün qeydiyyatdan keçin.",nl:"Je bent in gastmodus. Meld je aan om te schrijven, te liken en te reageren.",cs:"Jste v režimu hosta. Zaregistrujte se pro psaní, lajky a komentáře.",ro:"Ești în modul oaspete. Înregistrează-te pentru a scrie, aprecia și comenta.",he:"אתה במצב אורח. הירשם כדי לכתוב, לסמן לייק ולהגיב.",id:"Anda dalam mode tamu. Daftar untuk menulis, menyukai, dan berkomentar.",vi:"Bạn đang ở chế độ khách. Đăng ký để viết, thích và bình luận.",th:"คุณอยู่ในโหมดผู้เยี่ยมชม ลงทะเบียนเพื่อเขียน ถูกใจ และแสดงความคิดเห็น",fi:"Olet vierastilassa. Rekisteröidy kirjoittaaksesi, tykätäksesi ja kommentoidaksesi.",sv:"Du är i gästläge. Registrera dig för att skriva, gilla och kommentera."},
+            guest_need_account: {ru:"Войдите или зарегистрируйтесь, чтобы выполнить это действие",en:"Log in or sign up to do this",be:"Увайдзіце або зарэгіструйцеся, каб выканаць гэта",kk:"Бұл әрекетті орындау үшін кіріңіз немесе тіркеліңіз",uk:"Увійдіть або зареєструйтесь, щоб виконати цю дію",de:"Melden Sie sich an, um dies zu tun",fr:"Connectez-vous ou inscrivez-vous pour faire cela",es:"Inicia sesión o regístrate para hacer esto",tr:"Bunu yapmak için giriş yapın veya kaydolun",zh:"请登录或注册以执行此操作",ja:"この操作にはログインまたは登録が必要です",ar:"سجّل الدخول أو أنشئ حساباً للقيام بذلك",pl:"Zaloguj się lub zarejestruj, aby to zrobić",it:"Accedi o registrati per farlo",pt:"Entre ou registre-se para fazer isso",uz:"Buni qilish uchun kiring yoki ro'yxatdan o'ting",ko:"이 작업을 하려면 로그인하거나 가입하세요",hi:"यह करने के लिए लॉग इन या साइन अप करें",ky:"Муну жасоо үчүн кириңиз же катталыңыз",az:"Bunu etmək üçün daxil olun və ya qeydiyyatdan keçin",nl:"Log in of meld je aan om dit te doen",cs:"Pro tuto akci se přihlaste nebo zaregistrujte",ro:"Autentifică-te sau înregistrează-te pentru aceasta",he:"התחבר או הירשם כדי לבצע פעולה זו",id:"Masuk atau daftar untuk melakukan ini",vi:"Đăng nhập hoặc đăng ký để thực hiện",th:"เข้าสู่ระบบหรือลงทะเบียนเพื่อดำเนินการนี้",fi:"Kirjaudu tai rekisteröidy tehdäksesi tämän",sv:"Logga in eller registrera dig för att göra detta"},
+            guest_login: {ru:"Войти / Регистрация",en:"Log in / Sign up",be:"Увайсці / Рэгістрацыя",kk:"Кіру / Тіркелу",uk:"Увійти / Реєстрація",de:"Anmelden / Registrieren",fr:"Connexion / Inscription",es:"Entrar / Registrarse",tr:"Giriş / Kayıt",zh:"登录 / 注册",ja:"ログイン / 登録",ar:"دخول / تسجيل",pl:"Zaloguj / Zarejestruj",it:"Accedi / Registrati",pt:"Entrar / Registrar",uz:"Kirish / Ro'yxatdan o'tish",ko:"로그인 / 가입",hi:"लॉग इन / साइन अप",ky:"Кирүү / Катталуу",az:"Daxil ol / Qeydiyyat",nl:"Inloggen / Registreren",cs:"Přihlásit / Registrovat",ro:"Autentificare / Înregistrare",he:"התחברות / הרשמה",id:"Masuk / Daftar",vi:"Đăng nhập / Đăng ký",th:"เข้าสู่ระบบ / ลงทะเบียน",fi:"Kirjaudu / Rekisteröidy",sv:"Logga in / Registrera"},
             fav_messages: {ru:"Избранные сообщения",en:"Favorite messages",be:"Абраныя паведамленні",kk:"Таңдаулы хабарламалар",uk:"Обрані повідомлення",de:"Favorisierte Nachrichten",fr:"Messages favoris",es:"Mensajes favoritos",tr:"Favori mesajlar",zh:"收藏的消息",ja:"お気に入りメッセージ",ar:"الرسائل المفضلة",pl:"Ulubione wiadomości",it:"Messaggi preferiti",pt:"Mensagens favoritas",uz:"Sevimli xabarlar",ko:"즐겨찾기 메시지",hi:"पसंदीदा संदेश",ky:"Тандалма билдирүүлөр",az:"Seçilmiş mesajlar",nl:"Favoriete berichten",cs:"Oblíbené zprávy",ro:"Mesaje favorite",he:"הודעות מועדפות",id:"Pesan favorit",vi:"Tin nhắn yêu thích",th:"ข้อความโปรด",fi:"Suosikkiviestit",sv:"Favoritmeddelanden"}
         };
 
@@ -1299,6 +1305,8 @@
             }
             // RTL for ar/he
             document.documentElement.dir = (lang === "ar" || lang === "he") ? "rtl" : "ltr";
+            var gb = document.getElementById("guestBtn"); if (gb) gb.textContent = t("guest_enter");
+            if (isGuest) applyGuestUI(true);
         }
 
         // SPLASH
@@ -1311,6 +1319,11 @@
         // HELPERS
         function escapeHtml(t) { return String(t ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
         function mediaUrl(u) { if(!u) return ""; if(u.startsWith("http://")||u.startsWith("https://")) return u; return API + u; }
+        var DEFAULT_AVATAR = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIbLnr8-3ZlGD7AB7TwXHhHdgujtsrXLmdI8laFLml5w&s=10";
+        function avatarSrc(u) {
+            if (!u || String(u).trim() === "") return DEFAULT_AVATAR;
+            return mediaUrl(u);
+        }
         function isUserOnline(ls) { if(!ls) return false; try{ var d=(Date.now()-new Date(ls).getTime())/1000; return d<120; }catch(e){return false;} }
         function withVerified(n,u) { if(u&&(u.is_verified||u.is_bot||u.username==="lumi")) return escapeHtml(n)+' <span class="verified">'+VERIFIED_SVG+'</span>'; return escapeHtml(n); }
         function showToast(t,b,o){ var s=document.getElementById("toastStack"); if(!s)return; var e=document.createElement("div"); e.className="toast"; e.innerHTML="<strong>"+escapeHtml(t)+"</strong><span>"+escapeHtml(b||"")+"</span>"; e.onclick=function(){e.remove();if(o)o();}; s.appendChild(e); setTimeout(function(){try{e.remove();}catch(e){}},5000); }
@@ -1345,7 +1358,7 @@
             var r = await fetch(API + "/api/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: u, password: p }) });
             var d = await safeJson(r);
             if (!r.ok) { e.textContent = d.detail || t("error"); return; }
-            token = d.token; localStorage.setItem("token", token); await startApp();
+            isGuest = false; sessionStorage.removeItem("lumi_guest"); token = d.token; localStorage.setItem("token", token); await startApp();
         }
         async function register() {
             var u = document.getElementById("username").value.trim();
@@ -1355,7 +1368,7 @@
             var r = await fetch(API + "/api/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: u, password: p }) });
             var d = await safeJson(r);
             if (!r.ok) { e.textContent = d.detail || t("error"); return; }
-            token = d.token; localStorage.setItem("token", token); await startApp();
+            isGuest = false; sessionStorage.removeItem("lumi_guest"); token = d.token; localStorage.setItem("token", token); await startApp();
         }
         function showCodeLogin(){document.getElementById("codeLoginBox").classList.toggle("hidden");}
         async function requestLoginCode() {
@@ -1376,11 +1389,135 @@
             var r = await fetch(API + "/api/auth/login-code", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: u, code: c }) });
             var d = await safeJson(r);
             if (!r.ok) { e.textContent = d.detail || "Ошибка"; return; }
-            token = d.token; localStorage.setItem("token", token); await startApp();
+            isGuest = false; sessionStorage.removeItem("lumi_guest"); token = d.token; localStorage.setItem("token", token); await startApp();
         }
+
+
+        
+        // Fallback broken avatars to default
+        document.addEventListener("error", function(e) {
+            var t = e.target;
+            if (t && t.tagName === "IMG" && t.classList && (t.classList.contains("avatar") || t.style.borderRadius === "50%" || (t.getAttribute("style")||"").indexOf("border-radius:50%")>=0)) {
+                if (t.src !== DEFAULT_AVATAR && t.dataset.fallback !== "1") {
+                    t.dataset.fallback = "1";
+                    t.src = DEFAULT_AVATAR;
+                }
+            }
+        }, true);
+
+        // GUEST MODE
+        function requireAccount() {
+            if (!isGuest) return true;
+            showToast(t("guest_need_account"));
+            return false;
+        }
+        function showToast(msg) {
+            var stack = document.getElementById("toastStack");
+            if (!stack) { alert(msg); return; }
+            var el = document.createElement("div");
+            el.className = "toast";
+            el.textContent = msg;
+            el.style.cssText = "background:#1a1a24;color:#fff;padding:12px 16px;border-radius:12px;margin:8px;box-shadow:0 4px 20px rgba(0,0,0,.4);max-width:320px;font-size:14px;border:1px solid #2a2a38";
+            stack.appendChild(el);
+            setTimeout(function(){ el.style.opacity="0"; el.style.transition="opacity .3s"; setTimeout(function(){ el.remove(); }, 300); }, 3200);
+        }
+        function enterGuestMode() {
+            isGuest = true;
+            sessionStorage.setItem("lumi_guest", "1");
+            token = "";
+            localStorage.removeItem("token");
+            currentUser = {
+                id: 0,
+                username: "guest",
+                display_name: "Guest",
+                avatar_url: DEFAULT_AVATAR,
+                theme: localStorage.getItem("theme") || "dark",
+                language: localStorage.getItem("language") || "ru",
+                is_guest: true
+            };
+            document.getElementById("auth").classList.add("hidden");
+            document.getElementById("app").classList.remove("hidden");
+            applyTheme(currentUser.theme);
+            applyLanguage(currentUser.language);
+            applyGuestUI(true);
+            loadFeed().catch(function(){});
+            loadReels().catch(function(){});
+            refreshSidebar().catch(function(){});
+            showFeed();
+            showToast(t("guest_banner"));
+        }
+        function exitGuestMode() {
+            isGuest = false;
+            sessionStorage.removeItem("lumi_guest");
+            currentUser = null;
+            token = "";
+            localStorage.removeItem("token");
+            document.getElementById("app").classList.add("hidden");
+            document.getElementById("auth").classList.remove("hidden");
+            applyGuestUI(false);
+            var banner = document.getElementById("guestBanner");
+            if (banner) banner.remove();
+        }
+        function applyGuestUI(on) {
+            // banner
+            var existing = document.getElementById("guestBanner");
+            if (on) {
+                if (!existing) {
+                    var ban = document.createElement("div");
+                    ban.id = "guestBanner";
+                    ban.style.cssText = "position:sticky;top:0;z-index:50;background:linear-gradient(90deg,#5865f2,#7289da);color:#fff;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px;flex-wrap:wrap";
+                    ban.innerHTML = '<span style="flex:1">'+t("guest_banner")+'</span><button onclick="exitGuestMode()" style="background:#fff;color:#5865f2;border:none;padding:8px 14px;border-radius:8px;font-weight:600;cursor:pointer;white-space:nowrap">'+t("guest_login")+'</button>';
+                    var main = document.querySelector(".main") || document.getElementById("app");
+                    if (main) main.insertBefore(ban, main.firstChild);
+                } else {
+                    existing.querySelector("span").textContent = t("guest_banner");
+                    var b = existing.querySelector("button");
+                    if (b) b.textContent = t("guest_login");
+                }
+            } else if (existing) {
+                existing.remove();
+            }
+            // hide post composer
+            var postBox = document.querySelector(".post-box");
+            if (postBox) postBox.style.display = on ? "none" : "";
+            // disable composer
+            var msgInput = document.getElementById("messageInput");
+            var sendBtn = document.querySelector(".composer .send-btn");
+            if (msgInput) { msgInput.disabled = on; msgInput.placeholder = on ? t("guest_need_account") : t("message"); }
+            if (sendBtn) sendBtn.disabled = on;
+            // profile fields readonly
+            ["profileUsername","profileName","profileBio"].forEach(function(id){
+                var el = document.getElementById(id);
+                if (el) { el.readOnly = on; el.disabled = on; }
+            });
+            var avatarInp = document.getElementById("profileAvatar");
+            if (avatarInp) avatarInp.disabled = on;
+            var saveProf = document.querySelector("#profileView .card:first-child .btn-row .primary");
+            if (saveProf) saveProf.style.display = on ? "none" : "";
+            // hide account management for guests
+            var accCard = document.querySelector("#profileView .card:nth-child(2)");
+            if (accCard) accCard.style.display = on ? "none" : "";
+            // settings: hide privacy-sensitive actions that need account
+            document.querySelectorAll("#settingsTabAccounts .danger, #settingsTabAccounts .primary, #settingsTabAccounts .secondary").forEach(function(btn){
+                if (on) { btn.style.opacity=".5"; btn.onclick = function(e){ e.preventDefault(); requireAccount(); }; }
+            });
+            // create group/channel/community buttons
+            document.querySelectorAll("#groupsView .primary, #channelsView .primary, #communitiesView .primary").forEach(function(btn){
+                if (on) {
+                    btn.dataset._guest = "1";
+                    btn.style.opacity = ".5";
+                    btn.onclick = function(e){ e.preventDefault(); requireAccount(); };
+                }
+            });
+            // guest button label on auth
+            var gb = document.getElementById("guestBtn");
+            if (gb) gb.textContent = t("guest_enter");
+        }
+
 
         // START
         async function checkAuth() {
+            if (isGuest) { enterGuestMode(); return; }
             if (!token) { document.getElementById("auth").classList.remove("hidden"); document.getElementById("app").classList.add("hidden"); return; }
             await startApp();
         }
@@ -1390,6 +1527,9 @@
             currentUser = await safeJson(r);
             document.getElementById("auth").classList.add("hidden");
             document.getElementById("app").classList.remove("hidden");
+            isGuest = false;
+            sessionStorage.removeItem("lumi_guest");
+            applyGuestUI(false);
             await loadFeed();
             await loadReels();
             await refreshSidebar();
@@ -1481,7 +1621,7 @@
         function userItem(user) {
             var div = document.createElement("div"); div.className = "user-item";
             var avatar = document.createElement("img"); avatar.className = "avatar";
-            if (user.avatar_url) avatar.src = mediaUrl(user.avatar_url);
+            avatar.src = avatarSrc(user.avatar_url);
             var info = document.createElement("div"); info.className = "info";
             var name = document.createElement("div"); name.className = "name";
             name.innerHTML = withVerified(user.display_name || user.username, user);
@@ -1565,7 +1705,7 @@
             dialogs.forEach(function(d){
                 var div = document.createElement("div"); div.className = "user-item dialog-item";
                 var avatar = document.createElement("img"); avatar.className = "avatar";
-                if (d.avatar_url) avatar.src = mediaUrl(d.avatar_url);
+                avatar.src = avatarSrc(d.avatar_url);
                 var info = document.createElement("div"); info.className = "info";
                 var name = document.createElement("div"); name.className = "name";
                 name.innerHTML = withVerified(d.alias || d.display_name || d.username, d);
@@ -1606,7 +1746,7 @@
             currentChatPeer = user; favoritePickMode = false; setComposerEnabled(true);
             showOnly("chatView");
             setPageTitle("https://img.icons8.ru/ios-filled/50/chat.png", (user.display_name || user.username));
-            document.getElementById("chatAvatar").src = user.avatar_url ? mediaUrl(user.avatar_url) : "";
+            document.getElementById("chatAvatar").src = avatarSrc(user.avatar_url);
             document.getElementById("chatName").innerHTML = withVerified(user.display_name || user.username, user);
             updateChatStatus(user);
             var actions = document.getElementById("chatActions");
@@ -1792,6 +1932,7 @@
         function scrollMessages(){ var c = document.getElementById("messages"); c.scrollTop = c.scrollHeight; }
         function messageKey(e){ if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
         async function sendMessage() {
+            if (!requireAccount()) return;
             if (!selectedUserId) return;
             var input = document.getElementById("messageInput");
             var text = input.value.trim();
@@ -1843,7 +1984,7 @@
             var div = document.createElement("div"); div.className = "post"; div.dataset.id = post.id;
             var head = document.createElement("div"); head.className = "head";
             var avatar = document.createElement("img"); avatar.className = "avatar";
-            if (post.avatar_url) avatar.src = mediaUrl(post.avatar_url);
+            avatar.src = avatarSrc(post.avatar_url);
             avatar.onclick = function(){ openUserProfile(post.author_id); };
             var author = document.createElement("span"); author.className = "author";
             author.innerHTML = withVerified(post.display_name || post.username, post);
@@ -1867,6 +2008,7 @@
             like.innerHTML = (isLiked ? likeIconFilled : likeIconEmpty) + ' ' + (post.likes || 0);
             if (isLiked) like.classList.add("liked");
             like.onclick = async function(){
+                if (!requireAccount()) return;
                 var r2 = await req("/api/posts/" + post.id + "/like", { method: "POST" });
                 var d2 = await safeJson(r2);
                 if (r2.ok) {
@@ -1961,6 +2103,7 @@
             box.appendChild(form);
         }
         function openReplyComment(postId, commentId, username) {
+            if (!requireAccount()) return;
             var input = document.getElementById("commentInput-" + postId);
             if (input) {
                 input.value = "@" + username + " ";
@@ -1969,6 +2112,7 @@
             }
         }
         async function sendComment(postId) {
+            if (!requireAccount()) return;
             var input = document.getElementById("commentInput-" + postId);
             var text = (input?.value || "").trim();
             if (!text) return;
@@ -1986,6 +2130,7 @@
             if (input) { input.value = ""; input.dataset.replyTo = ""; }
         }
         async function publishPost() {
+            if (!requireAccount()) return;
             var text = document.getElementById("postText").value.trim();
             if (!text) return;
             var r = await req("/api/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: text }) });
@@ -1994,6 +2139,7 @@
             await loadFeed();
         }
         async function publishMediaPost() {
+            if (!requireAccount()) return;
             var input = document.getElementById("mediaFile");
             var file = input.files[0];
             if (!file) return;
@@ -2045,11 +2191,11 @@
             document.getElementById("profileName").value = user.display_name || "";
             document.getElementById("profileBio").value = user.bio || "";
             var avatar = document.getElementById("bigAvatar");
-            if (user.avatar_url) avatar.src = mediaUrl(user.avatar_url);
-            else avatar.removeAttribute("src");
+            avatar.src = avatarSrc(user.avatar_url);
             if (user.theme) applyTheme(user.theme);
         }
         async function saveProfile() {
+            if (!requireAccount()) return;
             var username = document.getElementById("profileUsername").value.trim();
             var display_name = document.getElementById("profileName").value.trim();
             var bio = document.getElementById("profileBio").value.trim();
@@ -2130,9 +2276,11 @@
 
         // GROUPS
         function openCreateGroup() {
+            if (!requireAccount()) return;
             openModal('<h2>'+t("new_group")+'</h2><input id="newGroupName" placeholder="'+t("name")+'"><textarea id="newGroupDescription" placeholder="'+t("description")+'" style="margin-top:8px;min-height:60px;resize:vertical"></textarea><button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px" onclick="createGroup()">'+t("create")+'</button>');
         }
         async function createGroup() {
+            if (!requireAccount()) return;
             var name = document.getElementById("newGroupName").value.trim();
             var desc = document.getElementById("newGroupDescription").value.trim();
             var r = await req("/api/groups", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name, description: desc }) });
@@ -2170,7 +2318,7 @@
             currentChatPeer = null; setComposerEnabled(true);
             showOnly("chatView");
             setPageTitle("https://img.icons8.ru/ios-filled/50/group.png", "Группа: " + groupName);
-            document.getElementById("chatAvatar").src = "";
+            document.getElementById("chatAvatar").src = DEFAULT_AVATAR;
             document.getElementById("chatName").textContent = "Группа: " + groupName;
             document.getElementById("chatStatus").textContent = "группа";
             document.getElementById("chatActions").style.display = "flex";
@@ -2224,9 +2372,11 @@
 
         // CHANNELS
         function openCreateChannel() {
+            if (!requireAccount()) return;
             openModal('<h2>'+t("new_channel")+'</h2><input id="newChannelName" placeholder="'+t("name")+'"><input id="newChannelUsername" placeholder="username" style="margin-top:8px"><textarea id="newChannelDescription" placeholder="'+t("description")+'" style="margin-top:8px;min-height:60px;resize:vertical"></textarea><button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px" onclick="createChannel()">'+t("create")+'</button>');
         }
         async function createChannel() {
+            if (!requireAccount()) return;
             var name = document.getElementById("newChannelName").value.trim();
             var username = document.getElementById("newChannelUsername").value.trim();
             var desc = document.getElementById("newChannelDescription").value.trim();
@@ -2266,7 +2416,7 @@
             currentChatPeer = null; setComposerEnabled(isOwner);
             showOnly("chatView");
             setPageTitle("https://img.icons8.ru/ios-filled/50/megaphone.png", "Канал: " + channelName);
-            document.getElementById("chatAvatar").src = "";
+            document.getElementById("chatAvatar").src = DEFAULT_AVATAR;
             document.getElementById("chatName").textContent = "Канал: " + channelName;
             document.getElementById("chatStatus").textContent = isOwner ? "Вы создатель" : t("channel");
             document.getElementById("chatActions").style.display = "flex";
@@ -2282,9 +2432,11 @@
 
         // COMMUNITIES
         function openCreateCommunity() {
+            if (!requireAccount()) return;
             openModal('<h2>'+t("new_community")+'</h2><input id="newCommunityName" placeholder="'+t("name")+'"><textarea id="newCommunityDescription" placeholder="'+t("description")+'" style="margin-top:8px;min-height:60px;resize:vertical"></textarea><button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px" onclick="createCommunity()">'+t("create")+'</button>');
         }
         async function createCommunity() {
+            if (!requireAccount()) return;
             var name = document.getElementById("newCommunityName").value.trim();
             var desc = document.getElementById("newCommunityDescription").value.trim();
             var r = await req("/api/communities", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name, description: desc }) });
@@ -2323,7 +2475,7 @@
             currentChatPeer = null; setComposerEnabled(false);
             showOnly("chatView");
             setPageTitle("https://img.icons8.ru/ios-filled/50/globe.png", "Сообщество: " + communityName);
-            document.getElementById("chatAvatar").src = "";
+            document.getElementById("chatAvatar").src = DEFAULT_AVATAR;
             document.getElementById("chatName").textContent = "Сообщество: " + communityName;
             document.getElementById("chatStatus").textContent = "сообщество";
             document.getElementById("chatActions").style.display = "flex";
@@ -2368,7 +2520,7 @@
             showOnly("chatView");
             var full = communityName ? communityName + " · " + chatName : chatName;
             setPageTitle("https://img.icons8.ru/ios-filled/50/chat.png", full);
-            document.getElementById("chatAvatar").src = "";
+            document.getElementById("chatAvatar").src = DEFAULT_AVATAR;
             document.getElementById("chatName").textContent = full;
             document.getElementById("chatStatus").textContent = "чат сообщества";
             document.getElementById("chatActions").style.display = "flex";
@@ -2474,7 +2626,7 @@
             var isBot = user.is_bot || user.username === "lumi";
             var online = isUserOnline(user.last_seen);
             var html = '<div style="text-align:center;padding:4px 0">';
-            html += '<img src="'+(user.avatar_url ? mediaUrl(user.avatar_url) : '')+'" style="width:100px;height:100px;border-radius:50%;object-fit:cover;background:#2a2a38;margin:0 auto 12px;display:block;border:3px solid #2a2a38">';
+            html += '<img src="'+avatarSrc(user.avatar_url)+'" style="width:100px;height:100px;border-radius:50%;object-fit:cover;background:#2a2a38;margin:0 auto 12px;display:block;border:3px solid #2a2a38">';
             html += '<div style="font-size:20px;font-weight:700">'+escapeHtml(user.display_name||user.username)+'</div>';
             html += '<div style="color:#5865f2;font-size:14px;margin-bottom:12px">@'+escapeHtml(user.username)+'</div>';
             html += '<div style="background:#1a1a24;border-radius:12px;padding:12px;text-align:left;margin-bottom:12px"><div style="font-size:12px;color:#6a6a7a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">О себе</div><div style="font-size:14px;color:'+(user.bio ? '#fff' : '#6a6a7a')+'">'+(user.bio ? escapeHtml(user.bio) : "Нет описания")+'</div></div>';
@@ -2756,6 +2908,7 @@
             { urls: "turn:openrelay.metered.ca:443", username: "openrelayproject", credential: "openrelayproject" }
         ];
         async function startCall(video) {
+            if (!requireAccount()) return;
             if (!selectedUserId) return;
             if (callTargetId) { alert(t("already_call")); return; }
             isCaller = true; callIsVideo = !!video; callTargetId = selectedUserId;
@@ -2765,7 +2918,7 @@
                 if (r.ok) {
                     var user = await safeJson(r);
                     document.getElementById("callName").textContent = user.display_name || user.username;
-                    document.getElementById("callAvatar").src = user.avatar_url ? mediaUrl(user.avatar_url) : "";
+                    document.getElementById("callAvatar").src = avatarSrc(user.avatar_url);
                 }
             } catch(ex) {}
             document.getElementById("callStatus").textContent = t("calling");
@@ -2844,7 +2997,7 @@
                     if (r.ok) {
                         var user = await safeJson(r);
                         document.getElementById("incomingCallName").textContent = user.display_name || user.username;
-                        document.getElementById("incomingCallAvatar").src = user.avatar_url ? mediaUrl(user.avatar_url) : "";
+                        document.getElementById("incomingCallAvatar").src = avatarSrc(user.avatar_url);
                         document.getElementById("incomingCallSub").textContent = (payload.video ? "Видеозвонок" : "Аудиозвонок") + " от " + (user.display_name || user.username);
                     }
                 } catch(ex) {}
@@ -2873,7 +3026,7 @@
                         if (r2.ok) {
                             var user2 = await safeJson(r2);
                             document.getElementById("incomingCallName").textContent = user2.display_name || user2.username;
-                            document.getElementById("incomingCallAvatar").src = user2.avatar_url ? mediaUrl(user2.avatar_url) : "";
+                            document.getElementById("incomingCallAvatar").src = avatarSrc(user2.avatar_url);
                             document.getElementById("incomingCallSub").textContent = (payload.video ? "Видеозвонок" : "Аудиозвонок") + " от " + (user2.display_name || user2.username);
                         }
                     } catch(ex) {}
@@ -3014,7 +3167,7 @@
                 if (r.ok) {
                     var user = await safeJson(r);
                     document.getElementById("callName").textContent = user.display_name || user.username;
-                    document.getElementById("callAvatar").src = user.avatar_url ? mediaUrl(user.avatar_url) : "";
+                    document.getElementById("callAvatar").src = avatarSrc(user.avatar_url);
                 }
             } catch(ex) {}
             document.getElementById("callStatus").textContent = "Соединение...";
@@ -3072,7 +3225,9 @@
         // START
         document.getElementById("auth").classList.remove("hidden");
         document.getElementById("app").classList.add("hidden");
-        if (localStorage.getItem("token")) {
+        if (sessionStorage.getItem("lumi_guest") === "1") {
+            enterGuestMode();
+        } else if (localStorage.getItem("token")) {
             checkAuth();
         }
     </script>
