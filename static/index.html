@@ -2210,96 +2210,68 @@
             var bio = document.getElementById("profileBio").value.trim();
             if (!username) { alert(t("enter_username_password") || "Username required"); return; }
 
-            var payload = { username: username, display_name: display_name, bio: bio, name: display_name };
-            var endpoints = [
-                { url: "/api/profile", method: "PUT" },
-                { url: "/api/profile", method: "PATCH" },
-                { url: "/api/me", method: "PUT" },
-                { url: "/api/me", method: "PATCH" },
-                { url: "/api/users/me", method: "PUT" },
-                { url: "/api/users/me", method: "PATCH" }
-            ];
-            var r = null, d = {}, ok = false;
-            for (var i = 0; i < endpoints.length; i++) {
-                try {
-                    r = await req(endpoints[i].url, {
-                        method: endpoints[i].method,
-                        body: JSON.stringify(payload)
-                    });
-                    d = await safeJson(r);
-                    if (r.ok) { ok = true; break; }
-                    // 404/405 — пробуем следующий
-                    if (r.status === 404 || r.status === 405 || r.status === 501) continue;
-                    // другая ошибка — показываем
-                    break;
-                } catch (e) { continue; }
-            }
-            if (!ok) {
-                var msg = (d && (d.detail || d.message || d.error)) || t("error");
-                if (typeof msg === "object") msg = JSON.stringify(msg);
-                alert(msg);
-                return;
-            }
+            var btn = document.querySelector("#profileView .card:first-child .btn-row .primary");
+            var prevText = btn ? btn.textContent : "";
+            if (btn) { btn.disabled = true; btn.textContent = "..."; }
 
-            // Аватар
-            var fileInput = document.getElementById("avatarFile");
-            var file = fileInput && fileInput.files && fileInput.files[0];
-            if (file) {
-                var form = new FormData();
-                form.append("file", file);
-                form.append("avatar", file);
-                var avatarEndpoints = ["/api/avatar", "/api/me/avatar", "/api/profile/avatar", "/api/users/me/avatar"];
-                var aok = false, ad = {};
-                for (var j = 0; j < avatarEndpoints.length; j++) {
-                    try {
-                        var ar = await req(avatarEndpoints[j], { method: "POST", body: form });
-                        ad = await safeJson(ar);
-                        if (ar.ok) {
-                            aok = true;
-                            if (ad.avatar_url) {
-                                if (currentUser) currentUser.avatar_url = ad.avatar_url;
-                                var big = document.getElementById("bigAvatar");
-                                if (big) big.src = avatarSrc(ad.avatar_url);
-                            }
-                            break;
-                        }
-                        if (ar.status === 404 || ar.status === 405) continue;
-                        break;
-                    } catch (e) { continue; }
-                }
-                if (!aok && file) {
-                    alert((ad && (ad.detail || ad.message)) || t("error"));
-                    // профиль уже мог сохраниться — не return жёстко, обновим UI
-                }
-                if (fileInput) fileInput.value = "";
-            }
-
-            // Мгновенно обновляем локального пользователя и UI (без reload)
+            // Оптимистично обновляем UI сразу
             if (currentUser) {
                 currentUser.username = username;
                 currentUser.display_name = display_name;
                 currentUser.bio = bio;
-                if (d.username) currentUser.username = d.username;
-                if (d.display_name) currentUser.display_name = d.display_name;
-                if (d.bio !== undefined) currentUser.bio = d.bio;
-                if (d.avatar_url) currentUser.avatar_url = d.avatar_url;
             }
-            // подтянуть свежие данные с /api/me
-            try {
-                var me = await req("/api/me");
-                if (me.ok) {
-                    var meData = await safeJson(me);
-                    currentUser = Object.assign(currentUser || {}, meData);
-                    document.getElementById("profileUsername").value = currentUser.username || username;
-                    document.getElementById("profileName").value = currentUser.display_name || display_name;
-                    document.getElementById("profileBio").value = currentUser.bio || bio || "";
-                    var big2 = document.getElementById("bigAvatar");
-                    if (big2) big2.src = avatarSrc(currentUser.avatar_url);
-                }
-            } catch (e) {}
 
-            if (typeof showToast === "function") showToast(t("settings_saved") || "Saved");
-            else alert(t("settings_saved") || "Saved");
+            try {
+                var payload = { username: username, display_name: display_name, bio: bio };
+                var r = await req("/api/profile", { method: "PUT", body: JSON.stringify(payload) });
+                // fallback один раз на /api/me если 404
+                if (!r.ok && (r.status === 404 || r.status === 405)) {
+                    r = await req("/api/me", { method: "PUT", body: JSON.stringify(payload) });
+                }
+                var d = await safeJson(r);
+                if (!r.ok) {
+                    var msg = (d && (d.detail || d.message || d.error)) || t("error");
+                    if (typeof msg === "object") msg = JSON.stringify(msg);
+                    alert(msg);
+                    return;
+                }
+                if (d && typeof d === "object") {
+                    if (d.username) currentUser.username = d.username;
+                    if (d.display_name) currentUser.display_name = d.display_name;
+                    if (d.bio !== undefined) currentUser.bio = d.bio;
+                    if (d.avatar_url) currentUser.avatar_url = d.avatar_url;
+                }
+
+                // Аватар — только если выбран файл
+                var fileInput = document.getElementById("avatarFile");
+                var file = fileInput && fileInput.files && fileInput.files[0];
+                if (file) {
+                    var form = new FormData();
+                    form.append("file", file);
+                    var ar = await req("/api/avatar", { method: "POST", body: form });
+                    if (!ar.ok && (ar.status === 404 || ar.status === 405)) {
+                        ar = await req("/api/me/avatar", { method: "POST", body: form });
+                    }
+                    var ad = await safeJson(ar);
+                    if (ar.ok) {
+                        if (ad.avatar_url) {
+                            currentUser.avatar_url = ad.avatar_url;
+                            var big = document.getElementById("bigAvatar");
+                            if (big) big.src = avatarSrc(ad.avatar_url);
+                        }
+                        if (fileInput) fileInput.value = "";
+                    } else {
+                        alert((ad && (ad.detail || ad.message)) || t("error"));
+                    }
+                }
+
+                if (typeof showToast === "function") showToast(t("settings_saved") || "Saved");
+                else alert(t("settings_saved") || "Saved");
+            } catch (e) {
+                alert(t("error") + (e && e.message ? ": " + e.message : ""));
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = prevText || t("save"); }
+            }
         }
 
         // SETTINGS
