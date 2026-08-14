@@ -1734,7 +1734,7 @@ def get_groups(request: Request):
     connection = db()
 
     groups = connection.execute("""
-        SELECT g.id, g.name, g.description, g.owner_id, g.created_at
+        SELECT g.id, g.name, g.description, g.owner_id, g.created_at, g.avatar_url
         FROM groups g
         JOIN group_members gm ON gm.group_id = g.id
         WHERE gm.user_id = ?
@@ -1765,6 +1765,7 @@ def get_group_messages(group_id: int, request: Request):
             m.id, m.group_id, m.sender_id,
             CASE WHEN m.deleted = 1 THEN '' ELSE m.text END AS text,
             m.created_at, m.deleted,
+            m.media_url, m.media_type,
             u.username, u.display_name AS sender_name
         FROM group_messages m
         JOIN users u ON u.id = m.sender_id
@@ -1969,7 +1970,7 @@ def get_channels(request: Request):
     connection = db()
 
     channels = connection.execute("""
-        SELECT c.id, c.name, c.username, c.description, c.owner_id, c.created_at
+        SELECT c.id, c.name, c.username, c.description, c.owner_id, c.avatar_url, c.created_at
         FROM channels c
         JOIN channel_subscribers s ON s.channel_id = c.id
         WHERE s.user_id = ?
@@ -3132,7 +3133,7 @@ def global_search(request: Request, q: str = ""):
     """, (like, like, user_id)).fetchall()
 
     channels = connection.execute("""
-        SELECT c.id, c.name, c.username, c.description, c.owner_id,
+        SELECT c.id, c.name, c.username, c.description, c.owner_id, c.avatar_url,
             CASE WHEN s.user_id IS NOT NULL THEN 1 ELSE 0 END AS joined
         FROM channels c
         LEFT JOIN channel_subscribers s ON s.channel_id = c.id AND s.user_id = ?
