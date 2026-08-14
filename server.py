@@ -86,117 +86,116 @@ def init_db():
     connection = db()
 
     connection.executescript("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            last_seen TEXT,
-            display_name TEXT,
-            bio TEXT DEFAULT '',
-            avatar_url TEXT,
-            is_bot INTEGER DEFAULT 0,
-            is_verified INTEGER DEFAULT 0
-        );
+    CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    last_seen TEXT,
+    display_name TEXT,
+    bio TEXT DEFAULT '',
+    avatar_url TEXT,
+    is_bot INTEGER DEFAULT 0,
+    is_verified INTEGER DEFAULT 0
+    );
 
-        CREATE TABLE IF NOT EXISTS sessions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            token_hash TEXT UNIQUE NOT NULL,
-            browser_hash TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            last_seen TEXT NOT NULL,
-            expires_at TEXT NOT NULL
-        );
+    CREATE TABLE IF NOT EXISTS sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    token_hash TEXT UNIQUE NOT NULL,
+    browser_hash TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    last_seen TEXT NOT NULL,
+    expires_at TEXT NOT NULL
+    );
 
-        CREATE TABLE IF NOT EXISTS messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sender_id INTEGER NOT NULL,
-            receiver_id INTEGER NOT NULL,
-            text TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            edited_at TEXT,
-            deleted INTEGER DEFAULT 0,
-            is_read INTEGER DEFAULT 0,
-            media_url TEXT,
-            media_type TEXT,
-            invite_id INTEGER,
-            invite_status TEXT,
-            forwarded_from INTEGER
-        );
+    CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sender_id INTEGER NOT NULL,
+    receiver_id INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    edited_at TEXT,
+    deleted INTEGER DEFAULT 0,
+    is_read INTEGER DEFAULT 0,
+    media_url TEXT,
+    media_type TEXT,
+    invite_id INTEGER,
+    invite_status TEXT,
+    forwarded_from INTEGER
+    );
 
-        CREATE TABLE IF NOT EXISTS posts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            author_id INTEGER NOT NULL,
-            text TEXT DEFAULT '',
-            media_url TEXT,
-            media_type TEXT,
-            created_at TEXT NOT NULL
-        );
+    CREATE TABLE IF NOT EXISTS posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    author_id INTEGER NOT NULL,
+    text TEXT DEFAULT '',
+    media_url TEXT,
+    media_type TEXT,
+    created_at TEXT NOT NULL
+    );
 
-        CREATE TABLE IF NOT EXISTS post_likes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            post_id INTEGER NOT NULL,
-            user_id INTEGER NOT NULL,
-            UNIQUE(post_id, user_id)
-        );
+    CREATE TABLE IF NOT EXISTS post_likes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    UNIQUE(post_id, user_id)
+    );
 
-        CREATE TABLE IF NOT EXISTS comments (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            post_id INTEGER NOT NULL,
-            user_id INTEGER NOT NULL,
-            parent_id INTEGER,
-            text TEXT NOT NULL,
-            created_at TEXT NOT NULL
-        );
+    CREATE TABLE IF NOT EXISTS comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    parent_id INTEGER,
+    text TEXT NOT NULL,
+    created_at TEXT NOT NULL
+    );
 
-        CREATE TABLE IF NOT EXISTS favorites (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            message_id INTEGER NOT NULL,
-            UNIQUE(user_id, message_id)
-        );
+    CREATE TABLE IF NOT EXISTS favorites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    message_id INTEGER NOT NULL,
+    UNIQUE(user_id, message_id)
+    );
 
-        CREATE TABLE IF NOT EXISTS favorite_reels (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            post_id INTEGER NOT NULL,
-            created_at TEXT NOT NULL,
-            UNIQUE(user_id, post_id)
-        );
+    CREATE TABLE IF NOT EXISTS favorite_reels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    post_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE(user_id, post_id)
+    );
+    CREATE TABLE IF NOT EXISTS settings (
+    user_id INTEGER PRIMARY KEY,
+    language TEXT DEFAULT 'ru',
+    theme TEXT DEFAULT 'dark',
+    notifications INTEGER DEFAULT 1,
+    show_online INTEGER DEFAULT 1,
+    show_last_seen INTEGER DEFAULT 1,
+    auto_answer INTEGER DEFAULT 0,
+    mute_on_join INTEGER DEFAULT 0,
+    camera_on_join INTEGER DEFAULT 0
+    );
 
-        CREATE TABLE IF NOT EXISTS settings (
-            user_id INTEGER PRIMARY KEY,
-            language TEXT DEFAULT 'ru',
-            theme TEXT DEFAULT 'dark',
-            notifications INTEGER DEFAULT 1,
-            show_online INTEGER DEFAULT 1,
-            show_last_seen INTEGER DEFAULT 1,
-            auto_answer INTEGER DEFAULT 0,
-            mute_on_join INTEGER DEFAULT 0,
-            camera_on_join INTEGER DEFAULT 0
-        );
+    CREATE TABLE IF NOT EXISTS groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    owner_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    avatar_url TEXT
+    );
 
-        CREATE TABLE IF NOT EXISTS groups (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            description TEXT DEFAULT '',
-            owner_id INTEGER NOT NULL,
-            created_at TEXT NOT NULL,
-            avatar_url TEXT
-        );
+    CREATE TABLE IF NOT EXISTS group_members (
+    group_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    joined_at TEXT NOT NULL,
+    UNIQUE(group_id, user_id)
+    );
 
-        CREATE TABLE IF NOT EXISTS group_members (
-            group_id INTEGER NOT NULL,
-            user_id INTEGER NOT NULL,
-            joined_at TEXT NOT NULL,
-            UNIQUE(group_id, user_id)
-        );
-
-        CREATE TABLE IF NOT EXISTS channels (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            username TEXT UNIQUE NOT NULL,
+    CREATE TABLE IF NOT EXISTS channels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    username TEXT UNIQUE NOT NULL,
             description TEXT DEFAULT '',
             owner_id INTEGER NOT NULL,
             created_at TEXT NOT NULL,
@@ -216,7 +215,9 @@ def init_db():
             sender_id INTEGER NOT NULL,
             text TEXT NOT NULL,
             created_at TEXT NOT NULL,
-            deleted INTEGER DEFAULT 0
+            deleted INTEGER DEFAULT 0,
+            media_url TEXT,
+            media_type TEXT
         );
 
         CREATE TABLE IF NOT EXISTS channel_messages (
@@ -341,6 +342,10 @@ def init_db():
     add_column_if_missing(connection, "comments", "parent_id", "INTEGER")
     add_column_if_missing(connection, "groups", "avatar_url", "TEXT")
     add_column_if_missing(connection, "channels", "avatar_url", "TEXT")
+    add_column_if_missing(connection, "group_messages", "media_url", "TEXT")
+    add_column_if_missing(connection, "group_messages", "media_type", "TEXT")
+    add_column_if_missing(connection, "channel_messages", "media_url", "TEXT")
+    add_column_if_missing(connection, "channel_messages", "media_type", "TEXT")
 
     try:
         connection.execute("ALTER TABLE settings ADD COLUMN auto_answer INTEGER DEFAULT 0")
@@ -532,9 +537,16 @@ async def send_ws(user_id, payload):
         connections[user_id].discard(socket)
 
 
+def clear_deleted_for_me(connection, user_a, user_b):
+    connection.execute("""
+        UPDATE chat_settings SET deleted_for_me = 0
+        WHERE (user_id = ? AND peer_id = ?) OR (user_id = ? AND peer_id = ?)
+    """, (user_a, user_b, user_b, user_a))
+
+
 def user_public(connection, user_id):
     row = connection.execute(
-        "SELECT id, username, display_name, avatar_url, is_bot, is_verified FROM users WHERE id = ?",
+        "SELECT id, username, display_name, avatar_url, is_bot, is_verified, last_seen FROM users WHERE id = ?",
         (user_id,)
     ).fetchone()
     return dict(row) if row else {}
@@ -998,13 +1010,13 @@ async def send_message(data: MessageRequest, request: Request):
         raise HTTPException(403, "Пользователь заблокирован")
 
     created = now()
-
     cursor = connection.execute("""
         INSERT INTO messages (sender_id, receiver_id, text, created_at)
         VALUES (?, ?, ?, ?)
     """, (sender_id, data.receiver_id, text, created))
 
     message_id = cursor.lastrowid
+    clear_deleted_for_me(connection, sender_id, data.receiver_id)
 
     connection.commit()
     connection.close()
@@ -2772,6 +2784,7 @@ async def send_message_media(request: Request, receiver_id: int, file: UploadFil
     """, (sender_id, receiver_id, (text or "").strip(), created, url, media_type))
 
     mid = cursor.lastrowid
+    clear_deleted_for_me(connection, sender_id, receiver_id)
 
     connection.commit()
     connection.close()
@@ -2802,6 +2815,131 @@ async def send_message_media(request: Request, receiver_id: int, file: UploadFil
     await send_ws(receiver_id, payload)
 
     return {"ok": True, "message": message}
+
+
+
+
+@app.post("/api/groups/{group_id}/messages/media")
+async def send_group_message_media(group_id: int, request: Request, file: UploadFile = File(...),
+                                   text: str = Form("")):
+    sender_id = get_auth_user(request)
+
+    connection = db()
+    member = connection.execute(
+        "SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?",
+        (group_id, sender_id)
+    ).fetchone()
+    if not member:
+        connection.close()
+        raise HTTPException(403, "Нет доступа")
+
+    ctype = (file.content_type or "application/octet-stream").split(";")[0].strip().lower()
+    name = file.filename or "file.bin"
+    ext = Path(name).suffix.lower() or ".bin"
+
+    if ctype.startswith("image/") or ext in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+        media_type = "image"
+        ext = ".jpg"
+    elif ctype.startswith("audio/") or ext in {".webm", ".ogg", ".mp3", ".m4a", ".wav", ".opus"}:
+        media_type = "voice"
+        ext = ".webm"
+    else:
+        media_type = "file"
+
+    filename = f"gmsg_{group_id}_{secrets.token_hex(10)}{ext}"
+    path = UPLOAD_DIR / filename
+    data_bytes = await file.read()
+    if not data_bytes:
+        connection.close()
+        raise HTTPException(400, "Пустой файл")
+    with open(path, "wb") as out:
+        out.write(data_bytes)
+
+    url = "/uploads/" + filename
+    created = now()
+    cursor = connection.execute("""
+        INSERT INTO group_messages (group_id, sender_id, text, created_at, media_url, media_type)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (group_id, sender_id, (text or "").strip(), created, url, media_type))
+    mid = cursor.lastrowid
+
+    members = connection.execute(
+        "SELECT user_id FROM group_members WHERE group_id = ?", (group_id,)
+    ).fetchall()
+    sender_info = user_public(connection, sender_id)
+    group = connection.execute("SELECT name FROM groups WHERE id = ?", (group_id,)).fetchone()
+    connection.commit()
+    connection.close()
+
+    message = {
+        "id": mid,
+        "group_id": group_id,
+        "group_name": group["name"] if group else None,
+        "sender_id": sender_id,
+        "text": (text or "").strip(),
+        "created_at": created,
+        "deleted": 0,
+        "media_url": url,
+        "media_type": media_type,
+        "sender_username": sender_info.get("username"),
+        "sender_name": sender_info.get("display_name") or sender_info.get("username"),
+        "chat_kind": "group",
+    }
+    payload = {"type": "group_message", "message": message}
+    for mrow in members:
+        await send_ws(mrow["user_id"], payload)
+
+    return {"ok": True, "message": message}
+
+
+@app.post("/api/groups/{group_id}/avatar")
+async def set_group_avatar(group_id: int, request: Request, file: UploadFile = File(...)):
+    user_id = get_auth_user(request)
+    connection = db()
+    group = connection.execute("SELECT * FROM groups WHERE id = ?", (group_id,)).fetchone()
+    member = connection.execute(
+        "SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?",
+        (group_id, user_id)
+    ).fetchone()
+    if not group or not member:
+        connection.close()
+        raise HTTPException(403, "Нет доступа")
+    ext = Path(file.filename or "a.jpg").suffix.lower() or ".jpg"
+    if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+        ext = ".jpg"
+    filename = f"group_{group_id}_{secrets.token_hex(8)}{ext}"
+    path = UPLOAD_DIR / filename
+    data_bytes = await file.read()
+    with open(path, "wb") as out:
+        out.write(data_bytes)
+    url = "/uploads/" + filename
+    connection.execute("UPDATE groups SET avatar_url = ? WHERE id = ?", (url, group_id))
+    connection.commit()
+    connection.close()
+    return {"ok": True, "avatar_url": url}
+
+
+@app.post("/api/channels/{channel_id}/avatar")
+async def set_channel_avatar(channel_id: int, request: Request, file: UploadFile = File(...)):
+    user_id = get_auth_user(request)
+    connection = db()
+    ch = connection.execute("SELECT * FROM channels WHERE id = ?", (channel_id,)).fetchone()
+    if not ch or ch["owner_id"] != user_id:
+        connection.close()
+        raise HTTPException(403, "Только владелец")
+    ext = Path(file.filename or "a.jpg").suffix.lower() or ".jpg"
+    if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+        ext = ".jpg"
+    filename = f"channel_{channel_id}_{secrets.token_hex(8)}{ext}"
+    path = UPLOAD_DIR / filename
+    data_bytes = await file.read()
+    with open(path, "wb") as out:
+        out.write(data_bytes)
+    url = "/uploads/" + filename
+    connection.execute("UPDATE channels SET avatar_url = ? WHERE id = ?", (url, channel_id))
+    connection.commit()
+    connection.close()
+    return {"ok": True, "avatar_url": url}
 
 
 # =========================================================
@@ -3111,6 +3249,7 @@ def get_dialogs(request: Request):
         item["alias"] = alias["alias"] if alias else None
         item["last_message"] = dict(last) if last else None
         item["unread"] = unread
+        item["is_online"] = peer_id in connections and len(connections.get(peer_id, set())) > 0
 
         result.append(item)
 
@@ -3139,9 +3278,8 @@ async def websocket_endpoint(websocket: WebSocket):
         WHERE token_hash = ?
     """, (hash_token(token),)).fetchone()
 
-    connection.close()
-
     if not session:
+        connection.close()
         await websocket.close(code=1008)
         return
 
@@ -3151,26 +3289,57 @@ async def websocket_endpoint(websocket: WebSocket):
         expires = datetime.utcnow()
 
     if expires < datetime.utcnow():
+        connection.close()
         await websocket.close(code=1008)
         return
 
     user_id = session["user_id"]
 
-    await websocket.accept()
+    # mark online on connect
+    connection.execute("UPDATE users SET last_seen = ? WHERE id = ?", (now(), user_id))
+    connection.commit()
+    connection.close()
 
+    await websocket.accept()
     connections[user_id].add(websocket)
+
+    try:
+        await broadcast_presence(user_id, True)
+    except Exception:
+        pass
 
     try:
         while True:
             data = await websocket.receive_json()
+            msg_type = data.get("type")
 
-            if data.get("type") == "ping":
+            if msg_type == "ping":
+                connection = db()
+                connection.execute("UPDATE users SET last_seen = ? WHERE id = ?", (now(), user_id))
+                connection.commit()
+                connection.close()
                 await websocket.send_json({"type": "pong"})
 
-            elif data.get("type") == "typing":
+            elif msg_type == "typing":
                 target = data.get("target_id")
                 if target:
-                    await send_ws(target, {"type": "typing", "user_id": user_id})
+                    connection = db()
+                    connection.execute("UPDATE users SET last_seen = ? WHERE id = ?", (now(), user_id))
+                    connection.commit()
+                    connection.close()
+                    await send_ws(int(target), {"type": "typing", "user_id": user_id})
+
+            elif msg_type == "typing_stop":
+                target = data.get("target_id")
+                if target:
+                    await send_ws(int(target), {"type": "typing_stop", "user_id": user_id})
+
+            elif msg_type == "presence":
+                connection = db()
+                connection.execute("UPDATE users SET last_seen = ? WHERE id = ?", (now(), user_id))
+                connection.commit()
+                connection.close()
+                await broadcast_presence(user_id, bool(data.get("online", True)))
 
     except WebSocketDisconnect:
         pass
@@ -3178,9 +3347,37 @@ async def websocket_endpoint(websocket: WebSocket):
         pass
     finally:
         connections[user_id].discard(websocket)
-
         if not connections[user_id]:
             connections.pop(user_id, None)
+            try:
+                await broadcast_presence(user_id, False)
+            except Exception:
+                pass
+
+
+async def broadcast_presence(user_id: int, online: bool):
+    connection = db()
+    peers = connection.execute("""
+        SELECT DISTINCT CASE WHEN sender_id = ? THEN receiver_id ELSE sender_id END AS peer_id
+        FROM messages
+        WHERE sender_id = ? OR receiver_id = ?
+        LIMIT 100
+    """, (user_id, user_id, user_id)).fetchall()
+    connection.close()
+    payload = {
+        "type": "presence",
+        "user_id": user_id,
+        "online": online,
+        "last_seen": now(),
+    }
+    for row in peers:
+        pid = row["peer_id"]
+        if pid and pid != user_id:
+            await send_ws(pid, payload)
+
+
+# =========================================================
+# STATIC
 
 
 # =========================================================
