@@ -2753,9 +2753,15 @@ async def send_message_media(request: Request, receiver_id: int, file: UploadFil
     name = file.filename or "file.bin"
     ext = Path(name).suffix.lower() or ".bin"
 
-    if ctype.startswith("image/") or ext in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+    if "video_note" in (name or "").lower():
+        media_type = "video_note"
+        ext = ".webm"
+    elif ctype.startswith("image/") or ext in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
         media_type = "image"
         ext = ".jpg"
+    elif ctype.startswith("video/") or ext in {".mp4", ".mov", ".mkv"}:
+        media_type = "video"
+        ext = ext if ext in {".mp4", ".webm", ".mov"} else ".mp4"
     elif ctype.startswith("audio/") or ext in {".webm", ".ogg", ".mp3", ".m4a", ".wav", ".opus"}:
         media_type = "voice"
         ext = ".webm"
@@ -2838,9 +2844,15 @@ async def send_group_message_media(group_id: int, request: Request, file: Upload
     name = file.filename or "file.bin"
     ext = Path(name).suffix.lower() or ".bin"
 
-    if ctype.startswith("image/") or ext in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+    if "video_note" in (name or "").lower():
+        media_type = "video_note"
+        ext = ".webm"
+    elif ctype.startswith("image/") or ext in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
         media_type = "image"
         ext = ".jpg"
+    elif ctype.startswith("video/") or ext in {".mp4", ".mov", ".mkv"}:
+        media_type = "video"
+        ext = ext if ext else ".mp4"
     elif ctype.startswith("audio/") or ext in {".webm", ".ogg", ".mp3", ".m4a", ".wav", ".opus"}:
         media_type = "voice"
         ext = ".webm"
