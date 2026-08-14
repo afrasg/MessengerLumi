@@ -2115,7 +2115,7 @@
         let currentUser = null;
         let isGuest = sessionStorage.getItem("lumi_guest") === "1";
         let ws = null;
-        let selectedUserId = null, selectedGroupId = null, selectedChannelId = null, selectedChannelIsOwner = false, selectedCommunityId = null, selectedCommunityChatId = null, selectedMessageId = null, currentChatPeer = null, favoritePickMode = false;
+        let selectedUserId = null, selectedGroupId = null, selectedChannelId = null, selectedChannelIsOwner = false, selectedCommunityId = null, selectedCommunityChatId = null, selectedMessageId = null, currentChatPeer = null, favoritePickMode = false, currentGroupMeta = null, currentChannelMeta = null;
         let notificationAudio = null, sendAudio = null, ringAudio = null;
         let pc = null, localStream = null, callTargetId = null, callIsVideo = false, micMuted = false, speakerMuted = false, callStartTime = null, callTimer = null, incomingCallData = null, isCaller = false;
         let pendingIceCandidates = [];
@@ -2910,7 +2910,16 @@
         // SIDEBAR / USERS
         var searchDebounce = null, searchId = 0;
         function searchUsers() { clearTimeout(searchDebounce); searchDebounce = setTimeout(function(){ loadUsers(document.getElementById("search").value.trim()); }, 200); }
-        async function refreshSidebar() { await loadDialogs(); await loadGroups(); await loadChannels(); await loadCommunities(); }
+        async function refreshSidebar() {
+            var container = document.getElementById("users");
+            if (container) {
+                container.querySelectorAll(".dialogs-header, .dialog-item, .groups-header, .group-item, .channels-header, .channel-item, .communities-header, .community-item, .section-header").forEach(function(el){ el.remove(); });
+            }
+            await loadDialogs();
+            await loadGroups();
+            await loadChannels();
+            await loadCommunities();
+        }
         function sectionHeader(t){var d=document.createElement("div");d.className="section-header";d.textContent=t;return d;}
         function userItem(user) {
             var div = document.createElement("div"); div.className = "user-item";
@@ -2963,14 +2972,14 @@
                 div.innerHTML = '<div class="avatar" style="display:flex;align-items:center;justify-content:center;font-size:20px;background:#2a2a38">📢</div><div class="info"><div class="name">'+escapeHtml(ch.name)+'</div><div class="sub">@'+escapeHtml(ch.username)+(ch.joined ?  " · " + t("subscribed") : "")+'</div></div>';
                 div.onclick = async function(){
                     if (!ch.joined) { var r2 = await req("/api/channels/" + ch.id + "/join", { method: "POST" }); if (!r2.ok) { var e2 = await safeJson(r2); alert(e2.detail || "Ошибка"); return; } ch.joined = true; }
-                    openChannelChat(ch.id, ch.name, !!ch.is_owner);
+                    openChannelChat(ch.id, ch.name, !!ch.is_owner, ch.avatar_url);
                 };
                 container.appendChild(div);
             });
             groups.forEach(function(g){
                 var div = document.createElement("div"); div.className = "user-item";
                 div.innerHTML = '<div class="avatar" style="display:flex;align-items:center;justify-content:center;font-size:20px;background:#2a2a38">👥</div><div class="info"><div class="name">'+escapeHtml(g.name)+'</div><div class="sub">группа</div></div>';
-                div.onclick = function(){ openGroupChat(g.id, g.name); };
+                div.onclick = function(){ openGroupChat(g.id, g.name, g.avatar_url); };
                 container.appendChild(div);
             });
             communities.forEach(function(c){
@@ -2983,6 +2992,11 @@
 
         // DIALOGS
         async function loadDialogs() {
+            var searchEl = document.getElementById("search");
+            if (searchEl && searchEl.value.trim()) {
+                // не ломаем результаты поиска
+                return;
+            }
             var r = await req("/api/dialogs");
             if (!r.ok) return;
             var dialogs = await safeJson(r);
@@ -3027,7 +3041,14 @@
                 dot.className = "status-dot " + (isUserOnline(d.last_seen) ? "online" : "offline");
                 div.appendChild(dot);
                 div.onclick = function(){
-                    openChat({ id: d.id, username: d.username, display_name: d.alias || d.display_name || d.username, avatar_url: d.avatar_url, is_bot: d.is_bot, is_verified: d.is_verified, last_seen: d.last_seen });
+                    var kind = (d.type || d.chat_type || d.kind || "private").toString().toLowerCase();
+                    if (kind === "group" || kind === "groups") {
+                        openGroupChat(d.group_id || d.id, d.name || d.display_name || d.username, d.avatar_url);
+                    } else if (kind === "channel" || kind === "channels") {
+                        openChannelChat(d.channel_id || d.id, d.name || d.display_name || d.username, !!d.is_owner, d.avatar_url);
+                    } else {
+                        openChat({ id: d.id, username: d.username, display_name: d.alias || d.display_name || d.username, avatar_url: d.avatar_url, is_bot: d.is_bot, is_verified: d.is_verified, last_seen: d.last_seen });
+                    }
                 };
                 frag.appendChild(div);
             });
@@ -3803,26 +3824,91 @@
             loadGroupsSidebar(groups);
         }
         function loadGroupsSidebar(groups) {
-            document.querySelectorAll(".group-item").forEach(function(el){ el.remove(); });
+            document.querySelectorAll(".group-item, .groups-header").forEach(function(el){ el.remove(); });
             var container = document.getElementById("users");
-            if (!container || !groups.length) return;
-            var header = document.createElement("div"); header.className = "section-header"; header.textContent = t("groups").toUpperCase(); container.appendChild(header);
+            if (!container || !groups || !groups.length) return;
+            var header = document.createElement("div");
+            header.className = "section-header groups-header";
+            header.textContent = t("groups");
+            container.appendChild(header);
             groups.forEach(function(g){
                 var div = document.createElement("div"); div.className = "user-item group-item";
-                div.innerHTML = '<div class="avatar" style="display:flex;align-items:center;justify-content:center;font-size:20px;background:#2a2a38">👥</div><div class="info"><div class="name">'+escapeHtml(g.name)+'</div><div class="sub">группа</div></div>';
-                div.onclick = function(){ openGroupChat(g.id, g.name); };
+                var av = avatarSrc(g.avatar_url);
+                div.innerHTML = '<img class="avatar" src="'+escapeHtml(av)+'" alt=""><div class="info"><div class="name">'+escapeHtml(g.name)+'</div><div class="sub">'+t("groups")+'</div></div>';
+                div.onclick = function(){ openGroupChat(g.id, g.name, g.avatar_url); };
                 container.appendChild(div);
             });
         }
-        async function openGroupChat(groupId, groupName) {
+        
+        function openGroupOrChannelAvatarPicker() {
+            if (!requireAccount()) return;
+            if (selectedGroupId) {
+                var inp = document.getElementById("groupAvatarFile");
+                if (!inp) {
+                    inp = document.createElement("input");
+                    inp.type = "file"; inp.accept = "image/*"; inp.id = "groupAvatarFile"; inp.hidden = true;
+                    inp.onchange = function(){ uploadEntityAvatar("group", selectedGroupId, inp.files && inp.files[0]); };
+                    document.body.appendChild(inp);
+                }
+                inp.value = "";
+                inp.click();
+                return;
+            }
+            if (selectedChannelId) {
+                if (!selectedChannelIsOwner) { alert(t("channel_only_owner")); return; }
+                var inp2 = document.getElementById("channelAvatarFile");
+                if (!inp2) {
+                    inp2 = document.createElement("input");
+                    inp2.type = "file"; inp2.accept = "image/*"; inp2.id = "channelAvatarFile"; inp2.hidden = true;
+                    inp2.onchange = function(){ uploadEntityAvatar("channel", selectedChannelId, inp2.files && inp2.files[0]); };
+                    document.body.appendChild(inp2);
+                }
+                inp2.value = "";
+                inp2.click();
+            }
+        }
+        async function uploadEntityAvatar(kind, id, file) {
+            if (!file || !id) return;
+            var form = new FormData();
+            form.append("file", file);
+            form.append("avatar", file);
+            var urls = kind === "group"
+                ? ["/api/groups/" + id + "/avatar", "/api/groups/" + id + "/photo", "/api/group/" + id + "/avatar"]
+                : ["/api/channels/" + id + "/avatar", "/api/channels/" + id + "/photo", "/api/channel/" + id + "/avatar"];
+            var ok = false, data = {};
+            for (var i = 0; i < urls.length; i++) {
+                try {
+                    var r = await req(urls[i], { method: "POST", body: form });
+                    data = await safeJson(r);
+                    if (r.ok) { ok = true; break; }
+                    if (r.status === 404 || r.status === 405) continue;
+                    break;
+                } catch (e) {}
+            }
+            if (!ok) {
+                alert((data && (data.detail || data.message)) || t("error"));
+                return;
+            }
+            var url = data.avatar_url || data.photo_url || data.url || "";
+            if (url) {
+                document.getElementById("chatAvatar").src = avatarSrc(url);
+                if (kind === "group" && currentGroupMeta) currentGroupMeta.avatar_url = url;
+                if (kind === "channel" && currentChannelMeta) currentChannelMeta.avatar_url = url;
+            }
+            if (typeof showToast === "function") showToast(t("settings_saved") || "OK");
+            await refreshSidebar();
+        }
+
+        async function openGroupChat(groupId, groupName, avatarUrl) {
             selectedGroupId = Number(groupId); selectedUserId = null; selectedChannelId = null; selectedChannelIsOwner = false; selectedCommunityId = null; selectedCommunityChatId = null;
             currentChatPeer = null; setComposerEnabled(true);
+            currentGroupMeta = { id: Number(groupId), name: groupName, avatar_url: avatarUrl || "" };
             showOnly("chatView");
             if (typeof isMobileLayout === "function" && isMobileLayout() && typeof mobileOpenChat === "function") mobileOpenChat();
-            setPageTitle("https://img.icons8.ru/ios-filled/50/group.png", "Группа: " + groupName);
-            document.getElementById("chatAvatar").src = DEFAULT_AVATAR;
-            document.getElementById("chatName").textContent = "Группа: " + groupName;
-            document.getElementById("chatStatus").textContent = "группа";
+            setPageTitle("https://img.icons8.ru/ios-filled/50/group.png", groupName || ("Группа"));
+            document.getElementById("chatAvatar").src = avatarSrc(avatarUrl);
+            document.getElementById("chatName").textContent = groupName || "Группа";
+            document.getElementById("chatStatus").textContent = t("groups");
             document.getElementById("chatActions").style.display = "flex";
             document.getElementById("chatActions").querySelectorAll("button").forEach(function(b){ b.style.display = "none"; });
             await loadGroupMessages(groupId);
@@ -3902,26 +3988,32 @@
             loadChannelsSidebar(channels);
         }
         function loadChannelsSidebar(channels) {
-            document.querySelectorAll(".channel-item").forEach(function(el){ el.remove(); });
+            document.querySelectorAll(".channel-item, .channels-header").forEach(function(el){ el.remove(); });
             var container = document.getElementById("users");
-            if (!container || !channels.length) return;
-            var header = document.createElement("div"); header.className = "section-header"; header.textContent = t("channels").toUpperCase(); container.appendChild(header);
+            if (!container || !channels || !channels.length) return;
+            var header = document.createElement("div");
+            header.className = "section-header channels-header";
+            header.textContent = t("channels");
+            container.appendChild(header);
             channels.forEach(function(ch){
                 var div = document.createElement("div"); div.className = "user-item channel-item";
-                div.innerHTML = '<div class="avatar" style="display:flex;align-items:center;justify-content:center;font-size:20px;background:#2a2a38">📢</div><div class="info"><div class="name">'+escapeHtml(ch.name)+'</div><div class="sub">@'+escapeHtml(ch.username)+'</div></div>';
-                div.onclick = function(){ openChannelChat(ch.id, ch.name, !!ch.is_owner); };
+                var av = avatarSrc(ch.avatar_url);
+                div.innerHTML = '<img class="avatar" src="'+escapeHtml(av)+'" alt=""><div class="info"><div class="name">'+escapeHtml(ch.name)+'</div><div class="sub">@'+escapeHtml(ch.username || "")+'</div></div>';
+                div.onclick = function(){ openChannelChat(ch.id, ch.name, !!ch.is_owner, ch.avatar_url); };
                 container.appendChild(div);
             });
         }
-        async function openChannelChat(channelId, channelName, isOwner) {
+        async function openChannelChat(channelId, channelName, isOwner, avatarUrl) {
             selectedChannelId = Number(channelId); selectedChannelIsOwner = !!isOwner;
             selectedUserId = null; selectedGroupId = null; selectedCommunityId = null; selectedCommunityChatId = null;
-            currentChatPeer = null; setComposerEnabled(isOwner);
+            currentChatPeer = null; setComposerEnabled(!!isOwner);
+            currentChannelMeta = { id: Number(channelId), name: channelName, avatar_url: avatarUrl || "", is_owner: !!isOwner };
             showOnly("chatView");
-            setPageTitle("https://img.icons8.ru/ios-filled/50/megaphone.png", "Канал: " + channelName);
-            document.getElementById("chatAvatar").src = DEFAULT_AVATAR;
-            document.getElementById("chatName").textContent = "Канал: " + channelName;
-            document.getElementById("chatStatus").textContent = isOwner ? "Вы создатель" : t("channel");
+            if (typeof isMobileLayout === "function" && isMobileLayout() && typeof mobileOpenChat === "function") mobileOpenChat();
+            setPageTitle("https://img.icons8.ru/ios-filled/50/megaphone.png", channelName || "Канал");
+            document.getElementById("chatAvatar").src = avatarSrc(avatarUrl);
+            document.getElementById("chatName").textContent = channelName || "Канал";
+            document.getElementById("chatStatus").textContent = isOwner ? (t("you") || "Вы создатель") : t("channel");
             document.getElementById("chatActions").style.display = "flex";
             document.getElementById("chatActions").querySelectorAll("button").forEach(function(b){ b.style.display = "none"; });
             await loadChannelMessages(channelId);
@@ -4127,6 +4219,17 @@
         }
 
         // USER PROFILE
+        
+        function openCurrentUserProfile() {
+            if (selectedGroupId || selectedChannelId) {
+                openGroupOrChannelAvatarPicker();
+                return;
+            }
+            if (selectedUserId) {
+                openUserProfile(selectedUserId);
+            }
+        }
+
         async function openUserProfile(userId) {
             var r = await req("/api/users/" + userId);
             if (!r.ok) { alert(t("user_not_found")); return; }
@@ -4221,7 +4324,8 @@
             if (info) info.innerHTML = "";
         }
         async function sendPendingFile() {
-            if (!pendingFile || !selectedUserId) return;
+            if (!pendingFile) return;
+            if (!selectedUserId && !selectedGroupId && !selectedChannelId && !selectedCommunityChatId) return;
             var text = document.getElementById("messageInput").value.trim();
             await uploadMedia(pendingFile, text);
             document.getElementById("messageInput").value = "";
@@ -4232,10 +4336,48 @@
             form.append("file", file, file.name || "file.bin");
             form.append("text", text || "");
             try {
-                var r = await req("/api/messages/media?receiver_id=" + encodeURIComponent(selectedUserId), { method: "POST", body: form });
-                var d = await safeJson(r);
+                var r, d;
+                if (selectedGroupId) {
+                    r = await req("/api/groups/" + selectedGroupId + "/messages/media", { method: "POST", body: form });
+                    if (!r.ok && (r.status === 404 || r.status === 405)) {
+                        // fallback: some backends use query param
+                        r = await req("/api/messages/media?group_id=" + encodeURIComponent(selectedGroupId), { method: "POST", body: form });
+                    }
+                    d = await safeJson(r);
+                    if (!r.ok) { alert(d.detail || d.message || "Ошибка"); return; }
+                    await loadGroupMessages(selectedGroupId);
+                    animateLastMessages(1);
+                    return;
+                }
+                if (selectedChannelId) {
+                    if (!selectedChannelIsOwner) { alert(t("channel_only_owner")); return; }
+                    r = await req("/api/channels/" + selectedChannelId + "/messages/media", { method: "POST", body: form });
+                    if (!r.ok && (r.status === 404 || r.status === 405)) {
+                        r = await req("/api/messages/media?channel_id=" + encodeURIComponent(selectedChannelId), { method: "POST", body: form });
+                    }
+                    d = await safeJson(r);
+                    if (!r.ok) { alert(d.detail || d.message || "Ошибка"); return; }
+                    await loadChannelMessages(selectedChannelId);
+                    animateLastMessages(1);
+                    return;
+                }
+                if (selectedCommunityChatId) {
+                    r = await req("/api/community-chats/" + selectedCommunityChatId + "/messages/media", { method: "POST", body: form });
+                    if (!r.ok && (r.status === 404 || r.status === 405)) {
+                        r = await req("/api/messages/media?community_chat_id=" + encodeURIComponent(selectedCommunityChatId), { method: "POST", body: form });
+                    }
+                    d = await safeJson(r);
+                    if (!r.ok) { alert(d.detail || d.message || "Ошибка"); return; }
+                    await loadCommunityChatMessages(selectedCommunityChatId);
+                    animateLastMessages(1);
+                    return;
+                }
+                if (!selectedUserId) { alert(t("error")); return; }
+                r = await req("/api/messages/media?receiver_id=" + encodeURIComponent(selectedUserId), { method: "POST", body: form });
+                d = await safeJson(r);
                 if (!r.ok) { alert(d.detail || "Ошибка"); return; }
                 await loadMessages(selectedUserId);
+                animateLastMessages(1);
                 await loadDialogs();
             } catch(err) { alert("Ошибка отправки файла"); }
         }
