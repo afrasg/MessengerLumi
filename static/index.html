@@ -1619,15 +1619,6 @@
             color: #fff !important;
         }
 
-        /* Colored call icons exception - keep phone green-ish visible */
-        body.theme-light .chat-header .actions button img[alt="phone"] {
-            filter: none !important;
-            opacity: 1 !important;
-        }
-        body:not(.theme-light) .chat-header .actions button img[alt="phone"] {
-            filter: none !important;
-            opacity: 1 !important;
-        }
 
         /* Sticker panel */
         .sticker-panel {
@@ -1752,6 +1743,103 @@
             min-width: 0;
         }
 
+    
+        /* Attach preview / voice preview controls */
+        #attachPreview {
+            flex-wrap: wrap;
+            gap: 8px !important;
+        }
+        #attachPreview .preview-send {
+            background: #3390ec !important;
+            color: #fff !important;
+            border-radius: 999px !important;
+            padding: 8px 16px !important;
+            font-weight: 600 !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+        #attachPreview .preview-cancel {
+            width: 40px !important;
+            height: 40px !important;
+            min-width: 40px !important;
+            border-radius: 50% !important;
+            padding: 0 !important;
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            background: #e74c3c !important;
+            border: none !important;
+            color: #fff !important;
+        }
+        #attachPreview .preview-cancel img {
+            filter: brightness(0) invert(1) !important;
+            opacity: 1 !important;
+            width: 18px !important;
+            height: 18px !important;
+        }
+        #attachPreview .preview-mic {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(51,144,236,.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        #attachPreview .preview-mic img {
+            width: 20px;
+            height: 20px;
+            filter: none !important;
+            opacity: 1 !important;
+        }
+        body.theme-light #attachPreview .preview-mic img {
+            filter: brightness(0) saturate(100%) !important;
+        }
+        body:not(.theme-light) #attachPreview .preview-mic img {
+            filter: brightness(0) invert(1) !important;
+        }
+        body.theme-light #attachPreview .preview-cancel {
+            background: #e74c3c !important;
+        }
+
+        /* Send button always visible contrast */
+        .composer .send-btn,
+        body.theme-light .composer .send-btn,
+        body.theme-dark .composer .send-btn,
+        body.theme-blue .composer .send-btn,
+        body:not(.theme-light) .composer .send-btn {
+            background: #3390ec !important;
+            color: #fff !important;
+            border: none !important;
+            box-shadow: 0 2px 8px rgba(51,144,236,.35) !important;
+        }
+        .composer .send-btn::after {
+            content: "➤" !important;
+            font-size: 16px !important;
+            color: #fff !important;
+            opacity: 1 !important;
+        }
+        body.theme-light .composer .send-btn::after,
+        body.theme-dark .composer .send-btn::after,
+        body:not(.theme-light) .composer .send-btn::after {
+            color: #fff !important;
+        }
+        /* Desktop: show text+arrow ok; mobile circle keeps arrow */
+        @media (min-width: 769px) {
+            .composer .send-btn {
+                font-size: 14px !important;
+                min-width: 100px !important;
+                width: auto !important;
+                height: auto !important;
+                border-radius: 22px !important;
+                padding: 10px 18px !important;
+            }
+            .composer .send-btn::after {
+                content: none !important;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -1829,7 +1917,7 @@
                                 </div>
                             </div>
                             <div class="actions" id="chatActions">
-                                <button onclick="event.stopPropagation();startCall(false)" title="Аудиозвонок"><img width="24" height="24" src="https://img.icons8.ru/parakeet-filled/48/phone.png" alt="phone"></button>
+                                <button onclick="event.stopPropagation();startCall(false)" title="Аудиозвонок"><img width="24" height="24" src="https://img.icons8.ru/ios-filled/50/phone.png" alt="phone"></button>
                                 <button onclick="event.stopPropagation();startCall(true)" title="Видеозвонок"><img width="24" height="24" src="https://img.icons8.ru/ios-filled/50/video-call.png" alt="video-call"></button>
                                 <button onclick="event.stopPropagation();openChatMenu(event)" title="Меню"><svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="24" height="24" viewBox="0 0 50 50"><path d="M 3 9 A 1.0001 1.0001 0 1 0 3 11 L 47 11 A 1.0001 1.0001 0 1 0 47 9 L 3 9 z M 3 24 A 1.0001 1.0001 0 1 0 3 26 L 47 26 A 1.0001 1.0001 0 1 0 47 24 L 3 24 z M 3 39 A 1.0001 1.0001 0 1 0 3 41 L 47 41 A 1.0001 1.0001 0 1 0 47 39 L 3 39 z"></path></svg></button>
                             </div>
@@ -1838,8 +1926,10 @@
                         <div id="blockedBar" class="hidden"><button onclick="unblockPeer()">Разблокировать</button></div>
                         <div id="attachPreview" class="hidden">
                             <span class="file-info"></span>
-                            <button class="primary" style="padding:6px 14px;border-radius:8px" onclick="sendPendingFile()">Отправить</button>
-                            <button class="secondary" style="padding:6px 14px;border-radius:8px;background:#2a2a38" onclick="clearAttachPreview()"><img width="20" height="20" src="https://img.icons8.ru/external-glyph-silhouettes-icons-papa-vector/78/external-Cross-Mark-interface-glyph-silhouettes-icons-papa-vector.png" alt="close"></button>
+                            <button type="button" class="preview-send" onclick="sendPendingFile()">Отправить</button>
+                            <button type="button" class="preview-cancel" onclick="clearAttachPreview()" title="Отмена" aria-label="Close">
+                                <img width="18" height="18" src="https://img.icons8.ru/ios-filled/50/ffffff/delete-sign.png" alt="close">
+                            </button>
                         </div>
                         <div class="composer-wrap">
                         <div id="stickerPanel" class="sticker-panel" aria-hidden="true">
@@ -4197,7 +4287,7 @@
             var info = box.querySelector(".file-info");
             var sec = Math.max(1, Math.round((durationMs || 0) / 1000));
             info.innerHTML = '<div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">' +
-                '<span style="font-size:20px">🎤</span>' +
+                '<div class="preview-mic"><img src="https://img.icons8.ru/ios-filled/50/microphone--v1.png" alt="mic"></div>' +
                 '<div style="flex:1;min-width:0">' +
                 '<div style="font-weight:600;font-size:14px">' + (t("voice") || "Голосовое") + ' · ' + sec + 's</div>' +
                 '<audio controls src="' + pendingVoiceUrl + '" style="width:100%;max-width:280px;height:32px;margin-top:4px"></audio>' +
@@ -4679,4 +4769,4 @@
         }
     </script>
 </body>
-                    </html>
+    </html>
