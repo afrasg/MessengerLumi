@@ -267,7 +267,352 @@
         .context-menu button{width:100%;display:block;text-align:left;padding:10px 14px;border-radius:8px;background:transparent;color:#fff;font-size:14px;border:none;cursor:pointer}
         .context-menu button:hover{background:#2a2a38}
         .context-menu .danger{color:#e74c4c}
-        @media (max-width:700px){.sidebar{width:240px}.message-bubble{max-width:85%}.composer .send-btn{min-width:60px;font-size:0;padding:10px 14px}.composer .send-btn::after{content:"➤";font-size:18px}.reels-container .reel .reel-actions{right:8px;bottom:100px}.reels-container .reel .reel-actions button{width:40px;height:40px;font-size:20px}.reels-container .reel .reel-profile{top:50px;right:8px}.reels-container .reel .reel-profile .avatar{width:36px;height:36px}}
+
+        /* ===== Telegram-like mobile layout ===== */
+        .mobile-back {
+            display: none;
+            width: 40px; height: 40px; border-radius: 50%;
+            align-items: center; justify-content: center;
+            flex-shrink: 0; margin-right: 4px;
+            color: #fff; font-size: 22px; line-height: 1;
+        }
+        .mobile-back:active { background: rgba(255,255,255,.1); }
+        .mobile-nav {
+            display: none;
+            position: fixed; left: 0; right: 0; bottom: 0;
+            z-index: 90;
+            height: calc(56px + env(safe-area-inset-bottom, 0px));
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            background: #17212b;
+            border-top: 1px solid rgba(255,255,255,.06);
+            align-items: stretch;
+            justify-content: space-around;
+        }
+        .mobile-nav button {
+            flex: 1;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: 2px;
+            color: #6d7f8f;
+            font-size: 10px;
+            font-weight: 500;
+            padding: 6px 0;
+            transition: color .15s;
+        }
+        .mobile-nav button svg, .mobile-nav button img {
+            width: 24px; height: 24px;
+            opacity: .7;
+        }
+        .mobile-nav button.active {
+            color: #5eb5f7;
+        }
+        .mobile-nav button.active svg,
+        .mobile-nav button.active img {
+            opacity: 1;
+            filter: none;
+        }
+        body.theme-light .mobile-nav {
+            background: #fff;
+            border-top-color: #e4e6eb;
+        }
+        body.theme-light .mobile-nav button { color: #8a8a8a; }
+        body.theme-light .mobile-nav button.active { color: #3390ec; }
+
+        @media (max-width: 768px) {
+            html, body {
+                height: 100%;
+                height: 100dvh;
+                overflow: hidden;
+            }
+            #app {
+                flex-direction: column !important;
+                height: 100%;
+                height: 100dvh;
+            }
+            .sidebar {
+                width: 100% !important;
+                max-width: 100% !important;
+                border-right: none !important;
+                height: 100% !important;
+                position: relative;
+                z-index: 2;
+            }
+            .sidebar-header {
+                padding: 10px 12px !important;
+                padding-top: max(10px, env(safe-area-inset-top)) !important;
+            }
+            .sidebar-header .logo span {
+                font-size: 20px !important;
+            }
+            .sidebar-search {
+                padding: 8px 12px !important;
+            }
+            .sidebar-search input {
+                background: #242f3d !important;
+                border-radius: 10px !important;
+                padding: 10px 14px !important;
+                font-size: 16px !important; /* prevent iOS zoom */
+            }
+            body.theme-light .sidebar-search input {
+                background: #f0f2f5 !important;
+            }
+            .user-item {
+                margin: 0 !important;
+                border-radius: 0 !important;
+                padding: 10px 14px !important;
+                border-bottom: 1px solid rgba(255,255,255,.04);
+            }
+            .user-item:active {
+                background: rgba(255,255,255,.06) !important;
+            }
+            .user-item .avatar {
+                width: 54px !important;
+                height: 54px !important;
+            }
+            .user-item .info .name {
+                font-size: 16px !important;
+            }
+            .user-item .info .sub {
+                font-size: 14px !important;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 60vw;
+            }
+
+            /* Main area: hidden until chat/content open */
+            .main {
+                position: fixed !important;
+                inset: 0 !important;
+                z-index: 10;
+                width: 100% !important;
+                height: 100% !important;
+                height: 100dvh !important;
+                display: none !important;
+                flex-direction: column !important;
+                background: #0e1621 !important;
+                padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+            }
+            body.theme-light .main {
+                background: #fff !important;
+            }
+            body.mobile-main-open .main {
+                display: flex !important;
+            }
+            body.mobile-main-open .sidebar {
+                display: none !important;
+            }
+            body.mobile-chat-open .mobile-nav {
+                display: none !important;
+            }
+            body.mobile-chat-open .main {
+                padding-bottom: 0 !important;
+            }
+
+            .topbar {
+                height: 56px !important;
+                padding: 0 8px 0 4px !important;
+                padding-top: env(safe-area-inset-top, 0) !important;
+                border-bottom: 1px solid rgba(255,255,255,.06) !important;
+            }
+            .topbar .title {
+                font-size: 18px !important;
+            }
+            .top-actions .icon-btn {
+                display: none !important; /* use bottom nav on mobile */
+            }
+
+            .content {
+                flex: 1 !important;
+                overflow: hidden !important;
+                display: flex !important;
+                flex-direction: column !important;
+            }
+            .content .view {
+                flex: 1 !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch;
+                padding: 12px !important;
+            }
+            #chatView.view {
+                padding: 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+            }
+            #chatView.hidden {
+                display: none !important;
+            }
+
+            .chat-container {
+                height: 100% !important;
+                max-height: 100% !important;
+                background: #0e1621 !important;
+            }
+            body.theme-light .chat-container {
+                background: #fff !important;
+            }
+            .chat-header {
+                min-height: 56px !important;
+                padding: 6px 8px !important;
+                padding-top: max(6px, env(safe-area-inset-top)) !important;
+                background: #17212b !important;
+                border-bottom: none !important;
+                cursor: default !important;
+            }
+            body.theme-light .chat-header {
+                background: #fff !important;
+                border-bottom: 1px solid #e4e6eb !important;
+            }
+            .chat-header:hover {
+                background: #17212b !important;
+            }
+            body.theme-light .chat-header:hover {
+                background: #fff !important;
+            }
+            .mobile-back {
+                display: inline-flex !important;
+            }
+            .chat-header .left .avatar {
+                width: 40px !important;
+                height: 40px !important;
+            }
+            .chat-header .left .info .name {
+                font-size: 16px !important;
+            }
+            .chat-header .left .info .status {
+                font-size: 13px !important;
+                color: #5eb5f7 !important;
+            }
+
+            .messages, #messages {
+                flex: 1 !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch;
+                padding: 8px 10px 12px !important;
+                background:
+                    radial-gradient(ellipse at 20% 30%, rgba(50,80,120,.15) 0%, transparent 50%),
+                    radial-gradient(ellipse at 80% 70%, rgba(40,60,90,.12) 0%, transparent 45%),
+                    #0e1621 !important;
+            }
+            body.theme-light .messages,
+            body.theme-light #messages {
+                background: #8ba6c1 !important; /* Telegram light wallpaper-ish */
+            }
+
+            .message-bubble {
+                max-width: 82% !important;
+                border-radius: 14px !important;
+                padding: 8px 12px !important;
+                font-size: 15.5px !important;
+                line-height: 1.35 !important;
+                box-shadow: 0 1px 1px rgba(0,0,0,.12) !important;
+            }
+            .message-row.mine .message-bubble {
+                background: #3390ec !important;
+                color: #fff !important;
+                border-bottom-right-radius: 4px !important;
+            }
+            .message-row.theirs .message-bubble {
+                background: #182533 !important;
+                color: #fff !important;
+                border-bottom-left-radius: 4px !important;
+            }
+            body.theme-light .message-row.theirs .message-bubble {
+                background: #fff !important;
+                color: #000 !important;
+            }
+            body.theme-light .message-row.mine .message-bubble {
+                background: #effdde !important; /* Telegram green bubble light */
+                color: #000 !important;
+            }
+            body.theme-light .message-row.mine .message-bubble .meta {
+                color: rgba(0,0,0,.45) !important;
+            }
+
+            .composer {
+                padding: 6px 8px !important;
+                padding-bottom: max(6px, env(safe-area-inset-bottom)) !important;
+                background: #17212b !important;
+                border-top: none !important;
+                gap: 4px !important;
+            }
+            body.theme-light .composer {
+                background: #fff !important;
+                border-top: 1px solid #e4e6eb !important;
+            }
+            .composer input {
+                background: #242f3d !important;
+                border-radius: 20px !important;
+                font-size: 16px !important;
+                padding: 10px 14px !important;
+                min-height: 40px !important;
+            }
+            body.theme-light .composer input {
+                background: #f0f2f5 !important;
+            }
+            .composer .send-btn {
+                width: 40px !important;
+                height: 40px !important;
+                min-width: 40px !important;
+                border-radius: 50% !important;
+                background: #3390ec !important;
+                box-shadow: none !important;
+                font-size: 0 !important;
+            }
+            .composer .send-btn::after {
+                content: "➤";
+                font-size: 16px;
+            }
+            .composer .icon-btn {
+                width: 36px !important;
+                height: 36px !important;
+            }
+
+            .post, .post-box, .card {
+                border-radius: 12px !important;
+                margin-bottom: 10px !important;
+            }
+            .feed-container {
+                padding-bottom: 8px !important;
+            }
+
+            .mobile-nav {
+                display: flex !important;
+            }
+            body.mobile-chat-open .mobile-nav {
+                display: none !important;
+            }
+
+            /* Auth full screen mobile */
+            #auth {
+                padding: 16px !important;
+            }
+            .auth-card {
+                border-radius: 16px !important;
+                padding: 24px 18px !important;
+                width: 100% !important;
+            }
+
+            /* Calls full screen */
+            #incomingCall, #callOverlay {
+                padding-top: env(safe-area-inset-top);
+            }
+
+            .reels-container .reel .reel-actions {
+                right: 8px; bottom: 100px;
+            }
+            .reels-container .reel .reel-actions button {
+                width: 40px; height: 40px; font-size: 20px;
+            }
+            .reels-container .reel .reel-profile {
+                top: 50px; right: 8px;
+            }
+            .reels-container .reel .reel-profile .avatar {
+                width: 36px; height: 36px;
+            }
+        }
+
 
         /* ============================================================
            ТЕМЫ
@@ -1228,6 +1573,7 @@
                     <div class="chat-container">
                         <div id="chatHeader" class="chat-header" onclick="openCurrentUserProfile()">
                             <div class="left">
+                                <button type="button" class="mobile-back" onclick="event.stopPropagation();mobileCloseChat()" title="Назад" aria-label="Back">‹</button>
                                 <img id="chatAvatar" class="avatar" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIbLnr8-3ZlGD7AB7TwXHhHdgujtsrXLmdI8laFLml5w&s=10" alt="">
                                 <div class="info">
                                     <div class="name" id="chatName">Выберите пользователя</div>
@@ -1371,6 +1717,24 @@
                 </section>
             </div>
         </main>
+        <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
+            <button type="button" data-tab="chats" onclick="mobileTab('chats')" class="active">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/></svg>
+                <span class="mn-label" data-i18n="chats">Чаты</span>
+            </button>
+            <button type="button" data-tab="feed" onclick="mobileTab('feed')">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                <span class="mn-label" data-i18n="feed">Лента</span>
+            </button>
+            <button type="button" data-tab="profile" onclick="mobileTab('profile')">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                <span class="mn-label" data-i18n="profile">Профиль</span>
+            </button>
+            <button type="button" data-tab="settings" onclick="mobileTab('settings')">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.48.48 0 0 0 .12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
+                <span class="mn-label" data-i18n="settings">Ещё</span>
+            </button>
+        </nav>
     </div>
     <div id="modalBg" class="modal-bg hidden" onclick="closeModal(event)">
         <div class="modal" onclick="event.stopPropagation()" id="modalContent"></div>
@@ -2053,6 +2417,52 @@
         }
 
 
+        
+        // ===== Mobile Telegram-like navigation =====
+        function isMobileLayout() {
+            return window.matchMedia && window.matchMedia("(max-width: 768px)").matches;
+        }
+        function mobileSetTab(tab) {
+            var nav = document.getElementById("mobileNav");
+            if (!nav) return;
+            nav.querySelectorAll("button").forEach(function(b) {
+                b.classList.toggle("active", b.getAttribute("data-tab") === tab);
+            });
+        }
+        function mobileOpenMain() {
+            document.body.classList.add("mobile-main-open");
+        }
+        function mobileCloseMain() {
+            document.body.classList.remove("mobile-main-open");
+            document.body.classList.remove("mobile-chat-open");
+        }
+        function mobileOpenChat() {
+            document.body.classList.add("mobile-main-open");
+            document.body.classList.add("mobile-chat-open");
+            mobileSetTab("chats");
+        }
+        function mobileCloseChat() {
+            document.body.classList.remove("mobile-chat-open");
+            // stay on chats list: hide main, show sidebar
+            document.body.classList.remove("mobile-main-open");
+            mobileSetTab("chats");
+            // hide chat view content state but keep desktop behavior via showFeed optional
+            var cv = document.getElementById("chatView");
+            if (cv && isMobileLayout()) cv.classList.add("hidden");
+        }
+        function mobileTab(tab) {
+            mobileSetTab(tab);
+            if (tab === "chats") {
+                mobileCloseMain();
+                return;
+            }
+            mobileOpenMain();
+            document.body.classList.remove("mobile-chat-open");
+            if (tab === "feed") showFeed();
+            else if (tab === "profile") showProfile();
+            else if (tab === "settings") showSettings();
+        }
+
         // START
         async function checkAuth() {
             if (isGuest) { enterGuestMode(); return; }
@@ -2283,6 +2693,7 @@
             selectedUserId = Number(user.id); selectedGroupId = null; selectedChannelId = null; selectedChannelIsOwner = false; selectedCommunityId = null; selectedCommunityChatId = null;
             currentChatPeer = user; favoritePickMode = false; setComposerEnabled(true);
             showOnly("chatView");
+            if (isMobileLayout()) mobileOpenChat();
             setPageTitle("https://img.icons8.ru/ios-filled/50/chat.png", (user.display_name || user.username));
             document.getElementById("chatAvatar").src = avatarSrc(user.avatar_url);
             document.getElementById("chatName").innerHTML = withVerified(user.display_name || user.username, user);
@@ -2506,6 +2917,8 @@
 
         // FEED
         async function showFeed() {
+            if (isMobileLayout() && typeof mobileOpenMain === "function") { mobileOpenMain(); mobileSetTab("feed"); document.body.classList.remove("mobile-chat-open"); }
+
             showOnly("feedView");
             setPageTitle("https://img.icons8.ru/ios-filled/50/home.png", t("feed"));
             await loadFeed();
@@ -2703,6 +3116,8 @@
 
         // FAVORITES
         async function showFavorites() {
+            if (isMobileLayout() && typeof mobileOpenMain === "function") { mobileOpenMain(); mobileSetTab("feed"); document.body.classList.remove("mobile-chat-open"); }
+
             showOnly("favoritesView");
             setPageTitle("https://img.icons8.ru/external-tanah-basah-basic-outline-tanah-basah/24/external-bookmark-social-media-ui-tanah-basah-basic-outline-tanah-basah.png", t("favorites"));
             var r = await req("/api/favorites");
@@ -2720,6 +3135,8 @@
 
         // PROFILE
         async function showProfile() {
+            if (isMobileLayout() && typeof mobileOpenMain === "function") { mobileOpenMain(); mobileSetTab("profile"); document.body.classList.remove("mobile-chat-open"); }
+
             showOnly("profileView");
             setPageTitle("https://img.icons8.ru/ios-filled/50/user.png", t("profile"));
             var r = await req("/api/me");
@@ -2820,6 +3237,8 @@
             document.querySelector('.settings-tabs button[data-tab="'+tab+'"]').classList.add("active");
         }
         async function showSettings() {
+            if (isMobileLayout() && typeof mobileOpenMain === "function") { mobileOpenMain(); mobileSetTab("settings"); document.body.classList.remove("mobile-chat-open"); }
+
             showOnly("settingsView");
             setPageTitle("https://img.icons8.ru/ios-filled/50/settings.png", t("settings"));
             switchSettingsTab("general");
@@ -3834,4 +4253,4 @@
         }
     </script>
 </body>
-</html>
+                                                              </html>
