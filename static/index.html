@@ -1846,6 +1846,85 @@
         body.theme-light .chat-header .left .info .status.typing { color: #3390ec !important; }
         .chat-header .left .info .status.typing { color: #5eb5f7 !important; font-weight: 500; }
 
+    
+        /* Telegram-like voice message */
+        .voice-msg {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 200px;
+            max-width: 280px;
+            padding: 2px 0;
+            user-select: none;
+        }
+        .voice-msg .voice-play {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.2);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            cursor: pointer;
+            border: none;
+            color: #fff;
+            font-size: 16px;
+            transition: transform .12s, background .12s;
+        }
+        .voice-msg .voice-play:hover { transform: scale(1.05); }
+        .message-row.theirs .voice-msg .voice-play {
+            background: rgba(51,144,236,.2);
+            color: #3390ec;
+        }
+        body.theme-light .message-row.theirs .voice-msg .voice-play {
+            background: rgba(51,144,236,.15);
+            color: #3390ec;
+        }
+        body.theme-light .message-row.mine .voice-msg .voice-play {
+            background: rgba(0,0,0,.08);
+            color: #1a1a1a;
+        }
+        .voice-msg .voice-body { flex: 1; min-width: 0; }
+        .voice-msg .voice-wave {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            height: 28px;
+            cursor: pointer;
+        }
+        .voice-msg .voice-wave span {
+            display: block;
+            width: 3px;
+            border-radius: 2px;
+            background: rgba(255,255,255,.55);
+            min-height: 4px;
+            transition: background .15s, height .1s;
+        }
+        .message-row.theirs .voice-msg .voice-wave span {
+            background: rgba(51,144,236,.45);
+        }
+        body.theme-light .message-row.mine .voice-msg .voice-wave span {
+            background: rgba(0,0,0,.35);
+        }
+        body.theme-light .message-row.theirs .voice-msg .voice-wave span {
+            background: rgba(51,144,236,.5);
+        }
+        .voice-msg .voice-wave span.played {
+            background: #fff !important;
+        }
+        .message-row.theirs .voice-msg .voice-wave span.played {
+            background: #3390ec !important;
+        }
+        body.theme-light .message-row.mine .voice-msg .voice-wave span.played {
+            background: #111 !important;
+        }
+        .voice-msg .voice-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            opacity: .8;
+            margin-top: 2px;
+        }
+        .voice-msg audio { display: none; }
+
     </style>
 </head>
 <body>
@@ -2598,17 +2677,14 @@
         }
         function isUserOnline(ls, user) {
             var uid = user && (user.id != null ? user.id : user.user_id);
-            if (uid != null && presenceMap[uid]) {
-                var p = presenceMap[uid];
+            if (uid != null && presenceMap[Number(uid)]) {
+                var p = presenceMap[Number(uid)];
                 if (p.online === true) return true;
-                if (p.online === false && p.lastSeen && (Date.now() - p.lastSeen) > 60000) return false;
-                if (p.lastSeen && (Date.now() - p.lastSeen) < 5 * 60 * 1000) return true;
+                if (p.online === false) return false;
             }
             if (user) {
                 if (user.is_online === true || user.online === true || user.status === "online") return true;
-                if (user.is_online === false || user.online === false || user.status === "offline") {
-                    // still check last_seen if very recent
-                } else if (user.is_online === false || user.online === false) return false;
+                if (user.is_online === false || user.online === false || user.status === "offline") return false;
             }
             var raw = ls;
             if ((raw == null || raw === "") && user) raw = user.last_seen || user.lastSeen || user.was_online;
@@ -2616,11 +2692,12 @@
             try {
                 var t;
                 if (typeof raw === "number") t = raw;
-                else if (typeof raw === "string" && /^\d+(\.\d+)?$/.test(raw.trim())) t = Number(raw);
+                else if (typeof raw === "string" && /^\d+(\.\d+)?$/.test(String(raw).trim())) t = Number(raw);
                 else t = new Date(raw).getTime();
                 if (!isFinite(t) || t <= 0) return false;
                 if (t < 1e12) t = t * 1000;
-                return (Date.now() - t) / 1000 < 5 * 60;
+                // "в сети" только если last_seen свежий (90 сек) — иначе "был N назад"
+                return (Date.now() - t) / 1000 < 90;
             } catch(e) { return false; }
         }
         var presenceMap = {};
@@ -2633,8 +2710,10 @@
             if (lastSeen) {
                 var t = typeof lastSeen === "number" ? lastSeen : new Date(lastSeen).getTime();
                 if (t < 1e12) t *= 1000;
-                presenceMap[id].lastSeen = t;
+                if (isFinite(t)) presenceMap[id].lastSeen = t;
             } else if (online) {
+                presenceMap[id].lastSeen = Date.now();
+            } else if (online === false) {
                 presenceMap[id].lastSeen = Date.now();
             }
             // refresh UI if this is current chat
@@ -3087,7 +3166,7 @@
             sub.textContent = "@" + user.username;
             if (user.is_bot || user.username === "lumi") sub.textContent = t("bot");
             else if (user.id === currentUser?.id) sub.textContent = t("this_is_you");
-            else sub.textContent = isUserOnline(user.last_seen, user) ? t("online") : t("offline");
+            else sub.textContent = formatLastSeen(user.last_seen, user);
             info.appendChild(name); info.appendChild(sub);
             div.appendChild(avatar); div.appendChild(info);
             if (user.unread > 0) {
@@ -3247,6 +3326,40 @@
             await refreshBlockedUI();
             await loadDialogs();
         }
+        function parseLastSeenMs(ls) {
+            if (ls == null || ls === "") return null;
+            try {
+                var t;
+                if (typeof ls === "number") t = ls;
+                else if (typeof ls === "string" && /^\d+(\.\d+)?$/.test(ls.trim())) t = Number(ls);
+                else t = new Date(ls).getTime();
+                if (!isFinite(t) || t <= 0) return null;
+                if (t < 1e12) t *= 1000;
+                return t;
+            } catch (e) { return null; }
+        }
+        function formatLastSeen(ls, user) {
+            if (isUserOnline(ls, user)) return t("online");
+            var ms = parseLastSeenMs(ls);
+            if (user && presenceMap[Number(user.id)] && presenceMap[Number(user.id)].lastSeen) {
+                ms = presenceMap[Number(user.id)].lastSeen;
+            }
+            if (!ms) return t("offline");
+            var sec = Math.max(0, Math.floor((Date.now() - ms) / 1000));
+            if (sec < 30) return t("last_seen_just") || "был(а) только что";
+            if (sec < 60) return t("last_seen_sec") || ("был(а) " + sec + " сек. назад");
+            var min = Math.floor(sec / 60);
+            if (min < 60) return (t("last_seen_min") || "был(а) {n} мин. назад").replace("{n}", String(min));
+            var hrs = Math.floor(min / 60);
+            if (hrs < 24) return (t("last_seen_hour") || "был(а) {n} ч. назад").replace("{n}", String(hrs));
+            var days = Math.floor(hrs / 24);
+            if (days === 1) return t("last_seen_yesterday") || "был(а) вчера";
+            if (days < 7) return (t("last_seen_days") || "был(а) {n} дн. назад").replace("{n}", String(days));
+            try {
+                var d = new Date(ms);
+                return (t("last_seen_at") || "был(а) {d}").replace("{d}", d.toLocaleDateString([], { day: "numeric", month: "short" }));
+            } catch (e) { return t("offline"); }
+        }
         function updateChatStatus(user) {
             var el = document.getElementById("chatStatus");
             if (!el) return;
@@ -3254,7 +3367,7 @@
             if (user.is_bot || user.username === "lumi") { el.textContent = t("bot"); el.className = "status"; return; }
             if (Number(user.id) === Number(currentUser?.id)) { el.textContent = t("this_is_you"); el.className = "status"; return; }
             var online = isUserOnline(user.last_seen, user);
-            el.textContent = online ? t("online") : t("offline");
+            el.textContent = online ? t("online") : formatLastSeen(user.last_seen, user);
             el.className = "status " + (online ? "online" : "offline");
         }
         function setTypingStatus() {
@@ -3291,6 +3404,117 @@
             msgs.forEach(renderMessage);
             scrollMessages();
         }
+        
+        function seedWaveFromUrl(url) {
+            // deterministic pseudo-random heights from url string
+            var bars = [];
+            var h = 0;
+            for (var i = 0; i < url.length; i++) h = ((h << 5) - h) + url.charCodeAt(i) | 0;
+            for (var j = 0; j < 28; j++) {
+                h = (h * 1103515245 + 12345) & 0x7fffffff;
+                bars.push(6 + (h % 22));
+            }
+            return bars;
+        }
+        function formatVoiceTime(sec) {
+            sec = Math.max(0, Math.floor(sec || 0));
+            var m = Math.floor(sec / 60);
+            var s = sec % 60;
+            return m + ":" + (s < 10 ? "0" : "") + s;
+        }
+        function createVoicePlayer(url, mine) {
+            var wrap = document.createElement("div");
+            wrap.className = "voice-msg";
+            var audio = document.createElement("audio");
+            audio.preload = "metadata";
+            audio.src = url;
+            var playBtn = document.createElement("button");
+            playBtn.type = "button";
+            playBtn.className = "voice-play";
+            playBtn.innerHTML = "▶";
+            var body = document.createElement("div");
+            body.className = "voice-body";
+            var wave = document.createElement("div");
+            wave.className = "voice-wave";
+            var heights = seedWaveFromUrl(url);
+            heights.forEach(function(h) {
+                var bar = document.createElement("span");
+                bar.style.height = h + "px";
+                wave.appendChild(bar);
+            });
+            var meta = document.createElement("div");
+            meta.className = "voice-meta";
+            var durEl = document.createElement("span");
+            durEl.textContent = "0:00";
+            var sizeEl = document.createElement("span");
+            sizeEl.textContent = "";
+            meta.appendChild(durEl);
+            meta.appendChild(sizeEl);
+            body.appendChild(wave);
+            body.appendChild(meta);
+            wrap.appendChild(playBtn);
+            wrap.appendChild(body);
+            wrap.appendChild(audio);
+
+            var bars = wave.querySelectorAll("span");
+            function updateProgress() {
+                var d = audio.duration || 0;
+                var cur = audio.currentTime || 0;
+                durEl.textContent = formatVoiceTime(audio.paused && cur < 0.1 ? d : cur);
+                if (d > 0) {
+                    var ratio = cur / d;
+                    bars.forEach(function(b, i) {
+                        b.classList.toggle("played", i / bars.length <= ratio);
+                    });
+                }
+            }
+            playBtn.onclick = function(e) {
+                e.stopPropagation();
+                // pause other voice players
+                document.querySelectorAll(".voice-msg audio").forEach(function(a) {
+                    if (a !== audio) { try { a.pause(); } catch (ex) {} }
+                });
+                document.querySelectorAll(".voice-msg .voice-play").forEach(function(b) {
+                    if (b !== playBtn) b.innerHTML = "▶";
+                });
+                if (audio.paused) {
+                    audio.play().catch(function(){});
+                    playBtn.innerHTML = "❚❚";
+                } else {
+                    audio.pause();
+                    playBtn.innerHTML = "▶";
+                }
+            };
+            wave.onclick = function(e) {
+                e.stopPropagation();
+                if (!audio.duration) return;
+                var rect = wave.getBoundingClientRect();
+                var ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+                audio.currentTime = ratio * audio.duration;
+                updateProgress();
+            };
+            audio.addEventListener("loadedmetadata", function() {
+                durEl.textContent = formatVoiceTime(audio.duration);
+            });
+            audio.addEventListener("timeupdate", updateProgress);
+            audio.addEventListener("ended", function() {
+                playBtn.innerHTML = "▶";
+                bars.forEach(function(b){ b.classList.remove("played"); });
+                durEl.textContent = formatVoiceTime(audio.duration);
+            });
+            // try fetch size
+            try {
+                fetch(url, { method: "HEAD" }).then(function(r) {
+                    var len = r.headers.get("content-length");
+                    if (len) {
+                        var kb = Math.max(1, Math.round(Number(len) / 1024));
+                        sizeEl.textContent = kb + " KB";
+                    }
+                }).catch(function(){});
+            } catch (e) {}
+            return wrap;
+        }
+
         function renderMessage(msg) {
             var container = document.getElementById("messages");
             var mine = Number(msg.sender_id) === Number(currentUser.id);
@@ -3306,7 +3530,7 @@
                 if (msg.media_type === "image") {
                     var img = document.createElement("img"); img.className = "media"; img.src = url; img.onclick = function(){ window.open(url, "_blank"); }; bubble.appendChild(img);
                 } else if (msg.media_type === "voice") {
-                    var audio = document.createElement("audio"); audio.className = "media-audio"; audio.controls = true; audio.src = url; bubble.appendChild(audio);
+                    bubble.appendChild(createVoicePlayer(url, mine));
                 } else {
                     var a = document.createElement("a"); a.className = "media-file"; a.href = url; a.target = "_blank"; a.textContent = t("file"); bubble.appendChild(a);
                 }
@@ -4101,8 +4325,20 @@
                 var text = document.createElement("div");
                 if (msg.deleted) { text.className = "deleted"; text.textContent = t("msg_deleted"); }
                 else if (isStickerText(msg.text || "")) { text.className = "sticker-msg"; text.textContent = (msg.text || "").trim(); }
-                else { text.textContent = msg.text || ""; }
-                bubble.appendChild(text);
+                else if (msg.text) { text.textContent = msg.text; }
+                if (text.textContent || text.className) bubble.appendChild(text);
+                if (msg.media_url && !msg.deleted) {
+                    var url = mediaUrl(msg.media_url);
+                    if (msg.media_type === "image") {
+                        var img = document.createElement("img"); img.className = "media"; img.src = url;
+                        img.onclick = function(){ window.open(url, "_blank"); }; bubble.appendChild(img);
+                    } else if (msg.media_type === "voice") {
+                        bubble.appendChild(createVoicePlayer(url, mine));
+                    } else {
+                        var a = document.createElement("a"); a.className = "media-file"; a.href = url; a.target = "_blank";
+                        a.textContent = t("file"); bubble.appendChild(a);
+                    }
+                }
                 var meta = document.createElement("div"); meta.className = "meta";
                 var time = document.createElement("span");
                 var d = new Date(msg.created_at);
@@ -4404,7 +4640,7 @@
             var isBot = user.is_bot || user.username === "lumi";
             var online = isUserOnline(user.last_seen, user);
             var statusColor = online ? "#2ecc71" : "#8a8a9a";
-            var statusText = online ? t("online") : t("offline");
+            var statusText = formatLastSeen(user.last_seen, user);
             var html = '<div style="text-align:center;padding:4px 0">';
             html += '<img src="'+avatarSrc(user.avatar_url)+'" style="width:100px;height:100px;border-radius:50%;object-fit:cover;background:#2a2a38;margin:0 auto 12px;display:block;border:3px solid #2a2a38">';
             html += '<div style="font-size:20px;font-weight:700;color:#111">'+escapeHtml(user.display_name||user.username)+'</div>';
