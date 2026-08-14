@@ -2597,21 +2597,55 @@
             return String(msg);
         }
         function isUserOnline(ls, user) {
+            var uid = user && (user.id != null ? user.id : user.user_id);
+            if (uid != null && presenceMap[uid]) {
+                var p = presenceMap[uid];
+                if (p.online === true) return true;
+                if (p.online === false && p.lastSeen && (Date.now() - p.lastSeen) > 60000) return false;
+                if (p.lastSeen && (Date.now() - p.lastSeen) < 5 * 60 * 1000) return true;
+            }
             if (user) {
                 if (user.is_online === true || user.online === true || user.status === "online") return true;
-                if (user.is_online === false || user.online === false || user.status === "offline") return false;
+                if (user.is_online === false || user.online === false || user.status === "offline") {
+                    // still check last_seen if very recent
+                } else if (user.is_online === false || user.online === false) return false;
             }
-            if (ls == null || ls === "") return false;
+            var raw = ls;
+            if ((raw == null || raw === "") && user) raw = user.last_seen || user.lastSeen || user.was_online;
+            if (raw == null || raw === "") return false;
             try {
                 var t;
-                if (typeof ls === "number") t = ls;
-                else if (typeof ls === "string" && /^\d+(\.\d+)?$/.test(ls.trim())) t = Number(ls);
-                else t = new Date(ls).getTime();
+                if (typeof raw === "number") t = raw;
+                else if (typeof raw === "string" && /^\d+(\.\d+)?$/.test(raw.trim())) t = Number(raw);
+                else t = new Date(raw).getTime();
                 if (!isFinite(t) || t <= 0) return false;
-                // seconds vs ms
                 if (t < 1e12) t = t * 1000;
-                return (Date.now() - t) / 1000 < 300; // 5 минут
+                return (Date.now() - t) / 1000 < 5 * 60;
             } catch(e) { return false; }
+        }
+        var presenceMap = {};
+        var hiddenDialogs = {};
+        function markPresence(userId, online, lastSeen) {
+            if (userId == null) return;
+            var id = Number(userId);
+            if (!presenceMap[id]) presenceMap[id] = {};
+            if (online != null) presenceMap[id].online = !!online;
+            if (lastSeen) {
+                var t = typeof lastSeen === "number" ? lastSeen : new Date(lastSeen).getTime();
+                if (t < 1e12) t *= 1000;
+                presenceMap[id].lastSeen = t;
+            } else if (online) {
+                presenceMap[id].lastSeen = Date.now();
+            }
+            // refresh UI if this is current chat
+            if (selectedUserId && Number(selectedUserId) === id && currentChatPeer) {
+                if (online != null) currentChatPeer.is_online = !!online;
+                if (lastSeen) currentChatPeer.last_seen = lastSeen;
+                else if (online) currentChatPeer.last_seen = new Date().toISOString();
+                // don't override typing indicator
+                var el = document.getElementById("chatStatus");
+                if (el && !el.classList.contains("typing")) updateChatStatus(currentChatPeer);
+            }
         }
         function withVerified(n,u) { if(u&&(u.is_verified||u.is_bot||u.username==="lumi")) return escapeHtml(n)+' <span class="verified">'+VERIFIED_SVG+'</span>'; return escapeHtml(n); }
         function showToast(t,b,o){ var s=document.getElementById("toastStack"); if(!s)return; var e=document.createElement("div"); e.className="toast"; e.innerHTML="<strong>"+escapeHtml(t)+"</strong><span>"+escapeHtml(b||"")+"</span>"; e.onclick=function(){e.remove();if(o)o();}; s.appendChild(e); setTimeout(function(){try{e.remove();}catch(e){}},5000); }
@@ -2868,6 +2902,7 @@
             await loadReels();
             await refreshSidebar();
             connectWS();
+            startPresenceHeartbeat();
             requestNotifyPermission();
             await loadDialogs();
             applyTheme(currentUser.theme || "dark");
@@ -2878,6 +2913,28 @@
         }
 
         // WEBSOCKET
+        
+        var presenceHeartbeat = null;
+        function startPresenceHeartbeat() {
+            if (presenceHeartbeat) clearInterval(presenceHeartbeat);
+            async function beat() {
+                if (!token || isGuest) return;
+                try {
+                    // /api/me обновляет last_seen на бэкенде (get_auth_user)
+                    var r = await req("/api/me");
+                    if (r.ok) {
+                        var me = await safeJson(r);
+                        if (me && me.id) markPresence(me.id, true, me.last_seen || new Date().toISOString());
+                    }
+                } catch (e) {}
+                if (ws && ws.readyState === 1) {
+                    try { ws.send(JSON.stringify({ type: "ping" })); } catch (e) {}
+                }
+            }
+            beat();
+            presenceHeartbeat = setInterval(beat, 45000);
+        }
+
         function connectWS() {
             if (!token || !currentUser) return;
             try {
@@ -2889,6 +2946,10 @@
                     if (data.type === "call_signal") { await handleCallSignal(data); return; }
                     if (data.type === "message" && data.message) {
                         playNotify();
+                        if (data.message.sender_id) markPresence(data.message.sender_id, true, data.message.created_at);
+                        // new message unhides dialog
+                        if (data.message.sender_id) delete hiddenDialogs[Number(data.message.sender_id)];
+                        if (data.message.receiver_id) delete hiddenDialogs[Number(data.message.receiver_id)];
                         notifyNewMessage(data.message, "private");
                         if (selectedUserId && (Number(data.message.sender_id) === Number(selectedUserId) || Number(data.message.receiver_id) === Number(selectedUserId))) {
                             await loadMessages(selectedUserId);
@@ -2921,10 +2982,27 @@
                         }
                         return;
                     }
-                    if ((data.type === "typing" || data.type === "user_typing") && selectedUserId && (Number(data.user_id) === Number(selectedUserId) || Number(data.sender_id) === Number(selectedUserId))) {
-                        setTypingStatus();
-                        clearTimeout(window.typingTimeout);
-                        window.typingTimeout = setTimeout(function(){ updateChatStatus(currentChatPeer); }, 3000);
+                    if ((data.type === "typing" || data.type === "user_typing") && selectedUserId) {
+                        var fromId = data.user_id != null ? data.user_id : (data.sender_id != null ? data.sender_id : data.from);
+                        // if server only sends target, accept when we're in that DM
+                        if (fromId == null || Number(fromId) === Number(selectedUserId) || Number(fromId) === Number(currentUser && currentUser.id)) {
+                            // ignore our own echo
+                            if (fromId != null && currentUser && Number(fromId) === Number(currentUser.id)) return;
+                            if (fromId == null || Number(fromId) === Number(selectedUserId)) {
+                                setTypingStatus();
+                                markPresence(selectedUserId, true);
+                                clearTimeout(window.typingTimeout);
+                                window.typingTimeout = setTimeout(function(){ updateChatStatus(currentChatPeer); }, 3000);
+                            }
+                        }
+                        return;
+                    }
+                    if ((data.type === "typing_stop" || data.type === "stop_typing") && selectedUserId) {
+                        var fromStop = data.user_id != null ? data.user_id : data.sender_id;
+                        if (fromStop == null || Number(fromStop) === Number(selectedUserId)) {
+                            clearTimeout(window.typingTimeout);
+                            updateChatStatus(currentChatPeer);
+                        }
                         return;
                     }
                     if (data.type === "presence" || data.type === "user_status" || data.type === "online") {
@@ -2947,14 +3025,40 @@
         }
 
         // TYPING
-        var typingTimeout = null;
+        var typingThrottle = null;
+        var typingStopTimer = null;
+        var lastTypingSent = 0;
+        function wsSendTypingPayload(type) {
+            if (!selectedUserId || !ws || ws.readyState !== 1) return;
+            try {
+                // бэкенд: type=typing, target_id → шлёт {type:typing, user_id}
+                ws.send(JSON.stringify({
+                    type: type === "typing_stop" ? "typing_stop" : "typing",
+                    target_id: Number(selectedUserId)
+                }));
+            } catch (ex) {}
+        }
         function sendTyping() {
-            if (!selectedUserId || !ws) return;
-            if (typingTimeout) return;
-            typingTimeout = setTimeout(function(){
-                try { ws.send(JSON.stringify({ type: "typing", target_id: selectedUserId })); } catch(ex) {}
-                typingTimeout = null;
-            }, 500);
+            if (!selectedUserId) return;
+            var input = document.getElementById("messageInput");
+            var text = input ? String(input.value || "") : "";
+            if (!text.trim()) {
+                // stopped typing
+                clearTimeout(typingStopTimer);
+                typingStopTimer = null;
+                wsSendTypingPayload("typing_stop");
+                return;
+            }
+            var now = Date.now();
+            if (now - lastTypingSent > 1200) {
+                lastTypingSent = now;
+                wsSendTypingPayload("typing");
+            }
+            clearTimeout(typingStopTimer);
+            typingStopTimer = setTimeout(function(){
+                wsSendTypingPayload("typing_stop");
+                typingStopTimer = null;
+            }, 2000);
         }
         document.getElementById("messageInput").addEventListener("input", sendTyping);
 
@@ -3062,6 +3166,10 @@
             header.textContent = t("chats");
             frag.appendChild(header);
             dialogs.forEach(function(d){
+                if (hiddenDialogs[Number(d.id)]) return;
+                if (d.last_seen || d.is_online != null || d.online != null) {
+                    markPresence(d.id, d.is_online != null ? d.is_online : d.online, d.last_seen);
+                }
                 var div = document.createElement("div"); div.className = "user-item dialog-item";
                 var avatar = document.createElement("img"); avatar.className = "avatar";
                 avatar.src = avatarSrc(d.avatar_url);
@@ -3115,6 +3223,7 @@
             setPageTitle("https://img.icons8.ru/ios-filled/50/chat.png", (user.display_name || user.username));
             document.getElementById("chatAvatar").src = avatarSrc(user.avatar_url);
             document.getElementById("chatName").innerHTML = withVerified(user.display_name || user.username, user);
+            if (user.id != null) markPresence(user.id, user.is_online, user.last_seen);
             updateChatStatus(user);
             var actions = document.getElementById("chatActions");
             actions.style.display = "flex";
@@ -4573,13 +4682,35 @@
         }
         async function deleteChatMe() {
             if (!selectedUserId || !confirm(t("delete_for_me")+"?")) return;
-            await req("/api/chats/" + selectedUserId + "?for_both=false", { method: "DELETE" });
-            showFeed(); alert(t("delete_for_me"));
+            var uid = Number(selectedUserId);
+            try {
+                await req("/api/chats/" + uid + "?for_both=false", { method: "DELETE" });
+            } catch (e) {}
+            hiddenDialogs[uid] = true;
+            selectedUserId = null;
+            currentChatPeer = null;
+            if (isMobileLayout()) mobileCloseChat();
+            await refreshSidebar();
+            if (typeof showToast === "function") showToast(t("delete_for_me"));
+            else alert(t("delete_for_me"));
+            if (isMobileLayout()) mobileTab("chats");
+            else showFeed();
         }
         async function deleteChatBoth() {
             if (!selectedUserId || !confirm(t("delete_for_all")+"?")) return;
-            await req("/api/chats/" + selectedUserId + "?for_both=true", { method: "DELETE" });
-            showFeed(); alert(t("delete_for_all"));
+            var uid = Number(selectedUserId);
+            try {
+                await req("/api/chats/" + uid + "?for_both=true", { method: "DELETE" });
+            } catch (e) {}
+            hiddenDialogs[uid] = true;
+            selectedUserId = null;
+            currentChatPeer = null;
+            if (isMobileLayout()) mobileCloseChat();
+            await refreshSidebar();
+            if (typeof showToast === "function") showToast(t("delete_for_all"));
+            else alert(t("delete_for_all"));
+            if (isMobileLayout()) mobileTab("chats");
+            else showFeed();
         }
         async function renameContact() {
             var alias = prompt(t("name")+":");
