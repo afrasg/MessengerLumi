@@ -1504,6 +1504,36 @@
             background: var(--m-blue-soft) !important;
         }
 
+    
+        /* Message send / appear animation */
+        @keyframes msgPopMine {
+            0% { opacity: 0; transform: translateY(12px) scale(0.92); }
+            60% { opacity: 1; transform: translateY(-2px) scale(1.02); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes msgPopTheirs {
+            0% { opacity: 0; transform: translateY(10px) scale(0.94); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes msgBubblePulse {
+            0% { box-shadow: 0 0 0 0 rgba(51,144,236,0.45); }
+            70% { box-shadow: 0 0 0 10px rgba(51,144,236,0); }
+            100% { box-shadow: 0 0 0 0 rgba(51,144,236,0); }
+        }
+        .message-row.msg-anim.mine .message-bubble {
+            animation: msgPopMine 0.32s cubic-bezier(0.22, 1, 0.36, 1) both, msgBubblePulse 0.55s ease-out 0.05s both;
+        }
+        .message-row.msg-anim.theirs .message-bubble {
+            animation: msgPopTheirs 0.28s ease-out both;
+        }
+        .composer.sending .send-btn {
+            transform: scale(0.88);
+            transition: transform 0.12s ease;
+        }
+        .composer.sending input {
+            opacity: 0.85;
+        }
+
     </style>
 </head>
 <body>
@@ -2506,6 +2536,7 @@
                         notifyNewMessage(data.message, "private");
                         if (selectedUserId && (Number(data.message.sender_id) === Number(selectedUserId) || Number(data.message.receiver_id) === Number(selectedUserId))) {
                             await loadMessages(selectedUserId);
+                            animateLastMessages(1);
                         }
                         await loadDialogs();
                         return;
@@ -2879,6 +2910,25 @@
 
         // EDIT / DELETE MESSAGES
         function scrollMessages(){ var c = document.getElementById("messages"); c.scrollTop = c.scrollHeight; }
+
+        function animateLastMessages(count) {
+            count = count || 1;
+            var rows = document.querySelectorAll("#messages .message-row");
+            var start = Math.max(0, rows.length - count);
+            for (var i = start; i < rows.length; i++) {
+                (function(row) {
+                    row.classList.remove("msg-anim");
+                    void row.offsetWidth;
+                    row.classList.add("msg-anim");
+                    setTimeout(function(){ row.classList.remove("msg-anim"); }, 600);
+                })(rows[i]);
+            }
+        }
+        function markComposerSending(on) {
+            var c = document.querySelector(".composer");
+            if (c) c.classList.toggle("sending", !!on);
+        }
+
         function messageKey(e){ if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
         async function sendMessage() {
             if (!requireAccount()) return;
@@ -2887,12 +2937,18 @@
             var text = input.value.trim();
             if (!text) return;
             playSend();
-            var r = await req("/api/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ receiver_id: selectedUserId, text: text }) });
-            var d = await safeJson(r);
-            if (!r.ok) { alert(d.detail || "Ошибка"); return; }
-            input.value = "";
-            await loadMessages(selectedUserId);
-            await loadDialogs();
+            markComposerSending(true);
+            try {
+                var r = await req("/api/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ receiver_id: selectedUserId, text: text }) });
+                var d = await safeJson(r);
+                if (!r.ok) { alert(d.detail || "Ошибка"); return; }
+                input.value = "";
+                await loadMessages(selectedUserId);
+                animateLastMessages(1);
+                await loadDialogs();
+            } finally {
+                markComposerSending(false);
+            }
         }
         async function deleteSelectedMessage() {
             if (!selectedMessageId) return;
@@ -3293,7 +3349,12 @@
                 });
             }
         }
-        function applyTheme(theme) { document.body.className = "theme-" + theme; }
+        function applyTheme(theme) {
+            var keep = [];
+            if (document.body.classList.contains("mobile-main-open")) keep.push("mobile-main-open");
+            if (document.body.classList.contains("mobile-chat-open")) keep.push("mobile-chat-open");
+            document.body.className = "theme-" + (theme || "dark") + (keep.length ? " " + keep.join(" ") : "");
+        }
 
         // GROUPS
         function openCreateGroup() {
@@ -3338,6 +3399,7 @@
             selectedGroupId = Number(groupId); selectedUserId = null; selectedChannelId = null; selectedChannelIsOwner = false; selectedCommunityId = null; selectedCommunityChatId = null;
             currentChatPeer = null; setComposerEnabled(true);
             showOnly("chatView");
+            if (typeof isMobileLayout === "function" && isMobileLayout() && typeof mobileOpenChat === "function") mobileOpenChat();
             setPageTitle("https://img.icons8.ru/ios-filled/50/group.png", "Группа: " + groupName);
             document.getElementById("chatAvatar").src = DEFAULT_AVATAR;
             document.getElementById("chatName").textContent = "Группа: " + groupName;
@@ -3571,24 +3633,30 @@
             var input = document.getElementById("messageInput");
             var text = (input?.value || "").trim();
             if (!text) return;
+            if (!requireAccount()) return;
             playSend();
-            if (selectedGroupId) {
-                var r = await req("/api/groups/" + selectedGroupId + "/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: text }) });
-                if (!r.ok) { var d = await safeJson(r); alert(d.detail || "Ошибка"); return; }
-                input.value = ""; await loadGroupMessages(selectedGroupId); return;
+            markComposerSending(true);
+            try {
+                if (selectedGroupId) {
+                    var r = await req("/api/groups/" + selectedGroupId + "/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: text }) });
+                    if (!r.ok) { var d = await safeJson(r); alert(d.detail || "Ошибка"); return; }
+                    input.value = ""; await loadGroupMessages(selectedGroupId); animateLastMessages(1); return;
+                }
+                if (selectedChannelId) {
+                    if (!selectedChannelIsOwner) { alert(t("channel_only_owner")); return; }
+                    var r = await req("/api/channels/" + selectedChannelId + "/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: text }) });
+                    if (!r.ok) { var d = await safeJson(r); alert(d.detail || "Ошибка"); return; }
+                    input.value = ""; await loadChannelMessages(selectedChannelId); animateLastMessages(1); return;
+                }
+                if (selectedCommunityChatId) {
+                    var r = await req("/api/community-chats/" + selectedCommunityChatId + "/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: text }) });
+                    if (!r.ok) { var d = await safeJson(r); alert(d.detail || "Ошибка"); return; }
+                    input.value = ""; await loadCommunityChatMessages(selectedCommunityChatId); animateLastMessages(1); return;
+                }
+                return await origSend();
+            } finally {
+                markComposerSending(false);
             }
-            if (selectedChannelId) {
-                if (!selectedChannelIsOwner) { alert(t("channel_only_owner")); return; }
-                var r = await req("/api/channels/" + selectedChannelId + "/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: text }) });
-                if (!r.ok) { var d = await safeJson(r); alert(d.detail || "Ошибка"); return; }
-                input.value = ""; await loadChannelMessages(selectedChannelId); return;
-            }
-            if (selectedCommunityChatId) {
-                var r = await req("/api/community-chats/" + selectedCommunityChatId + "/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: text }) });
-                if (!r.ok) { var d = await safeJson(r); alert(d.detail || "Ошибка"); return; }
-                input.value = ""; await loadCommunityChatMessages(selectedCommunityChatId); return;
-            }
-            return origSend();
         };
 
         // ACCOUNTS
@@ -4253,4 +4321,4 @@
         }
     </script>
 </body>
-                                                              </html>
+                    </html>
