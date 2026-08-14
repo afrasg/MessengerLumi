@@ -1534,6 +1534,224 @@
             opacity: 0.85;
         }
 
+    
+        /* ===== Icon contrast: dark bg = light icons, light bg = dark icons ===== */
+        body.theme-light .icon-btn img,
+        body.theme-light .top-actions .icon-btn img,
+        body.theme-light .composer .icon-btn img,
+        body.theme-light .sidebar-header .icon-btn img,
+        body.theme-light .chat-header .actions button img,
+        body.theme-light .topbar .icon-btn img,
+        body.theme-light button.icon-btn img {
+            filter: brightness(0) saturate(100%) !important;
+            opacity: 0.75 !important;
+        }
+        body.theme-light .icon-btn:hover img,
+        body.theme-light .top-actions .icon-btn:hover img,
+        body.theme-light .composer .icon-btn:hover img,
+        body.theme-light .sidebar-header .icon-btn:hover img,
+        body.theme-light .chat-header .actions button:hover img {
+            filter: brightness(0) saturate(100%) !important;
+            opacity: 1 !important;
+        }
+        body.theme-light .chat-header .actions button svg,
+        body.theme-light .mobile-nav button svg,
+        body.theme-light .mobile-back {
+            color: #050505 !important;
+            fill: #050505 !important;
+        }
+        body.theme-light .chat-header .actions button svg path {
+            fill: #050505 !important;
+        }
+        body.theme-light .mobile-nav button {
+            color: #65676b !important;
+        }
+        body.theme-light .mobile-nav button.active {
+            color: #3390ec !important;
+        }
+        body.theme-light .mobile-nav button svg {
+            opacity: 0.85;
+        }
+        body.theme-light .mobile-nav button.active svg {
+            opacity: 1;
+            color: #3390ec !important;
+            fill: #3390ec !important;
+        }
+        body.theme-light .settings-tabs button img,
+        body.theme-light .card h2 img,
+        body.theme-light .topbar .title img {
+            filter: brightness(0) saturate(100%) !important;
+            opacity: 0.8 !important;
+        }
+        body.theme-light .post .actions button img {
+            filter: brightness(0) saturate(100%) !important;
+            opacity: 0.7 !important;
+        }
+        body.theme-light .post .actions button.liked img {
+            filter: none !important;
+            opacity: 1 !important;
+        }
+
+        /* Dark / default: white-ish icons */
+        body.theme-dark .icon-btn img,
+        body.theme-dark .top-actions .icon-btn img,
+        body.theme-dark .composer .icon-btn img,
+        body.theme-dark .sidebar-header .icon-btn img,
+        body.theme-dark .chat-header .actions button img,
+        body:not(.theme-light) .icon-btn img,
+        body:not(.theme-light) .composer .icon-btn img,
+        body:not(.theme-light) .chat-header .actions button img,
+        body:not(.theme-light) .top-actions .icon-btn img,
+        body:not(.theme-light) .sidebar-header .icon-btn img {
+            filter: brightness(0) invert(1) !important;
+            opacity: 0.85 !important;
+        }
+        body.theme-dark .icon-btn:hover img,
+        body:not(.theme-light) .icon-btn:hover img,
+        body:not(.theme-light) .composer .icon-btn:hover img,
+        body:not(.theme-light) .chat-header .actions button:hover img {
+            opacity: 1 !important;
+        }
+        body:not(.theme-light) .chat-header .actions button svg path {
+            fill: #e4e6eb !important;
+        }
+        body:not(.theme-light) .mobile-back {
+            color: #fff !important;
+        }
+
+        /* Colored call icons exception - keep phone green-ish visible */
+        body.theme-light .chat-header .actions button img[alt="phone"] {
+            filter: none !important;
+            opacity: 1 !important;
+        }
+        body:not(.theme-light) .chat-header .actions button img[alt="phone"] {
+            filter: none !important;
+            opacity: 1 !important;
+        }
+
+        /* Sticker panel */
+        .sticker-panel {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            right: 0;
+            max-height: 280px;
+            background: #17212b;
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 16px 16px 0 0;
+            box-shadow: 0 -8px 32px rgba(0,0,0,.35);
+            z-index: 40;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .sticker-panel.open { display: flex; }
+        body.theme-light .sticker-panel {
+            background: #fff;
+            border-color: #e4e6eb;
+            box-shadow: 0 -8px 32px rgba(0,0,0,.12);
+        }
+        .sticker-panel .sticker-tabs {
+            display: flex;
+            gap: 4px;
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(255,255,255,.06);
+            overflow-x: auto;
+            flex-shrink: 0;
+        }
+        body.theme-light .sticker-panel .sticker-tabs {
+            border-bottom-color: #e4e6eb;
+        }
+        .sticker-panel .sticker-tabs button {
+            flex-shrink: 0;
+            width: 36px; height: 36px;
+            border-radius: 10px;
+            font-size: 20px;
+            display: flex; align-items: center; justify-content: center;
+            background: transparent;
+            transition: background .12s;
+        }
+        .sticker-panel .sticker-tabs button.active,
+        .sticker-panel .sticker-tabs button:hover {
+            background: rgba(255,255,255,.1);
+        }
+        body.theme-light .sticker-panel .sticker-tabs button.active,
+        body.theme-light .sticker-panel .sticker-tabs button:hover {
+            background: #f0f2f5;
+        }
+        .sticker-panel .sticker-grid {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+            gap: 6px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .sticker-panel .sticker-grid button {
+            aspect-ratio: 1;
+            border-radius: 12px;
+            font-size: 36px;
+            display: flex; align-items: center; justify-content: center;
+            background: transparent;
+            transition: background .12s, transform .1s;
+            line-height: 1;
+        }
+        .sticker-panel .sticker-grid button:hover {
+            background: rgba(255,255,255,.08);
+            transform: scale(1.08);
+        }
+        body.theme-light .sticker-panel .sticker-grid button:hover {
+            background: #f0f2f5;
+        }
+        .sticker-panel .sticker-grid button:active {
+            transform: scale(0.95);
+        }
+        .composer-wrap {
+            position: relative;
+            flex-shrink: 0;
+        }
+        .message-bubble .sticker-msg {
+            font-size: 72px;
+            line-height: 1.1;
+            padding: 4px 0;
+            text-align: center;
+            user-select: none;
+        }
+        .message-row.mine .message-bubble:has(.sticker-msg),
+        .message-row.theirs .message-bubble:has(.sticker-msg) {
+            background: transparent !important;
+            box-shadow: none !important;
+            padding: 4px !important;
+        }
+        @media (max-width: 768px) {
+            .sticker-panel {
+                max-height: 42vh;
+                border-radius: 16px 16px 0 0;
+            }
+            .sticker-panel .sticker-grid {
+                grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+            }
+            .sticker-panel .sticker-grid button {
+                font-size: 32px;
+            }
+            .message-bubble .sticker-msg {
+                font-size: 64px;
+            }
+        }
+
+    
+        #attachPreview audio {
+            vertical-align: middle;
+            border-radius: 8px;
+        }
+        #attachPreview .file-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
     </style>
 </head>
 <body>
@@ -1623,12 +1841,19 @@
                             <button class="primary" style="padding:6px 14px;border-radius:8px" onclick="sendPendingFile()">Отправить</button>
                             <button class="secondary" style="padding:6px 14px;border-radius:8px;background:#2a2a38" onclick="clearAttachPreview()"><img width="20" height="20" src="https://img.icons8.ru/external-glyph-silhouettes-icons-papa-vector/78/external-Cross-Mark-interface-glyph-silhouettes-icons-papa-vector.png" alt="close"></button>
                         </div>
+                        <div class="composer-wrap">
+                        <div id="stickerPanel" class="sticker-panel" aria-hidden="true">
+                            <div class="sticker-tabs" id="stickerTabs"></div>
+                            <div class="sticker-grid" id="stickerGrid"></div>
+                        </div>
                         <div class="composer">
                             <button class="icon-btn" onclick="document.getElementById('dmFile').click()" title="Файл"><img width="24" height="24" src="https://img.icons8.ru/ios-filled/50/attach.png" alt="attach"></button>
                             <input id="dmFile" type="file" hidden onchange="previewFile()">
+                            <button class="icon-btn" id="stickerBtn" onclick="toggleStickerPanel(event)" title="Стикеры"><img width="24" height="24" src="https://img.icons8.ru/ios-filled/50/happy.png" alt="stickers"></button>
                             <button class="icon-btn" id="voiceBtn" onpointerdown="startVoice()" onpointerup="stopVoice()" onpointerleave="stopVoice()" title="Голосовое"><img width="24" height="24" src="https://img.icons8.ru/ios-filled/50/microphone--v1.png" alt="microphone"></button>
                             <input id="messageInput" placeholder="Сообщение..." onkeydown="messageKey(event)">
                             <button class="send-btn" onclick="sendMessage()">Отправить</button>
+                        </div>
                         </div>
                     </div>
                 </section>
@@ -2796,6 +3021,7 @@
             var bubble = document.createElement("div"); bubble.className = "message-bubble"; bubble.dataset.id = msg.id;
             var text = document.createElement("div");
             if (msg.deleted) { text.className = "deleted"; text.textContent = t("msg_deleted"); }
+            else if (isStickerText(msg.text || "")) { text.className = "sticker-msg"; text.textContent = (msg.text || "").trim(); }
             else { text.textContent = msg.text || ""; }
             bubble.appendChild(text);
             if (msg.media_url && !msg.deleted) {
@@ -2909,6 +3135,109 @@
         }
 
         // EDIT / DELETE MESSAGES
+        
+        // ===== Stickers (Telegram-like) =====
+        var STICKER_PACKS = [
+            { id: "smile", icon: "😀", items: ["😀","😃","😄","😁","😆","😅","🤣","😂","🙂","😉","😊","😇","🥰","😍","🤩","😘","😗","😚","😙","🥲","😋","😛","😜","🤪","😝","🤑","🤗","🤭","🤫","🤔","🤐","🤨","😐","😑","😶","😏","😒","🙄","😬","😮‍💨","🤥","😌","😔","😪","🤤","😴","😷","🤒","🤕","🤢","🤮","🥵","🥶","🥴","😵","🤯","🤠","🥳","🥸","😎","🤓","🧐"] },
+            { id: "animals", icon: "🐱", items: ["🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐻‍❄️","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🙈","🙉","🙊","🦄","🐝","🦋","🐌","🐞","🐜","🐢","🐍","🐙","🦑","🦐","🦞","🦀","🐡","🐠","🐟","🐬","🐳","🦈","🐊","🐅","🐆","🦓","🦍","🦧","🐘","🦛","🦏","🐪","🐫","🦒","🦘","🦬","🐃","🐂","🐄","🐎","🐖","🐏","🐑","🦙","🐐","🦌","🐕","🐩","🦮","🐈","🐓","🦃","🦚","🦜","🦢","🦩","🕊️","🐇","🦝","🦨","🦡","🦫","🦦","🦥","🐁","🐀","🐿️","🦔"] },
+            { id: "food", icon: "🍕", items: ["🍎","🍐","🍊","🍋","🍌","🍉","🍇","🍓","🫐","🍈","🍒","🍑","🥭","🍍","🥥","🥝","🍅","🍆","🥑","🥦","🥬","🥒","🌶️","🫑","🌽","🥕","🫒","🧄","🧅","🥔","🍠","🥐","🥯","🍞","🥖","🥨","🧀","🥚","🍳","🧈","🥞","🧇","🥓","🥩","🍗","🍖","🦴","🌭","🍔","🍟","🍕","🫓","🥪","🥙","🧆","🌮","🌯","🫔","🥗","🥘","🫕","🥫","🍝","🍜","🍲","🍛","🍣","🍱","🥟","🦪","🍤","🍙","🍚","🍘","🍥","🥠","🥮","🍢","🍡","🍧","🍨","🍦","🥧","🧁","🍰","🎂","🍮","🍭","🍬","🍫","🍿","🍩","🍪","🌰","🥜","🍯","🥛","🍼","☕","🍵","🧃","🥤","🧋","🍶","🍺","🍻","🥂","🍷","🥃","🍸","🍹","🧉","🍾"] },
+            { id: "gestures", icon: "👍", items: ["👍","👎","👊","✊","🤛","🤜","👏","🙌","👐","🤲","🤝","🙏","✍️","💅","🤳","💪","🦾","🦵","🦶","👂","🦻","👃","🧠","👀","👁️","👅","👄","💋","🩸","👋","🤚","🖐️","✋","🖖","👌","🤌","🤏","✌️","🤞","🤟","🤘","🤙","👈","👉","👆","🖕","👇","☝️"] },
+            { id: "hearts", icon: "❤️", items: ["❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💔","❣️","💕","💞","💓","💗","💖","💘","💝","💟","♥️","😍","🥰","😘","😻","💑","👩‍❤️‍👨","👨‍❤️‍👨","👩‍❤️‍👩","💏"] },
+            { id: "activity", icon: "⚽", items: ["⚽","🏀","🏈","⚾","🥎","🎾","🏐","🏉","🥏","🎱","🪀","🏓","🏸","🏒","🏑","🥍","🏏","🪃","🥅","⛳","🪁","🏹","🎣","🤿","🥊","🥋","🎽","🛹","🛼","🛷","⛸️","🥌","🎿","⛷️","🏂","🪂","🏋️","🤼","🤸","⛹️","🤺","🤾","🏌️","🏇","🧘","🏄","🏊","🤽","🚣","🧗","🚴","🚵","🎪","🎭","🩰","🎨","🎬","🎤","🎧","🎼","🎹","🥁","🪘","🎷","🎺","🪗","🎸","🪕","🎻","🎲","♟️","🎯","🎳","🎮","🎰","🧩"] },
+            { id: "travel", icon: "🚀", items: ["🚗","🚕","🚙","🚌","🚎","🏎️","🚓","🚑","🚒","🚐","🛻","🚚","🚛","🚜","🏍️","🛵","🚲","🛴","🛺","🚨","🚔","🚍","🚘","🚖","🚡","🚠","🚟","🚃","🚋","🚞","🚝","🚄","🚅","🚈","🚂","🚆","🚇","🚊","🚉","✈️","🛫","🛬","🛩️","💺","🚀","🛸","🚁","🛶","⛵","🚤","🛥️","🛳️","⛴️","🚢","⚓","🪝","⛽","🚧","🚦","🚥","🚏","🗺️","🗿","🗽","🗼","🏰","🏯","🏟️","🎡","🎢","🎠","⛲","⛱️","🏖️","🏝️","🏜️","🌋","⛰️","🏔️","🗻","🏕️","⛺","🏠","🏡","🏢","🏣","🏤","🏥","🏦","🏨","🏩","🏪","🏫","🏬","🏭","🏯","🏰","💒","🗼","🗽","⛪","🕌","🛕","synagogue","⛩️","🕋"] },
+            { id: "objects", icon: "💡", items: ["⌚","📱","📲","💻","⌨️","🖥️","🖨️","🖱️","🖲️","🕹️","🗜️","💽","💾","💿","📀","📼","📷","📸","📹","🎥","📽️","🎞️","📞","☎️","📟","📠","📺","📻","🎙️","🎚️","🎛️","🧭","⏱️","⏲️","⏰","🕰️","⌛","⏳","📡","🔋","🔌","💡","🔦","🕯️","🪔","🧯","🛢️","💸","💵","💴","💶","💷","🪙","💰","💳","💎","⚖️","🪜","🧰","🪛","🔧","🔨","⚒️","🛠️","⛏️","🪚","🔩","⚙️","🪤","🧱","⛓️","🧲","🔫","💣","🧨","🪓","🔪","🗡️","⚔️","🛡️","🚬","⚰️","🪦","⚱️","🏺","🔮","📿","🧿","💈","⚗️","🔭","🔬","🕳️","🩹","🩺","💊","💉","🩸","🧬","🦠","🧫","🧪","🌡️","🧹","🪠","🧺","🧻","🚽","🚰","🚿","🛁","🛀","🧼","🪥","🪒","🧽","🪣","🧴","🛎️","🔑","🗝️","🚪","🪑","🛋️","🛏️","🛌","🧸","🖼️","🪞","🪟","🛍️","🛒","🎁","🎈","🎏","🎀","🎊","🎉","🎎","🏮","🎐","🧧","✉️","📩","📨","📧","💌","📥","📤","📦","🏷️","🪧","📪","📫","📬","📭","📮","📯","📜","📃","📄","📑","🧾","📊","📈","📉","🗒️","🗓️","📆","📅","🗑️","📇","🗃️","🗳️","🗄️","📋","📁","📂","🗂️","🗞️","📰","📓","📔","📒","📕","📗","📘","📙","📚","📖","🔖","🧷","🔗","📎","🖇️","📐","📏","🧮","📌","📍","✂️","🖊️","🖋️","✒️","🖌️","🖍️","📝","✏️","🔍","🔎","🔏","🔐","🔒","🔓"] }
+        ];
+        var currentStickerPack = 0;
+        function isStickerText(text) {
+            if (!text) return false;
+            var t = text.trim();
+            // 1–3 emoji-ish characters without regular letters
+            if (t.length > 16) return false;
+            if (/[a-zA-Zа-яА-Я0-9]/.test(t)) return false;
+            // count code points
+            var chars = Array.from(t);
+            return chars.length >= 1 && chars.length <= 3;
+        }
+        function toggleStickerPanel(e) {
+            if (e) e.stopPropagation();
+            if (!requireAccount()) return;
+            var panel = document.getElementById("stickerPanel");
+            if (!panel) return;
+            var open = panel.classList.toggle("open");
+            panel.setAttribute("aria-hidden", open ? "false" : "true");
+            if (open) {
+                renderStickerTabs();
+                renderStickerGrid(currentStickerPack);
+                setTimeout(function() {
+                    document.addEventListener("click", closeStickerPanelOutside, { once: true });
+                }, 0);
+            }
+        }
+        function closeStickerPanelOutside(e) {
+            var panel = document.getElementById("stickerPanel");
+            var btn = document.getElementById("stickerBtn");
+            if (!panel) return;
+            if (panel.contains(e.target) || (btn && btn.contains(e.target))) {
+                document.addEventListener("click", closeStickerPanelOutside, { once: true });
+                return;
+            }
+            panel.classList.remove("open");
+            panel.setAttribute("aria-hidden", "true");
+        }
+        function closeStickerPanel() {
+            var panel = document.getElementById("stickerPanel");
+            if (panel) { panel.classList.remove("open"); panel.setAttribute("aria-hidden", "true"); }
+        }
+        function renderStickerTabs() {
+            var tabs = document.getElementById("stickerTabs");
+            if (!tabs) return;
+            tabs.innerHTML = "";
+            STICKER_PACKS.forEach(function(pack, i) {
+                var b = document.createElement("button");
+                b.type = "button";
+                b.textContent = pack.icon;
+                if (i === currentStickerPack) b.className = "active";
+                b.onclick = function(ev) {
+                    ev.stopPropagation();
+                    currentStickerPack = i;
+                    renderStickerTabs();
+                    renderStickerGrid(i);
+                };
+                tabs.appendChild(b);
+            });
+        }
+        function renderStickerGrid(packIndex) {
+            var grid = document.getElementById("stickerGrid");
+            if (!grid) return;
+            var pack = STICKER_PACKS[packIndex] || STICKER_PACKS[0];
+            grid.innerHTML = "";
+            pack.items.forEach(function(st) {
+                var b = document.createElement("button");
+                b.type = "button";
+                b.textContent = st;
+                b.title = st;
+                b.onclick = function(ev) {
+                    ev.stopPropagation();
+                    sendSticker(st);
+                };
+                grid.appendChild(b);
+            });
+        }
+        function sendSticker(sticker) {
+            if (!requireAccount()) return;
+            closeStickerPanel();
+            var input = document.getElementById("messageInput");
+            if (!input) return;
+            // вставляем в строку (можно несколько)
+            var start = input.selectionStart != null ? input.selectionStart : input.value.length;
+            var end = input.selectionEnd != null ? input.selectionEnd : input.value.length;
+            var val = input.value || "";
+            input.value = val.slice(0, start) + sticker + val.slice(end);
+            var pos = start + sticker.length;
+            try { input.setSelectionRange(pos, pos); } catch (e) {}
+            input.focus();
+        }
+
         function scrollMessages(){ var c = document.getElementById("messages"); c.scrollTop = c.scrollHeight; }
 
         function animateLastMessages(count) {
@@ -3429,6 +3758,7 @@
                 }
                 var text = document.createElement("div");
                 if (msg.deleted) { text.className = "deleted"; text.textContent = t("msg_deleted"); }
+                else if (isStickerText(msg.text || "")) { text.className = "sticker-msg"; text.textContent = (msg.text || "").trim(); }
                 else { text.textContent = msg.text || ""; }
                 bubble.appendChild(text);
                 var meta = document.createElement("div"); meta.className = "meta";
@@ -3791,9 +4121,14 @@
         function clearAttachPreview() {
             pendingFile = null;
             document.getElementById("dmFile").value = "";
+            if (pendingVoiceUrl) {
+                try { URL.revokeObjectURL(pendingVoiceUrl); } catch (e) {}
+                pendingVoiceUrl = null;
+            }
             var box = document.getElementById("attachPreview");
             box.classList.add("hidden");
-            box.querySelector(".file-info").innerHTML = "";
+            var info = box.querySelector(".file-info");
+            if (info) info.innerHTML = "";
         }
         async function sendPendingFile() {
             if (!pendingFile || !selectedUserId) return;
@@ -3814,8 +4149,11 @@
                 await loadDialogs();
             } catch(err) { alert("Ошибка отправки файла"); }
         }
+        var pendingVoiceUrl = null;
         async function startVoice() {
-            if (!selectedUserId || isRecording) return;
+            if (!requireAccount()) return;
+            if (!selectedUserId && !selectedGroupId && !selectedChannelId && !selectedCommunityChatId) return;
+            if (isRecording) return;
             try {
                 var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 voiceStream = stream;
@@ -3823,14 +4161,17 @@
                 var mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm";
                 mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
                 mediaRecorder.ondataavailable = function(e){ if (e.data.size > 0) voiceChunks.push(e.data); };
-                mediaRecorder.onstop = async function(){
+                mediaRecorder.onstop = function(){
                     try { stream.getTracks().forEach(function(t){ t.stop(); }); } catch(ex) {}
                     var duration = Date.now() - voiceStart;
-                    if (duration < 300 || voiceChunks.length === 0) return;
+                    if (duration < 300 || voiceChunks.length === 0) {
+                        voiceChunks = [];
+                        return;
+                    }
                     var blob = new Blob(voiceChunks, { type: mime });
                     var ext = mime.includes("ogg") ? "ogg" : "webm";
                     var file = new File([blob], "voice." + ext, { type: mime.split(";")[0] });
-                    await uploadMedia(file, "");
+                    showVoicePreview(file, blob, duration);
                     voiceChunks = [];
                 };
                 voiceStart = Date.now();
@@ -3844,6 +4185,23 @@
             isRecording = false;
             document.getElementById("voiceBtn").classList.remove("recording");
             try { if (mediaRecorder && mediaRecorder.state !== "inactive") { mediaRecorder.stop(); } } catch(ex) {}
+        }
+        function showVoicePreview(file, blob, durationMs) {
+            pendingFile = file;
+            if (pendingVoiceUrl) {
+                try { URL.revokeObjectURL(pendingVoiceUrl); } catch (e) {}
+            }
+            pendingVoiceUrl = URL.createObjectURL(blob || file);
+            var box = document.getElementById("attachPreview");
+            box.classList.remove("hidden");
+            var info = box.querySelector(".file-info");
+            var sec = Math.max(1, Math.round((durationMs || 0) / 1000));
+            info.innerHTML = '<div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">' +
+                '<span style="font-size:20px">🎤</span>' +
+                '<div style="flex:1;min-width:0">' +
+                '<div style="font-weight:600;font-size:14px">' + (t("voice") || "Голосовое") + ' · ' + sec + 's</div>' +
+                '<audio controls src="' + pendingVoiceUrl + '" style="width:100%;max-width:280px;height:32px;margin-top:4px"></audio>' +
+                '</div></div>';
         }
 
         // BLOCK
