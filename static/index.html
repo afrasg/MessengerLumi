@@ -2719,22 +2719,17 @@
             return String(msg);
         }
         function isUserOnline(ls, user) {
+            // "в сети" ТОЛЬКО если реально есть WS-сессия (presence / is_online).
+            // Свежий last_seen сам по себе = "был(а) только что", не онлайн.
             var uid = user && (user.id != null ? user.id : user.user_id);
-            if (uid != null && presenceMap[Number(uid)]) {
-                var p = presenceMap[Number(uid)];
-                if (p.online === true) return true;
-                if (p.online === false) return false;
+            if (uid != null && presenceMap[Number(uid)] && presenceMap[Number(uid)].online != null) {
+                return !!presenceMap[Number(uid)].online;
             }
             if (user) {
                 if (user.is_online === true || user.online === true || user.status === "online") return true;
                 if (user.is_online === false || user.online === false || user.status === "offline") return false;
             }
-            var raw = ls;
-            if ((raw == null || raw === "") && user) raw = user.last_seen || user.lastSeen || user.was_online;
-            var t = parseLastSeenMs(raw);
-            if (t == null) return false;
-            // "в сети" если last_seen свежий (2 мин)
-            return (Date.now() - t) / 1000 < 120;
+            return false;
         }
         var presenceMap = {};
         var hiddenDialogs = {};
@@ -3018,6 +3013,7 @@
             await refreshSidebar();
             connectWS();
             startPresenceHeartbeat();
+            startStatusPoll();
             requestNotifyPermission();
             await loadDialogs();
             applyTheme(currentUser.theme || "dark");
@@ -3049,6 +3045,28 @@
             beat();
             presenceHeartbeat = setInterval(beat, 45000);
         }
+
+        
+        window.addEventListener("pagehide", function() {
+            try { if (ws) { ws.onclose = null; ws.close(); } } catch (e) {}
+        });
+        window.addEventListener("beforeunload", function() {
+            try { if (ws) { ws.onclose = null; ws.close(); } } catch (e) {}
+        });
+        document.addEventListener("visibilitychange", function() {
+            if (document.visibilityState === "hidden") {
+                try {
+                    if (ws && ws.readyState === 1) {
+                        ws.send(JSON.stringify({ type: "presence", online: false }));
+                    }
+                } catch (e) {}
+            } else if (document.visibilityState === "visible" && token) {
+                try {
+                    if (!ws || ws.readyState > 1) connectWS();
+                    else if (ws.readyState === 1) ws.send(JSON.stringify({ type: "presence", online: true }));
+                } catch (e) {}
+            }
+        });
 
         function connectWS() {
             if (!token || !currentUser) return;
@@ -3123,10 +3141,22 @@
                     if (data.type === "presence" || data.type === "user_status" || data.type === "online") {
                         var uid = data.user_id || data.id;
                         var onlineFlag = data.online != null ? data.online : data.is_online;
+                        markPresence(uid, onlineFlag, data.last_seen || null);
+                        // обновить точку в списке чатов
+                        try {
+                            document.querySelectorAll(".dialog-item").forEach(function(el) {
+                                // no stable data-id — refresh status line if open
+                            });
+                        } catch (e) {}
                         if (selectedUserId && Number(uid) === Number(selectedUserId) && currentChatPeer) {
                             if (onlineFlag != null) currentChatPeer.is_online = !!onlineFlag;
                             if (data.last_seen) currentChatPeer.last_seen = data.last_seen;
+                            else if (onlineFlag === false) currentChatPeer.last_seen = new Date().toISOString();
                             updateChatStatus(currentChatPeer);
+                        }
+                        // подтянуть is_online в сайдбаре
+                        if (onlineFlag === false || onlineFlag === true) {
+                            loadDialogs();
                         }
                         return;
                     }
@@ -3338,8 +3368,23 @@
             setPageTitle("https://img.icons8.ru/ios-filled/50/chat.png", (user.display_name || user.username));
             document.getElementById("chatAvatar").src = avatarSrc(user.avatar_url);
             document.getElementById("chatName").innerHTML = withVerified(user.display_name || user.username, user);
-            if (user.id != null) markPresence(user.id, user.is_online, user.last_seen);
+            if (user.id != null) markPresence(user.id, user.is_online != null ? user.is_online : user.online, user.last_seen);
             updateChatStatus(user);
+            // актуализировать online с сервера
+            (async function(peerId){
+                try {
+                    var r = await req("/api/users/" + peerId);
+                    if (!r.ok) return;
+                    var u = await safeJson(r);
+                    if (!u) return;
+                    markPresence(peerId, u.is_online, u.last_seen);
+                    if (selectedUserId && Number(selectedUserId) === Number(peerId) && currentChatPeer) {
+                        currentChatPeer.is_online = u.is_online;
+                        currentChatPeer.last_seen = u.last_seen;
+                        updateChatStatus(currentChatPeer);
+                    }
+                } catch (e) {}
+            })(user.id);
             var actions = document.getElementById("chatActions");
             actions.style.display = "flex";
             var isBot = user.is_bot || user.username === "lumi";
@@ -3410,6 +3455,28 @@
                 return "был(а) " + d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
             } catch (e) { return "оффлайн"; }
         }
+        
+        var statusPollTimer = null;
+        function startStatusPoll() {
+            if (statusPollTimer) clearInterval(statusPollTimer);
+            statusPollTimer = setInterval(async function() {
+                if (!selectedUserId || !token || isGuest) return;
+                try {
+                    var r = await req("/api/users/" + selectedUserId);
+                    if (!r.ok) return;
+                    var u = await safeJson(r);
+                    if (!u) return;
+                    markPresence(selectedUserId, u.is_online, u.last_seen);
+                    if (currentChatPeer && Number(currentChatPeer.id) === Number(selectedUserId)) {
+                        currentChatPeer.is_online = u.is_online;
+                        currentChatPeer.last_seen = u.last_seen;
+                        var el = document.getElementById("chatStatus");
+                        if (el && !el.classList.contains("typing")) updateChatStatus(currentChatPeer);
+                    }
+                } catch (e) {}
+            }, 15000);
+        }
+
         function updateChatStatus(user) {
             var el = document.getElementById("chatStatus");
             if (!el) return;
