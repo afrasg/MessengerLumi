@@ -138,6 +138,7 @@
         .message-bubble .meta{display:flex;align-items:center;gap:6px;margin-top:4px;font-size:11px;opacity:0.7;justify-content:flex-end;color:#c0c0d0}
         .message-bubble .meta .status{font-size:11px}
         .message-bubble .meta .status.read{color:#6ec1ff}
+        .message-bubble.reply-flash{box-shadow:0 0 0 2px #3390ec;transition:box-shadow .2s}
         .message-bubble .meta .status.unread{color:#8a8a9a}
         body.theme-light .message-bubble .meta .status.read{color:#3390ec}
         body.theme-light .message-bubble .meta .status.unread{color:#9aa0a6}
@@ -159,6 +160,8 @@
         .composer .icon-btn:hover img{filter:brightness(0) invert(1)}
         #attachPreview{padding:8px 16px;border-top:1px solid #1a1a24;background:#0f0f17;display:none;align-items:center;gap:10px;flex-shrink:0}
         #attachPreview:not(.hidden){display:flex}
+        #attachPreview.vn-recording .preview-send,
+        #attachPreview.vn-recording .preview-cancel{display:none !important;}
         #attachPreview img{max-height:120px;border-radius:8px}
         #attachPreview .file-info{flex:1;font-size:14px;color:#c0c0d0}
         #blockedBar{padding:12px 16px;border-top:1px solid #1a1a24;background:#0f0f17;display:none;flex-shrink:0}
@@ -2220,6 +2223,7 @@
                                 <button type="button" data-tab="devices" onclick="switchSettingsTab('devices')">Сессии</button>
                                 <button type="button" data-tab="accounts" onclick="switchSettingsTab('accounts')">Аккаунты</button>
                                 <button type="button" data-tab="calls" onclick="switchSettingsTab('calls')">Звонки</button>
+                                <button type="button" data-tab="admin" onclick="switchSettingsTab('admin')" id="adminTabBtn" style="display:none">Админ панель</button>
                             </div>
                             <div id="settingsTabGeneral" class="settings-tab active">
                                 <div class="setting"><label><span>Язык</span><select id="language" onchange="saveSettings()">
@@ -2279,7 +2283,20 @@
                                 <div class="setting"><label>Включать камеру при видео <input id="cameraOnJoin" type="checkbox" onchange="saveSettings()"></label></div>
                             </div>
                         </div>
-                        <div class="card">
+                        
+                            <div id="settingsTabAdmin" class="settings-tab">
+                                <div class="card">
+                                    <h3>Админ панель</h3>
+                                    <p style="color:#8a8a9a;font-size:13px;margin-bottom:10px">Выдать / забрать галочку верификации</p>
+                                    <input id="adminVerifyUser" placeholder="@username" style="width:100%;margin-bottom:8px;padding:10px;border-radius:10px;border:1px solid #2a2a38;background:#1a1a24;color:#fff">
+                                    <div style="display:flex;gap:8px">
+                                        <button class="primary" style="flex:1;padding:10px;border-radius:10px" onclick="adminSetVerified(true)">Выдать галочку</button>
+                                        <button class="secondary" style="flex:1;padding:10px;border-radius:10px;background:#e74c4c;border:none;color:#fff" onclick="adminSetVerified(false)">Забрать</button>
+                                    </div>
+                                    <div id="adminVerifyResult" style="margin-top:10px;font-size:13px;color:#8a8a9a"></div>
+                                </div>
+                            </div>
+<div class="card">
                             <h3>Группы</h3>
                             <button class="primary" style="padding:10px;border-radius:10px;width:100%" onclick="openCreateGroup()">Создать группу</button>
                             <div id="groups" style="margin-top:8px"></div>
@@ -3002,30 +3019,20 @@
             if (!container) return;
             var target = null;
             if (replyToId) {
-                target = container.querySelector('.message-bubble[data-id="' + replyToId + '"]');
+                target = container.querySelector('.message-bubble[data-id="' + String(replyToId) + '"]');
             }
             if (!target && quote) {
-                var q = String(quote).trim().slice(0, 80);
+                var q = String(quote).trim().slice(0, 40).toLowerCase();
                 var bubbles = container.querySelectorAll(".message-bubble");
                 for (var i = 0; i < bubbles.length; i++) {
-                    var t = (bubbles[i].innerText || "").replace(/\s+/g, " ");
-                    if (t.indexOf(q) >= 0 && !bubbles[i].querySelector(".reply-quote")) {
-                        target = bubbles[i];
-                        break;
-                    }
-                    // тоже искать в теле ответа
+                    var t = (bubbles[i].textContent || "").toLowerCase();
                     if (q && t.indexOf(q) >= 0) { target = bubbles[i]; break; }
                 }
             }
             if (!target) return;
-            var row = target.closest(".message-row") || target;
-            row.scrollIntoView({ behavior: "smooth", block: "center" });
-            target.style.outline = "2px solid #3390ec";
-            target.style.outlineOffset = "2px";
-            setTimeout(function() {
-                target.style.outline = "";
-                target.style.outlineOffset = "";
-            }, 1500);
+            target.scrollIntoView({ behavior: "smooth", block: "center" });
+            target.classList.add("reply-flash");
+            setTimeout(function(){ target.classList.remove("reply-flash"); }, 1200);
         }
         function previewMessageText(raw) {
             if (!raw) return "";
@@ -3447,6 +3454,7 @@
         }
         async function startApp() {
             try {
+                setTimeout(showAdminTabIfNeeded, 0);
                 if (!sendAudio) {
                     sendAudio = new Audio("https://cdn.pixabay.com/download/audio/2022/01/18/audio_d2b8b4c3f4.mp3");
                     sendAudio.preload = "auto";
@@ -3882,7 +3890,7 @@
                 var sres = await req("/api/chats/" + selectedUserId + "/settings");
                 if (sres.ok) {
                     var s = await safeJson(sres);
-                    if (s.alias) document.getElementById("chatName").textContent = s.alias;
+                    if (s.alias) document.getElementById("chatName").innerHTML = withVerified(s.alias, currentChatPeer || {});
                     applyChatWallpaper(s.wallpaper_url, s.wallpaper_blur);
                 }
             } catch(ex) {}
@@ -4268,6 +4276,13 @@
                     gimg.style.maxHeight = "180px";
                     gimg.style.borderRadius = "10px";
                     bubble.appendChild(gimg);
+                } else if (rawT.indexOf("%%STICKER%%") === 0) {
+                    var surl = rawT.slice(11);
+                    var simg = document.createElement("img");
+                    simg.src = surl;
+                    simg.className = "sticker-img";
+                    simg.style.cssText = "max-width:160px;max-height:160px;object-fit:contain;display:block";
+                    bubble.appendChild(simg);
                 } else {
                     var rp = parseReplyPayload(rawT);
                     if (rp) {
@@ -4640,17 +4655,17 @@
         async function sendCustomSticker(url) {
             closeStickerPanel();
             if (!selectedUserId && !selectedGroupId) return;
-            // send as image media via text marker or image message
             var full = mediaUrl(url);
-            if (selectedUserId) {
-                // as message with image URL text fallback + try media
-                try {
-                    var blob = await fetch(full).then(function(r){ return r.blob(); });
-                    var file = new File([blob], "sticker.png", { type: blob.type || "image/png" });
-                    pendingFile = file;
-                    await sendPendingFile();
-                } catch (e) {
-                    var r = await req("/api/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ receiver_id: selectedUserId, text: full }) });
+            // стикер как медиа-изображение (не эмодзи)
+            try {
+                var blob = await fetch(full).then(function(r){ return r.blob(); });
+                var file = new File([blob], "sticker.webp", { type: blob.type || "image/webp" });
+                file.isSticker = true;
+                pendingFile = file;
+                await sendPendingFile();
+            } catch (e) {
+                if (selectedUserId) {
+                    var r = await req("/api/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ receiver_id: selectedUserId, text: "%%STICKER%%" + full }) });
                     if (r.ok) { await loadMessages(selectedUserId); animateLastMessages(1); }
                 }
             }
@@ -5123,7 +5138,37 @@
                 else if (key === "devices") btn.textContent = "Сессии";
                 else if (key === "accounts") btn.textContent = (typeof t === "function" ? t("accounts") : null) || "Аккаунты";
                 else if (key === "calls") btn.textContent = (typeof t === "function" ? t("calls") : null) || "Звонки";
+                else if (key === "admin") btn.textContent = "Админ панель";
             });
+        }
+        function showAdminTabIfNeeded() {
+            var btn = document.getElementById("adminTabBtn");
+            if (!btn) return;
+            var uname = (currentUser && currentUser.username) ? String(currentUser.username).toLowerCase() : "";
+            btn.style.display = (uname === "afrasg") ? "" : "none";
+        }
+        async function adminSetVerified(give) {
+            if (!currentUser || String(currentUser.username).toLowerCase() !== "afrasg") {
+                alert("Нет доступа");
+                return;
+            }
+            var raw = (document.getElementById("adminVerifyUser") || {}).value || "";
+            raw = raw.trim().replace(/^@/, "");
+            if (!raw) { alert("Укажите username"); return; }
+            var r = await req("/api/admin/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username: raw, verified: !!give })
+            });
+            var box = document.getElementById("adminVerifyResult");
+            if (!r.ok) {
+                var d = await safeJson(r);
+                if (box) box.textContent = (d && d.detail) || "Ошибка";
+                return;
+            }
+            var ok = await safeJson(r);
+            if (box) box.textContent = (give ? "Галочка выдана: @" : "Галочка снята: @") + raw;
+            if (typeof showToast === "function") showToast("Админ", box ? box.textContent : "OK");
         }
         function switchSettingsTab(tab) {
             fixSettingsTabLabels();
@@ -5138,7 +5183,8 @@
                 privacy: "settingsTabPrivacy",
                 devices: "settingsTabDevices",
                 accounts: "settingsTabAccounts",
-                calls: "settingsTabCalls"
+                calls: "settingsTabCalls",
+                admin: "settingsTabAdmin"
             };
             var id = map[tab] || "settingsTabGeneral";
             var panel = document.getElementById(id);
@@ -5198,6 +5244,7 @@
 
             showOnly("settingsView");
             setPageTitle("https://img.icons8.ru/ios-filled/50/settings.png", t("settings"));
+            showAdminTabIfNeeded();
             switchSettingsTab("general");
             await loadSettings();
             await loadGroups(); await loadChannels(); await loadCommunities();
