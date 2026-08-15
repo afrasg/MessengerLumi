@@ -7,7 +7,7 @@
     <style>
         *{box-sizing:border-box;margin:0;padding:0}
         html,body{width:100%;height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#0a0a0f;color:#fff;overflow:hidden}
-        .hidden{display:none!important} 
+        .hidden{display:none!important}
         button,input,textarea,select{font:inherit}
         button{cursor:pointer;border:none;background:none;color:inherit}
         input,textarea,select{background:#1a1a24;color:#fff;border:1px solid #2a2a38;border-radius:12px;padding:12px 16px;outline:none;width:100%}
@@ -2855,19 +2855,20 @@
             }
             return String(msg);
         }
-function isUserOnline(ls, user) {
-    if (user && user.blocked_me) return false;
-    var uid = user && (user.id != null ? user.id : user.user_id);
-    if (uid != null && presenceMap[Number(uid)] && presenceMap[Number(uid)].online != null) {
-        return !!presenceMap[Number(uid)].online;
-    }
-    // !!! УБИРАЕМ ПРОВЕРКУ user.is_online - ТОЛЬКО WEBSOCKET !!!
-    // if (user) {
-    //     if (user.is_online === true || user.online === true || user.status === "online") return true;
-    //     if (user.is_online === false || user.online === false || user.status === "offline") return false;
-    // }
-    return false;
-}
+        function isUserOnline(ls, user) {
+            if (user && user.blocked_me) return false;
+            // "в сети" ТОЛЬКО если реально есть WS-сессия (presence / is_online).
+            // Свежий last_seen сам по себе = "был(а) только что", не онлайн.
+            var uid = user && (user.id != null ? user.id : user.user_id);
+            if (uid != null && presenceMap[Number(uid)] && presenceMap[Number(uid)].online != null) {
+                return !!presenceMap[Number(uid)].online;
+            }
+            if (user) {
+                if (user.is_online === true || user.online === true || user.status === "online") return true;
+                if (user.is_online === false || user.online === false || user.status === "offline") return false;
+            }
+            return false;
+        }
         var presenceMap = {};
         function isDmChatVisible() {
             var chat = document.getElementById("chatView");
@@ -3154,10 +3155,12 @@ function isUserOnline(ls, user) {
             source = source || "api";
             if (online === false) {
                 presenceMap[id].online = false;
-                presenceStickyOffline[id] = Date.now() + 1500;
+                // окно чуть больше интервала опроса (2с), чтобы отстающий poll
+                // не успел "воскресить" онлайн после реального мгновенного офлайна
+                presenceStickyOffline[id] = Date.now() + 2500;
             } else if (online === true) {
                 if (presenceStickyOffline[id] && Date.now() < presenceStickyOffline[id]
-                    && source !== "presence" && source !== "ws") {
+                    && source !== "ws") {
                     if (lastSeen) {
                         var t0 = typeof lastSeen === "number" ? lastSeen : new Date(lastSeen).getTime();
                         if (t0 < 1e12) t0 *= 1000;
@@ -3516,25 +3519,26 @@ function isUserOnline(ls, user) {
         // WEBSOCKET
         
         var presenceHeartbeat = null;
-       function startPresenceHeartbeat() {
-    if (presenceHeartbeat) clearInterval(presenceHeartbeat);
-    async function beat() {
-        // !!! УБИРАЕМ HTTP-ЗАПРОС К /api/me - ТОЛЬКО WEBSOCKET !!!
-        // if (!token || isGuest) return;
-        // try {
-        //     var r = await req("/api/me");
-        //     if (r.ok) {
-        //         var me = await safeJson(r);
-        //         if (me && me.id) markPresence(me.id, true, me.last_seen || new Date().toISOString());
-        //     }
-        // } catch (e) {}
-        if (ws && ws.readyState === 1) {
-            try { ws.send(JSON.stringify({ type: "ping" })); } catch (e) {}
+        function startPresenceHeartbeat() {
+            if (presenceHeartbeat) clearInterval(presenceHeartbeat);
+            async function beat() {
+                if (!token || isGuest) return;
+                try {
+                    // /api/me обновляет last_seen на бэкенде (get_auth_user)
+                    var r = await req("/api/me");
+                    if (r.ok) {
+                        var me = await safeJson(r);
+                        if (me && me.id) markPresence(me.id, true, me.last_seen || new Date().toISOString());
+                    }
+                } catch (e) {}
+                if (ws && ws.readyState === 1) {
+                    try { ws.send(JSON.stringify({ type: "ping" })); } catch (e) {}
+                }
+            }
+            beat();
+            presenceHeartbeat = setInterval(beat, 45000);
         }
-    }
-    beat();
-    presenceHeartbeat = setInterval(beat, 45000);
-}
+
         
         function forceOfflineSignal() {
             try {
@@ -3687,7 +3691,8 @@ function isUserOnline(ls, user) {
                     if (data.type === "presence" || data.type === "user_status" || data.type === "online") {
                         var uid = data.user_id || data.id;
                         var onlineFlag = data.online != null ? data.online : data.is_online;
-                        markPresence(uid, onlineFlag, data.last_seen || null, "presence");
+                        // это реальный мгновенный push от сервера (connect/disconnect) — источник "ws"
+                        markPresence(uid, onlineFlag, data.last_seen || null, "ws");
                         if (selectedUserId && Number(uid) === Number(selectedUserId) && currentChatPeer) {
                             if (onlineFlag != null) currentChatPeer.is_online = !!onlineFlag;
                             if (data.last_seen) currentChatPeer.last_seen = data.last_seen;
@@ -3701,20 +3706,8 @@ function isUserOnline(ls, user) {
                     else if (selectedChannelId) { await loadChannelMessages(selectedChannelId); }
                     else if (selectedCommunityChatId) { await loadCommunityChatMessages(selectedCommunityChatId); }
                 };
-             ws.onclose = function() {
-    console.log("WebSocket closed");
-    // Переподключаемся только если есть токен и страница видима
-    if (token && document.visibilityState === "visible") {
-        console.log("Reconnecting WebSocket...");
-        setTimeout(function() {
-            // Проверяем, не истек ли токен
-            if (token) {
-                connectWS();
-            }
-        }, 2000);
-    }
-};
-};
+                ws.onclose = function(){ if(token) setTimeout(connectWS,3000); };
+            } catch(ex) {}
         }
 
         // TYPING
@@ -4024,8 +4017,9 @@ function isUserOnline(ls, user) {
                         u.last_seen = "1970-01-01T00:00:00Z";
                         u.avatar_url = null;
                     }
-                    // is_online с бэка = реальные WS-коннекты → как presence
-                    markPresence(selectedUserId, u.is_online, u.last_seen, "presence");
+                    // периодический опрос — источник "poll", может отставать от реального
+                    // отключения на сервере, поэтому не должен перебивать недавний офлайн
+                    markPresence(selectedUserId, u.is_online, u.last_seen, "poll");
                     if (currentChatPeer && Number(currentChatPeer.id) === Number(selectedUserId)) {
                         currentChatPeer = Object.assign(currentChatPeer, u);
                         currentChatPeer.is_online = u.is_online;
@@ -5820,6 +5814,7 @@ function isUserOnline(ls, user) {
             } catch(err) { alert("Ошибка: " + err.message); }
         }
         function logout() {
+            forceOfflineSignal();
             token = ""; localStorage.removeItem("token");
             if (ws) try { ws.close(); } catch(ex) {}
             location.reload();
