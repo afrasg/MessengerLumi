@@ -104,6 +104,7 @@ def init_db():
     user_id INTEGER NOT NULL,
     token_hash TEXT UNIQUE NOT NULL,
     browser_hash TEXT NOT NULL,
+    device_info TEXT,
     created_at TEXT NOT NULL,
     last_seen TEXT NOT NULL,
     expires_at TEXT NOT NULL
@@ -284,6 +285,31 @@ def init_db():
             UNIQUE(user_id, peer_id)
         );
 
+        CREATE TABLE IF NOT EXISTS polls (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            creator_id INTEGER NOT NULL,
+            chat_type TEXT NOT NULL,
+            chat_id INTEGER NOT NULL,
+            question TEXT NOT NULL,
+            options TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            message_id INTEGER
+        );
+
+        CREATE TABLE IF NOT EXISTS poll_votes (
+            poll_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            option_idx INTEGER NOT NULL,
+            PRIMARY KEY (poll_id, user_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS stickers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            image_url TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS message_hides (
             user_id INTEGER NOT NULL,
             message_id INTEGER NOT NULL,
@@ -352,6 +378,8 @@ def init_db():
     add_column_if_missing(connection, "group_messages", "media_type", "TEXT")
     add_column_if_missing(connection, "channel_messages", "media_url", "TEXT")
     add_column_if_missing(connection, "channel_messages", "media_type", "TEXT")
+    add_column_if_missing(connection, "sessions", "device_info", "TEXT")
+    add_column_if_missing(connection, "posts", "repost_of", "INTEGER")
 
     try:
         connection.execute("ALTER TABLE settings ADD COLUMN auto_answer INTEGER DEFAULT 0")
@@ -462,7 +490,7 @@ def get_or_create_browser(request: Request, response: Response):
     return value
 
 
-def create_session(user_id, browser_id):
+def create_session(user_id, browser_id, device_info=None):
     token = new_token()
     created = datetime.utcnow()
     expires = created + timedelta(days=SESSION_DAYS)
@@ -470,9 +498,10 @@ def create_session(user_id, browser_id):
     connection = db()
     connection.execute("""
         INSERT INTO sessions
-        (user_id, token_hash, browser_hash, created_at, last_seen, expires_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        (user_id, token_hash, browser_hash, device_info, created_at, last_seen, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
     """, (user_id, hash_token(token), browser_hash(browser_id),
+          (device_info or "")[:200],
           created.isoformat(), created.isoformat(), expires.isoformat()))
     connection.commit()
     connection.close()
@@ -566,6 +595,7 @@ def user_public(connection, user_id):
 class RegisterRequest(BaseModel):
     username: str
     password: str
+    display_name: str = ""
 
 
 class LoginRequest(BaseModel):
@@ -711,10 +741,11 @@ def register(data: RegisterRequest, request: Request, response: Response):
 
     created = now()
 
+    dn = (getattr(data, "display_name", None) or "").strip() or username
     cursor = connection.execute("""
         INSERT INTO users (username, password_hash, created_at, last_seen, display_name)
         VALUES (?, ?, ?, ?, ?)
-    """, (username, hash_password(data.password), created, created, username))
+    """, (username, hash_password(data.password), created, created, dn))
 
     user_id = cursor.lastrowid
 
@@ -725,7 +756,8 @@ def register(data: RegisterRequest, request: Request, response: Response):
     connection.close()
 
     browser_id = get_or_create_browser(request, response)
-    token = create_session(user_id, browser_id)
+    ua = (request.headers.get("user-agent") or "")[:200]
+    token = create_session(user_id, browser_id, ua)
     set_auth_cookie(response, token)
 
     return {"ok": True, "token": token}
@@ -750,11 +782,83 @@ def login(data: LoginRequest, request: Request, response: Response):
     connection.close()
 
     browser_id = get_or_create_browser(request, response)
-    token = create_session(user["id"], browser_id)
+    ua = (request.headers.get("user-agent") or "")[:200]
+    token = create_session(user["id"], browser_id, ua)
     set_auth_cookie(response, token)
 
     return {"ok": True, "token": token}
 
+
+
+
+@app.get("/api/sessions")
+def list_sessions(request: Request):
+    user_id = get_auth_user(request)
+    token = request.cookies.get(SESSION_COOKIE) or ""
+    auth = request.headers.get("Authorization") or ""
+    if not token and auth.lower().startswith("bearer "):
+        token = auth[7:].strip()
+    current_hash = hash_token(token) if token else ""
+    connection = db()
+    rows = connection.execute("""
+        SELECT id, browser_hash, device_info, created_at, last_seen, expires_at, token_hash
+        FROM sessions WHERE user_id = ?
+        ORDER BY last_seen DESC
+    """, (user_id,)).fetchall()
+    connection.close()
+    out = []
+    for r in rows:
+        out.append({
+            "id": r["id"],
+            "device_info": r["device_info"] or "Браузер",
+            "created_at": r["created_at"],
+            "last_seen": r["last_seen"],
+            "is_current": r["token_hash"] == current_hash,
+        })
+    return out
+
+
+@app.delete("/api/sessions/{session_id}")
+def revoke_session(session_id: int, request: Request):
+    user_id = get_auth_user(request)
+    token = request.cookies.get(SESSION_COOKIE) or ""
+    auth = request.headers.get("Authorization") or ""
+    if not token and auth.lower().startswith("bearer "):
+        token = auth[7:].strip()
+    current_hash = hash_token(token) if token else ""
+    connection = db()
+    row = connection.execute(
+        "SELECT id, token_hash FROM sessions WHERE id = ? AND user_id = ?",
+        (session_id, user_id)
+    ).fetchone()
+    if not row:
+        connection.close()
+        raise HTTPException(404, "Сессия не найдена")
+    if row["token_hash"] == current_hash:
+        connection.close()
+        raise HTTPException(400, "Нельзя завершить текущую сессию здесь")
+    connection.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+    connection.commit()
+    connection.close()
+    return {"ok": True}
+
+
+@app.post("/api/sessions/revoke-others")
+def revoke_other_sessions(request: Request):
+    user_id = get_auth_user(request)
+    token = request.cookies.get(SESSION_COOKIE) or ""
+    auth = request.headers.get("Authorization") or ""
+    if not token and auth.lower().startswith("bearer "):
+        token = auth[7:].strip()
+    current_hash = hash_token(token) if token else ""
+    connection = db()
+    connection.execute(
+        "DELETE FROM sessions WHERE user_id = ? AND token_hash != ?",
+        (user_id, current_hash)
+    )
+    connection.commit()
+    connection.close()
+    return {"ok": True}
 
 @app.post("/api/logout")
 def logout(request: Request, response: Response):
@@ -925,6 +1029,28 @@ def get_user_profile(user_id: int, request: Request):
         return result
 
     connection = db()
+
+    # если ОН заблокировал МЕНЯ — скрываем статус и аватар
+    blocked_me = connection.execute(
+        "SELECT 1 FROM blocks WHERE user_id = ? AND blocked_id = ?",
+        (user_id, current_user_id)
+    ).fetchone()
+    i_blocked = connection.execute(
+        "SELECT 1 FROM blocks WHERE user_id = ? AND blocked_id = ?",
+        (current_user_id, user_id)
+    ).fetchone()
+
+    if blocked_me:
+        result["avatar_url"] = None
+        result["is_online"] = False
+        result["last_seen"] = "1970-01-01T00:00:00Z"
+        result["blocked_me"] = True
+        result["created_at"] = None
+        connection.close()
+        return result
+
+    result["i_blocked"] = bool(i_blocked)
+
     privacy = connection.execute(
         "SELECT last_seen_visibility FROM privacy_settings WHERE user_id = ?", (user_id,)
     ).fetchone()
@@ -955,7 +1081,7 @@ def get_user_profile(user_id: int, request: Request):
 # =========================================================
 
 @app.get("/api/messages/{other_user_id}")
-def get_messages(other_user_id: int, request: Request):
+async def get_messages(other_user_id: int, request: Request):
     user_id = get_auth_user(request)
 
     connection = db()
@@ -973,6 +1099,12 @@ def get_messages(other_user_id: int, request: Request):
         ORDER BY m.id ASC
     """, (user_id, user_id, other_user_id, other_user_id, user_id)).fetchall()
 
+    unread = connection.execute("""
+        SELECT id FROM messages
+        WHERE sender_id = ? AND receiver_id = ? AND is_read = 0
+    """, (other_user_id, user_id)).fetchall()
+    unread_ids = [r["id"] for r in unread]
+
     connection.execute("""
         UPDATE messages SET is_read = 1
         WHERE sender_id = ? AND receiver_id = ? AND is_read = 0
@@ -980,6 +1112,13 @@ def get_messages(other_user_id: int, request: Request):
 
     connection.commit()
     connection.close()
+
+    if unread_ids:
+        await send_ws(other_user_id, {
+            "type": "messages_read",
+            "reader_id": user_id,
+            "message_ids": unread_ids
+        })
 
     return [dict(m) for m in messages]
 
@@ -1416,6 +1555,58 @@ def like_post(post_id: int, request: Request):
 
     return {"liked": liked, "likes": count}
 
+
+
+
+@app.post("/api/posts/{post_id}/repost")
+def repost_post(post_id: int, request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    post = connection.execute("SELECT * FROM posts WHERE id = ?", (post_id,)).fetchone()
+    if not post:
+        connection.close()
+        raise HTTPException(404, "Пост не найден")
+    # already reposted?
+    exists = connection.execute(
+        "SELECT id FROM posts WHERE author_id = ? AND repost_of = ?",
+        (user_id, post_id)
+    ).fetchone()
+    if exists:
+        connection.close()
+        raise HTTPException(400, "Уже репостнуто")
+    origin_id = post["repost_of"] or post_id
+    origin = connection.execute("SELECT * FROM posts WHERE id = ?", (origin_id,)).fetchone() or post
+    cur = connection.execute(
+        "INSERT INTO posts (author_id, text, created_at, repost_of) VALUES (?,?,?,?)",
+        (user_id, origin["text"], now(), origin_id)
+    )
+    new_id = cur.lastrowid
+    connection.commit()
+    connection.close()
+    return {"ok": True, "id": new_id}
+
+
+@app.get("/api/users/{user_id}/posts")
+def user_posts(user_id: int, request: Request):
+    get_auth_user(request)
+    connection = db()
+    rows = connection.execute("""
+        SELECT p.id, p.author_id, p.text, p.created_at, p.repost_of,
+               u.username, u.display_name, u.avatar_url, u.is_verified,
+               (SELECT COUNT(*) FROM likes WHERE post_id = p.id) AS likes_count,
+               (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count,
+               (SELECT COUNT(*) FROM posts WHERE repost_of = COALESCE(p.repost_of, p.id)) AS reposts_count,
+               op.username AS origin_username, op.display_name AS origin_display_name
+        FROM posts p
+        JOIN users u ON u.id = p.author_id
+        LEFT JOIN posts orig ON orig.id = p.repost_of
+        LEFT JOIN users op ON op.id = orig.author_id
+        WHERE p.author_id = ?
+        ORDER BY p.id DESC
+        LIMIT 50
+    """, (user_id,)).fetchall()
+    connection.close()
+    return [dict(r) for r in rows]
 
 @app.delete("/api/posts/{post_id}")
 def delete_post(post_id: int, request: Request):
@@ -1868,6 +2059,131 @@ async def send_group_message(group_id: int, data: GroupMessageRequest, request: 
 
     return {"ok": True, "message": message}
 
+
+
+
+@app.post("/api/groups/{group_id}/kick/{member_id}")
+def kick_group_member(group_id: int, member_id: int, request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    g = connection.execute("SELECT * FROM groups WHERE id = ?", (group_id,)).fetchone()
+    if not g:
+        connection.close()
+        raise HTTPException(404, "Группа не найдена")
+    if g["owner_id"] != user_id:
+        connection.close()
+        raise HTTPException(403, "Только владелец может кикать")
+    if member_id == user_id:
+        connection.close()
+        raise HTTPException(400, "Нельзя кикнуть себя")
+    connection.execute("DELETE FROM group_members WHERE group_id = ? AND user_id = ?", (group_id, member_id))
+    connection.commit()
+    connection.close()
+    return {"ok": True}
+
+
+@app.post("/api/groups/{group_id}/transfer/{member_id}")
+def transfer_group_ownership(group_id: int, member_id: int, request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    g = connection.execute("SELECT * FROM groups WHERE id = ?", (group_id,)).fetchone()
+    if not g:
+        connection.close()
+        raise HTTPException(404, "Группа не найдена")
+    if g["owner_id"] != user_id:
+        connection.close()
+        raise HTTPException(403, "Только владелец")
+    mem = connection.execute(
+        "SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?",
+        (group_id, member_id)
+    ).fetchone()
+    if not mem:
+        connection.close()
+        raise HTTPException(400, "Пользователь не в группе")
+    connection.execute("UPDATE groups SET owner_id = ? WHERE id = ?", (member_id, group_id))
+    connection.commit()
+    connection.close()
+    return {"ok": True}
+
+
+@app.get("/api/groups/{group_id}/members")
+def list_group_members(group_id: int, request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    mem = connection.execute(
+        "SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?",
+        (group_id, user_id)
+    ).fetchone()
+    if not mem:
+        connection.close()
+        raise HTTPException(403, "Нет доступа")
+    g = connection.execute("SELECT owner_id, name, avatar_url FROM groups WHERE id = ?", (group_id,)).fetchone()
+    rows = connection.execute("""
+        SELECT u.id, u.username, u.display_name, u.avatar_url, u.is_verified
+        FROM group_members gm
+        JOIN users u ON u.id = gm.user_id
+        WHERE gm.group_id = ?
+        ORDER BY u.username
+    """, (group_id,)).fetchall()
+    connection.close()
+    owner_id = g["owner_id"] if g else None
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["is_owner"] = d["id"] == owner_id
+        out.append(d)
+    return {"name": g["name"] if g else "", "avatar_url": g["avatar_url"] if g else None, "owner_id": owner_id, "members": out}
+
+
+@app.get("/api/channels/{channel_id}/info")
+def channel_info(channel_id: int, request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    ch = connection.execute("SELECT id, name, owner_id, avatar_url FROM channels WHERE id = ?", (channel_id,)).fetchone()
+    if not ch:
+        connection.close()
+        raise HTTPException(404, "Канал не найден")
+    sub = connection.execute(
+        "SELECT 1 FROM channel_subscribers WHERE channel_id = ? AND user_id = ?",
+        (channel_id, user_id)
+    ).fetchone()
+    cnt = connection.execute(
+        "SELECT COUNT(*) AS c FROM channel_subscribers WHERE channel_id = ?", (channel_id,)
+    ).fetchone()
+    owner = connection.execute(
+        "SELECT username, display_name FROM users WHERE id = ?", (ch["owner_id"],)
+    ).fetchone()
+    connection.close()
+    return {
+        "id": ch["id"],
+        "name": ch["name"],
+        "avatar_url": ch["avatar_url"],
+        "owner_id": ch["owner_id"],
+        "owner_name": (owner["display_name"] or owner["username"]) if owner else "",
+        "is_owner": ch["owner_id"] == user_id,
+        "joined": bool(sub),
+        "subscribers": cnt["c"] if cnt else 0,
+    }
+
+
+@app.get("/api/communities/{community_id}/info")
+def community_info(community_id: int, request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    cm = connection.execute(
+        "SELECT id, name, description, owner_id FROM communities WHERE id = ?", (community_id,)
+    ).fetchone()
+    if not cm:
+        connection.close()
+        raise HTTPException(404, "Сообщество не найдено")
+    connection.close()
+    return {
+        "id": cm["id"],
+        "name": cm["name"],
+        "description": cm["description"] or "",
+        "owner_id": cm["owner_id"],
+        "is_owner": cm["owner_id"] == user_id,
+    }
 
 @app.post("/api/groups/{group_id}/leave")
 def leave_group(group_id: int, request: Request):
@@ -2602,7 +2918,8 @@ def login_by_code(data: CodeLoginRequest, request: Request, response: Response):
     connection.close()
 
     browser_id = get_or_create_browser(request, response)
-    token = create_session(user["id"], browser_id)
+    ua = (request.headers.get("user-agent") or "")[:200]
+    token = create_session(user["id"], browser_id, ua)
     set_auth_cookie(response, token)
 
     return {"ok": True, "token": token}
@@ -2702,8 +3019,25 @@ def get_chat_settings(peer_id: int, request: Request):
     }
 
 
+@app.delete("/api/chats/{peer_id}/wallpaper")
+def clear_wallpaper(peer_id: int, request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    connection.execute("""
+        INSERT INTO chat_settings (user_id, peer_id, wallpaper_url, wallpaper_blur)
+        VALUES (?, ?, NULL, 0)
+        ON CONFLICT(user_id, peer_id) DO UPDATE SET
+            wallpaper_url = NULL,
+            wallpaper_blur = 0
+    """, (user_id, peer_id))
+    connection.commit()
+    connection.close()
+    return {"ok": True}
+
+
 @app.put("/api/chats/{peer_id}/wallpaper")
 def set_wallpaper(peer_id: int, data: WallpaperRequest, request: Request):
+
     user_id = get_auth_user(request)
 
     connection = db()
@@ -2767,7 +3101,165 @@ def delete_chat(peer_id: int, request: Request, for_both: bool = False):
     return {"ok": True}
 
 
+
+
+@app.post("/api/polls")
+async def create_poll(request: Request):
+    user_id = get_auth_user(request)
+    data = await request.json()
+    question = (data.get("question") or "").strip()
+    options = data.get("options") or []
+    chat_type = data.get("chat_type") or "private"
+    chat_id = int(data.get("chat_id") or 0)
+    if not question or len(options) < 2:
+        raise HTTPException(400, "Нужен вопрос и минимум 2 варианта")
+    options = [str(o).strip() for o in options if str(o).strip()][:10]
+    if len(options) < 2:
+        raise HTTPException(400, "Нужно минимум 2 варианта")
+    import json as _json
+    connection = db()
+    created = now()
+    cur = connection.execute(
+        "INSERT INTO polls (creator_id, chat_type, chat_id, question, options, created_at) VALUES (?,?,?,?,?,?)",
+        (user_id, chat_type, chat_id, question, _json.dumps(options, ensure_ascii=False), created)
+    )
+    poll_id = cur.lastrowid
+    # post as special message text
+    marker = "%%POLL%%" + str(poll_id)
+    msg_id = None
+    if chat_type == "private":
+        cur2 = connection.execute(
+            "INSERT INTO messages (sender_id, receiver_id, text, created_at, is_read) VALUES (?,?,?,?,0)",
+            (user_id, chat_id, marker, created)
+        )
+        msg_id = cur2.lastrowid
+        connection.execute("UPDATE polls SET message_id = ? WHERE id = ?", (msg_id, poll_id))
+        clear_deleted_for_me(connection, user_id, chat_id)
+    elif chat_type == "group":
+        cur2 = connection.execute(
+            "INSERT INTO group_messages (group_id, sender_id, text, created_at) VALUES (?,?,?,?)",
+            (chat_id, user_id, marker, created)
+        )
+        msg_id = cur2.lastrowid
+    elif chat_type == "channel":
+        ch = connection.execute("SELECT owner_id FROM channels WHERE id = ?", (chat_id,)).fetchone()
+        if not ch or ch["owner_id"] != user_id:
+            connection.close()
+            raise HTTPException(403, "Только владелец канала")
+        cur2 = connection.execute(
+            "INSERT INTO channel_messages (channel_id, sender_id, text, created_at) VALUES (?,?,?,?)",
+            (chat_id, user_id, marker, created)
+        )
+        msg_id = cur2.lastrowid
+    connection.commit()
+    connection.close()
+    if chat_type == "private":
+        await send_ws(user_id, {"type": "message", "message": {"id": msg_id, "sender_id": user_id, "receiver_id": chat_id, "text": marker, "created_at": created, "deleted": 0, "is_read": 0, "chat_kind": "private"}})
+        await send_ws(chat_id, {"type": "message", "message": {"id": msg_id, "sender_id": user_id, "receiver_id": chat_id, "text": marker, "created_at": created, "deleted": 0, "is_read": 0, "chat_kind": "private"}})
+    return {"ok": True, "poll_id": poll_id, "message_id": msg_id}
+
+
+@app.get("/api/polls/{poll_id}")
+def get_poll(poll_id: int, request: Request):
+    user_id = get_auth_user(request)
+    import json as _json
+    connection = db()
+    p = connection.execute("SELECT * FROM polls WHERE id = ?", (poll_id,)).fetchone()
+    if not p:
+        connection.close()
+        raise HTTPException(404, "Опрос не найден")
+    votes = connection.execute(
+        "SELECT option_idx, COUNT(*) AS c FROM poll_votes WHERE poll_id = ? GROUP BY option_idx",
+        (poll_id,)
+    ).fetchall()
+    my = connection.execute(
+        "SELECT option_idx FROM poll_votes WHERE poll_id = ? AND user_id = ?",
+        (poll_id, user_id)
+    ).fetchone()
+    connection.close()
+    counts = {int(v["option_idx"]): int(v["c"]) for v in votes}
+    options = _json.loads(p["options"])
+    total = sum(counts.values())
+    return {
+        "id": p["id"],
+        "question": p["question"],
+        "options": [{"text": o, "votes": counts.get(i, 0)} for i, o in enumerate(options)],
+        "total": total,
+        "my_vote": my["option_idx"] if my else None,
+        "creator_id": p["creator_id"],
+    }
+
+
+@app.post("/api/polls/{poll_id}/vote")
+def vote_poll(poll_id: int, request: Request, option_idx: int = 0):
+    user_id = get_auth_user(request)
+    connection = db()
+    p = connection.execute("SELECT * FROM polls WHERE id = ?", (poll_id,)).fetchone()
+    if not p:
+        connection.close()
+        raise HTTPException(404, "Опрос не найден")
+    import json as _json
+    options = _json.loads(p["options"])
+    if option_idx < 0 or option_idx >= len(options):
+        connection.close()
+        raise HTTPException(400, "Неверный вариант")
+    connection.execute(
+        "INSERT INTO poll_votes (poll_id, user_id, option_idx) VALUES (?,?,?) ON CONFLICT(poll_id, user_id) DO UPDATE SET option_idx = excluded.option_idx",
+        (poll_id, user_id, option_idx)
+    )
+    connection.commit()
+    connection.close()
+    return {"ok": True}
+
+
 # =========================================================
+
+
+@app.get("/api/stickers")
+def list_stickers(request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    rows = connection.execute(
+        "SELECT id, image_url, created_at FROM stickers WHERE user_id = ? ORDER BY id DESC",
+        (user_id,)
+    ).fetchall()
+    connection.close()
+    return [dict(r) for r in rows]
+
+
+@app.post("/api/stickers")
+async def upload_sticker(request: Request, file: UploadFile = File(...)):
+    user_id = get_auth_user(request)
+    import uuid as _uuid
+    ext = (file.filename or "sticker.png").rsplit(".", 1)[-1].lower()
+    if ext not in ("png", "jpg", "jpeg", "gif", "webp"):
+        ext = "png"
+    name = f"sticker_{user_id}_{_uuid.uuid4().hex[:10]}.{ext}"
+    path = os.path.join(UPLOAD_DIR, name)
+    with open(path, "wb") as out:
+        shutil.copyfileobj(file.file, out)
+    url = "/uploads/" + name
+    connection = db()
+    cur = connection.execute(
+        "INSERT INTO stickers (user_id, image_url, created_at) VALUES (?,?,?)",
+        (user_id, url, now())
+    )
+    sid = cur.lastrowid
+    connection.commit()
+    connection.close()
+    return {"ok": True, "id": sid, "image_url": url}
+
+
+@app.delete("/api/stickers/{sticker_id}")
+def delete_sticker(sticker_id: int, request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    connection.execute("DELETE FROM stickers WHERE id = ? AND user_id = ?", (sticker_id, user_id))
+    connection.commit()
+    connection.close()
+    return {"ok": True}
+
+
 # MESSAGE MEDIA / VOICE
 # =========================================================
 
