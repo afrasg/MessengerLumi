@@ -4174,8 +4174,18 @@
             if (mine && !msg.media_type && (msg.text || "").length) {
                 addItem(t("edit") || "Изменить", function(){ openEditMessage(msg); });
             }
+            // Удалить для себя — свои и чужие
+            if (selectedUserId) {
+                addItem(t("delete_for_me") || "Удалить для себя", function(){
+                    deleteMessageForMe(msg.id);
+                }, true);
+            }
+            // Удалить для всех — только свои
             if (mine) {
-                addItem(t("delete") || "Удалить", function(){ selectedMessageId = msg.id; deleteSelectedMessage(); }, true);
+                addItem(t("delete_for_all") || "Удалить для всех", function(){
+                    selectedMessageId = msg.id;
+                    deleteSelectedMessage();
+                }, true);
             }
             document.body.appendChild(menu);
             var rect = el.getBoundingClientRect();
@@ -4371,9 +4381,37 @@
                 markComposerSending(false);
             }
         }
+        async function deleteMessageForMe(messageId) {
+            if (!messageId) return;
+            if (!confirm((t("delete_for_me") || "Удалить для себя") + "?")) return;
+            var r = await req("/api/messages/" + messageId + "?for_me=true", { method: "DELETE" });
+            if (!r.ok) {
+                var d = await safeJson(r);
+                alert((d && d.detail) || "Ошибка");
+                return;
+            }
+            var el = document.querySelector('.message-bubble[data-id="' + messageId + '"]');
+            if (el && el.parentElement) el.parentElement.remove();
+            else if (selectedUserId) await loadMessages(selectedUserId);
+        }
+        async function clearChatHistoryForMe() {
+            if (!selectedUserId) return;
+            if (!confirm("Очистить историю чата только у себя?")) return;
+            var r = await req("/api/chats/" + selectedUserId + "/clear-history", { method: "POST" });
+            if (!r.ok) {
+                var d = await safeJson(r);
+                alert((d && d.detail) || "Ошибка");
+                return;
+            }
+            var box = document.getElementById("messages");
+            if (box) box.innerHTML = "";
+            if (typeof showToast === "function") showToast("История очищена");
+            else alert("История очищена");
+            try { await loadDialogs(); } catch (e) {}
+        }
         async function deleteSelectedMessage() {
             if (!selectedMessageId) return;
-            if (!confirm(t("confirm_delete"))) return;
+            if (!confirm(t("confirm_delete") || "Удалить для всех?")) return;
             var r = await req("/api/messages/" + selectedMessageId, { method: "DELETE" });
             if (!r.ok) { var d = await safeJson(r); alert(d.detail || "Ошибка"); return; }
             selectedMessageId = null;
@@ -5720,9 +5758,10 @@
                 addBtn(t("to_favorites"), function(){ favoritePickMode = true; alert(t("fav_hint")); });
                 addBtn(t("rename"), function(){ renameContact(); });
                 addBtn(t("wallpaper"), function(){ setWallpaper(); });
+                addBtn("Очистить историю", function(){ clearChatHistoryForMe(); }, true);
+                addBtn(t("delete_for_me") || "Удалить чат у себя", function(){ deleteChatMe(); }, true);
+                addBtn(t("delete_for_all") || "Удалить чат у всех", function(){ deleteChatBoth(); }, true);
                 addBtn(t("block"), function(){ blockPeer2(); }, true);
-                addBtn(t("delete_for_me"), function(){ deleteChatMe(); });
-                addBtn(t("delete_for_all"), function(){ deleteChatBoth(); }, true);
             } else if (selectedChannelId) {
                 addBtn("Уведомления", function(){ toggleChannelMute(); });
                 addBtn(t("unsubscribe"), function(){ leaveChannel(); }, true);
