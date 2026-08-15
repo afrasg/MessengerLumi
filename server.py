@@ -545,9 +545,9 @@ def get_auth_user(request: Request, update_last_seen: bool = True):
     connection.execute("UPDATE sessions SET last_seen = ? WHERE id = ?",
                        (now(), session["session_id"]))
 
-    if update_last_seen:
-        connection.execute("UPDATE users SET last_seen = ? WHERE id = ?",
-                           (now(), session["user_id"]))
+    # if update_last_seen:
+    #    connection.execute("UPDATE users SET last_seen = ? WHERE id = ?",
+    #                     (now(), session["user_id"]))
 
     connection.commit()
     connection.close()
