@@ -2015,6 +2015,46 @@
         }
         .vn-preview-wrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
+    
+        .reply-quote {
+            border-left: 3px solid rgba(255,255,255,.55);
+            padding: 4px 8px 5px;
+            margin: 0 0 6px 0;
+            background: rgba(0,0,0,.18);
+            border-radius: 0 6px 6px 0;
+            max-width: 100%;
+        }
+        .message-row.theirs .reply-quote {
+            border-left-color: #3390ec;
+            background: rgba(51,144,236,.12);
+        }
+        body.theme-light .message-row.theirs .reply-quote {
+            background: rgba(51,144,236,.1);
+            border-left-color: #3390ec;
+        }
+        body.theme-light .message-row.mine .reply-quote {
+            border-left-color: rgba(255,255,255,.7);
+            background: rgba(0,0,0,.12);
+        }
+        .reply-quote .rq-name {
+            font-weight: 700;
+            font-size: 13px;
+            line-height: 1.25;
+            margin-bottom: 2px;
+        }
+        .reply-quote .rq-text {
+            font-style: italic;
+            font-size: 13px;
+            opacity: 0.88;
+            line-height: 1.3;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .msg-body-text {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
     </style>
 </head>
 <body>
@@ -2781,12 +2821,62 @@
         }
         var presenceMap = {};
         var replyingTo = null; // {id, text, name, media_type}
+        
+        var REPLY_MARK = "\u2060REPLY\u2060";
+        function buildReplyPayload(name, quote, text) {
+            var n = String(name || "").replace(/\u2060/g, "");
+            var q = String(quote || "").replace(/\u2060/g, "").slice(0, 120);
+            return REPLY_MARK + n + "\u2060" + q + "\u2060\n" + text;
+        }
+        function parseReplyPayload(text) {
+            if (!text || text.indexOf(REPLY_MARK) !== 0) return null;
+            var rest = text.slice(REPLY_MARK.length);
+            var i1 = rest.indexOf("\u2060");
+            if (i1 < 0) return null;
+            var name = rest.slice(0, i1);
+            var rest2 = rest.slice(i1 + 1);
+            var i2 = rest2.indexOf("\u2060\n");
+            if (i2 < 0) {
+                i2 = rest2.indexOf("\u2060");
+                if (i2 < 0) return null;
+                return { name: name, quote: rest2.slice(0, i2), body: rest2.slice(i2 + 1).replace(/^\n/, "") };
+            }
+            return { name: name, quote: rest2.slice(0, i2), body: rest2.slice(i2 + 2) };
+        }
+        function appendReplyQuote(bubble, name, quote) {
+            var box = document.createElement("div");
+            box.className = "reply-quote";
+            var nm = document.createElement("div");
+            nm.className = "rq-name";
+            nm.textContent = name || "Пользователь";
+            var qt = document.createElement("div");
+            qt.className = "rq-text";
+            qt.textContent = quote || "";
+            box.appendChild(nm);
+            box.appendChild(qt);
+            bubble.appendChild(box);
+        }
+
         function setReplyingTo(msg) {
             if (!msg) { clearReplyingTo(); return; }
+            var parsed = parseReplyPayload(msg.text || "");
+            var quoteText = "";
+            if (msg.media_type === "voice") quoteText = "Голосовое сообщение";
+            else if (msg.media_type === "video_note") quoteText = "Видеосообщение";
+            else if (msg.media_type === "image") quoteText = "Фото";
+            else if (parsed) quoteText = parsed.body || parsed.quote || "";
+            else quoteText = msg.text || "";
+            var who = msg.sender_name || msg.sender_username || "";
+            if (!who && currentUser && Number(msg.sender_id) === Number(currentUser.id)) {
+                who = currentUser.display_name || currentUser.username || "Вы";
+            }
+            if (!who && currentChatPeer) {
+                who = currentChatPeer.display_name || currentChatPeer.username || "";
+            }
             replyingTo = {
                 id: msg.id,
-                text: msg.text || "",
-                name: msg.sender_name || msg.sender_username || "",
+                text: quoteText,
+                name: who,
                 media_type: msg.media_type || null
             };
             var bar = document.getElementById("replyBar");
@@ -2839,26 +2929,45 @@
         }
 
         var hiddenDialogs = {};
-        function markPresence(userId, online, lastSeen) {
+        var presenceStickyOffline = {}; // id -> timestamp: ignore false "online" after real offline
+        function markPresence(userId, online, lastSeen, source) {
             if (userId == null) return;
             var id = Number(userId);
             if (!presenceMap[id]) presenceMap[id] = {};
-            if (online != null) presenceMap[id].online = !!online;
+            source = source || "api";
+            if (online === false) {
+                presenceMap[id].online = false;
+                // 15 сек не принимать online из dialogs/poll (гонка WS close)
+                presenceStickyOffline[id] = Date.now() + 15000;
+            } else if (online === true) {
+                if (presenceStickyOffline[id] && Date.now() < presenceStickyOffline[id] && source !== "presence" && source !== "ws") {
+                    // игнор ложного online
+                    if (lastSeen) {
+                        var t0 = typeof lastSeen === "number" ? lastSeen : new Date(lastSeen).getTime();
+                        if (t0 < 1e12) t0 *= 1000;
+                        if (isFinite(t0)) presenceMap[id].lastSeen = t0;
+                    }
+                    return;
+                }
+                presenceMap[id].online = true;
+                delete presenceStickyOffline[id];
+            }
             if (lastSeen) {
                 var t = typeof lastSeen === "number" ? lastSeen : new Date(lastSeen).getTime();
+                if (typeof lastSeen === "string" && !/[zZ]$|[+-]\d{2}:?\d{2}$/.test(lastSeen.trim().replace(" ","T"))) {
+                    try { t = parseLastSeenMs(lastSeen); } catch (e) {}
+                }
                 if (t < 1e12) t *= 1000;
                 if (isFinite(t)) presenceMap[id].lastSeen = t;
-            } else if (online) {
+            } else if (online === true) {
                 presenceMap[id].lastSeen = Date.now();
             } else if (online === false) {
                 presenceMap[id].lastSeen = Date.now();
             }
-            // refresh UI if this is current chat
             if (selectedUserId && Number(selectedUserId) === id && currentChatPeer) {
                 if (online != null) currentChatPeer.is_online = !!online;
                 if (lastSeen) currentChatPeer.last_seen = lastSeen;
-                else if (online) currentChatPeer.last_seen = new Date().toISOString();
-                // don't override typing indicator
+                else if (online === false) currentChatPeer.last_seen = new Date().toISOString();
                 var el = document.getElementById("chatStatus");
                 if (el && !el.classList.contains("typing")) updateChatStatus(currentChatPeer);
             }
@@ -3196,7 +3305,7 @@
                     if (data.type === "call_signal") { await handleCallSignal(data); return; }
                     if (data.type === "message" && data.message) {
                         playNotify();
-                        if (data.message.sender_id) markPresence(data.message.sender_id, true, data.message.created_at);
+                        if (data.message.sender_id) markPresence(data.message.sender_id, true, data.message.created_at, "ws");
                         // new message unhides dialog
                         if (data.message.sender_id) delete hiddenDialogs[Number(data.message.sender_id)];
                         if (data.message.receiver_id) delete hiddenDialogs[Number(data.message.receiver_id)];
@@ -3240,7 +3349,7 @@
                             if (fromId != null && currentUser && Number(fromId) === Number(currentUser.id)) return;
                             if (fromId == null || Number(fromId) === Number(selectedUserId)) {
                                 setTypingStatus();
-                                markPresence(selectedUserId, true);
+                                markPresence(selectedUserId, true, null, "ws");
                                 clearTimeout(window.typingTimeout);
                                 window.typingTimeout = setTimeout(function(){ updateChatStatus(currentChatPeer); }, 3000);
                             }
@@ -3269,7 +3378,7 @@
                     if (data.type === "presence" || data.type === "user_status" || data.type === "online") {
                         var uid = data.user_id || data.id;
                         var onlineFlag = data.online != null ? data.online : data.is_online;
-                        markPresence(uid, onlineFlag, data.last_seen || null);
+                        markPresence(uid, onlineFlag, data.last_seen || null, "presence");
                         // обновить точку в списке чатов
                         try {
                             document.querySelectorAll(".dialog-item").forEach(function(el) {
@@ -3848,10 +3957,20 @@
             var row = document.createElement("div"); row.className = "message-row " + (mine ? "mine" : "theirs");
             var bubble = document.createElement("div"); bubble.className = "message-bubble"; bubble.dataset.id = msg.id;
             var text = document.createElement("div");
-            if (msg.deleted) { text.className = "deleted"; text.textContent = t("msg_deleted"); }
-            else if (isStickerText(msg.text || "")) { text.className = "sticker-msg"; text.textContent = (msg.text || "").trim(); }
-            else { text.textContent = msg.text || ""; }
-            bubble.appendChild(text);
+            text.className = "msg-body-text";
+            if (msg.deleted) { text.className = "deleted"; text.textContent = t("msg_deleted"); bubble.appendChild(text); }
+            else if (isStickerText(msg.text || "")) { text.className = "sticker-msg"; text.textContent = (msg.text || "").trim(); bubble.appendChild(text); }
+            else {
+                var rp = parseReplyPayload(msg.text || "");
+                if (rp) {
+                    appendReplyQuote(bubble, rp.name, rp.quote);
+                    text.textContent = rp.body || "";
+                    if (rp.body) bubble.appendChild(text);
+                } else {
+                    text.textContent = msg.text || "";
+                    if (msg.text) bubble.appendChild(text);
+                }
+            }
             if (msg.media_url && !msg.deleted) {
                 var url = mediaUrl(msg.media_url);
                 if (msg.media_type === "image") {
@@ -4937,8 +5056,9 @@
             if (!text) return;
             if (!requireAccount()) return;
             if (typeof replyingTo !== "undefined" && replyingTo) {
-                var q = (replyingTo.text || (replyingTo.media_type === "voice" ? "Голосовое" : (replyingTo.media_type === "video_note" ? "Кружок" : "Сообщение"))).slice(0, 60);
-                text = "↩️ " + q + "\n" + text;
+                var q = (replyingTo.text || (replyingTo.media_type === "voice" ? "Голосовое сообщение" : (replyingTo.media_type === "video_note" ? "Видеосообщение" : "Сообщение"))).slice(0, 120);
+                var who = replyingTo.name || (currentChatPeer && (currentChatPeer.display_name || currentChatPeer.username)) || "Пользователь";
+                text = buildReplyPayload(who, q, text);
                 if (input) input.value = text;
                 clearReplyingTo();
             }
