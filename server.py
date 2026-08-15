@@ -514,41 +514,33 @@ def get_auth_user(request: Request, update_last_seen: bool = True):
         auth = request.headers.get("Authorization") or ""
         if auth.lower().startswith("bearer "):
             token = auth[7:].strip()
-
     if not token:
         raise HTTPException(401, "Не авторизован")
-
     connection = db()
-
     session = connection.execute("""
         SELECT s.id AS session_id, s.user_id, s.expires_at, u.username
         FROM sessions s
         JOIN users u ON u.id = s.user_id
         WHERE s.token_hash = ?
     """, (hash_token(token),)).fetchone()
-
     if not session:
         connection.close()
         raise HTTPException(401, "Сессия недействительна")
-
     try:
         expires = datetime.fromisoformat(session["expires_at"])
     except Exception:
         expires = datetime.utcnow()
-
     if expires < datetime.utcnow():
         connection.execute("DELETE FROM sessions WHERE id = ?", (session["session_id"],))
         connection.commit()
         connection.close()
         raise HTTPException(401, "Сессия истекла")
-
     connection.execute("UPDATE sessions SET last_seen = ? WHERE id = ?",
                        (now(), session["session_id"]))
-
+    # !!! ЗАКОММЕНТИРОВАНО - НЕ ОБНОВЛЯЕМ last_seen при каждом запросе !!!
     # if update_last_seen:
-    #    connection.execute("UPDATE users SET last_seen = ? WHERE id = ?",
-    #                     (now(), session["user_id"]))
-
+    #     connection.execute("UPDATE users SET last_seen = ? WHERE id = ?",
+    #                        (now(), session["user_id"]))
     connection.commit()
     connection.close()
     return session["user_id"]
