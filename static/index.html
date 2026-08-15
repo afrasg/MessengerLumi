@@ -2731,17 +2731,10 @@
             }
             var raw = ls;
             if ((raw == null || raw === "") && user) raw = user.last_seen || user.lastSeen || user.was_online;
-            if (raw == null || raw === "") return false;
-            try {
-                var t;
-                if (typeof raw === "number") t = raw;
-                else if (typeof raw === "string" && /^\d+(\.\d+)?$/.test(String(raw).trim())) t = Number(raw);
-                else t = new Date(raw).getTime();
-                if (!isFinite(t) || t <= 0) return false;
-                if (t < 1e12) t = t * 1000;
-                // "в сети" только если last_seen свежий (90 сек) — иначе "был N назад"
-                return (Date.now() - t) / 1000 < 90;
-            } catch(e) { return false; }
+            var t = parseLastSeenMs(raw);
+            if (t == null) return false;
+            // "в сети" если last_seen свежий (2 мин)
+            return (Date.now() - t) / 1000 < 120;
         }
         var presenceMap = {};
         var hiddenDialogs = {};
@@ -3373,9 +3366,21 @@
             if (ls == null || ls === "") return null;
             try {
                 var t;
-                if (typeof ls === "number") t = ls;
-                else if (typeof ls === "string" && /^\d+(\.\d+)?$/.test(ls.trim())) t = Number(ls);
-                else t = new Date(ls).getTime();
+                if (typeof ls === "number") {
+                    t = ls;
+                } else if (typeof ls === "string") {
+                    var s = ls.trim();
+                    if (/^\d+(\.\d+)?$/.test(s)) {
+                        t = Number(s);
+                    } else {
+                        // бэкенд пишет UTC без Z → иначе сдвиг на часовой пояс (у тебя ~+4/+5 ч)
+                        s = s.replace(" ", "T");
+                        if (!/[zZ]$|[+-]\d{2}:?\d{2}$/.test(s)) s += "Z";
+                        t = new Date(s).getTime();
+                    }
+                } else {
+                    t = new Date(ls).getTime();
+                }
                 if (!isFinite(t) || t <= 0) return null;
                 if (t < 1e12) t *= 1000;
                 return t;
