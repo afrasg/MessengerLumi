@@ -2212,12 +2212,12 @@
                     <div class="profile-container">
                         <div class="card">
                             <h2><img width="24" height="24" src="https://img.icons8.ru/ios-filled/50/settings.png" alt="settings"> Настройки</h2>
-                            <div class="settings-tabs">
-                                <button class="active" data-tab="general" onclick="switchSettingsTab('general')">Общие</button>
-                                <button data-tab="privacy" onclick="switchSettingsTab('privacy')">Приватность</button>
-                                <button data-tab="devices" onclick="switchSettingsTab('devices')">Устройства</button>
-                                <button data-tab="accounts" onclick="switchSettingsTab('accounts')">Аккаунты</button>
-                                <button data-tab="calls" onclick="switchSettingsTab('calls')">Звонки</button>
+                            <div class="settings-tabs" id="settingsTabsBar">
+                                <button type="button" class="active" data-tab="general" onclick="switchSettingsTab('general')">Общие</button>
+                                <button type="button" data-tab="privacy" onclick="switchSettingsTab('privacy')">Приватность</button>
+                                <button type="button" data-tab="devices" onclick="switchSettingsTab('devices')">Сессии</button>
+                                <button type="button" data-tab="accounts" onclick="switchSettingsTab('accounts')">Аккаунты</button>
+                                <button type="button" data-tab="calls" onclick="switchSettingsTab('calls')">Звонки</button>
                             </div>
                             <div id="settingsTabGeneral" class="settings-tab active">
                                 <div class="setting"><label><span>Язык</span><select id="language" onchange="saveSettings()">
@@ -2671,11 +2671,15 @@
                 if (img2) setH2.appendChild(img2);
                 setH2.appendChild(document.createTextNode(" " + t("settings")));
             }
-            var tabs = document.querySelectorAll(".settings-tabs button");
-            if (tabs[0]) tabs[0].textContent = t("general");
-            if (tabs[1]) tabs[1].textContent = t("privacy");
-            if (tabs[2]) tabs[2].textContent = t("accounts");
-            if (tabs[3]) tabs[3].textContent = t("calls");
+            // подписи вкладок ТОЛЬКО по data-tab (не по индексу!)
+            document.querySelectorAll(".settings-tabs button[data-tab]").forEach(function(btn) {
+                var key = btn.getAttribute("data-tab");
+                if (key === "general") btn.textContent = t("general") || "Общие";
+                else if (key === "privacy") btn.textContent = t("privacy") || "Приватность";
+                else if (key === "devices") btn.textContent = "Сессии";
+                else if (key === "accounts") btn.textContent = t("accounts") || "Аккаунты";
+                else if (key === "calls") btn.textContent = t("calls") || "Звонки";
+            });
             // General settings labels
             var genSettings = document.querySelectorAll("#settingsTabGeneral .setting label span, #settingsTabGeneral .setting label");
             // better specific
@@ -2847,6 +2851,16 @@
             return false;
         }
         var presenceMap = {};
+        function isDmChatVisible() {
+            var chat = document.getElementById("chatView");
+            if (!chat || chat.classList.contains("hidden")) return false;
+            if (document.visibilityState === "hidden") return false;
+            // mobile: нужен open chat
+            if (typeof isMobileLayout === "function" && isMobileLayout()) {
+                if (!document.body.classList.contains("mobile-chat-open")) return false;
+            }
+            return !!selectedUserId;
+        }
         var replyingTo = null; // {id, text, name, media_type}
         
         // Устойчивый формат (не ломается в БД/превью): %%REPLY%%\nname\nquote\n%%\nbody
@@ -2967,7 +2981,11 @@
         }
         function previewMessageText(raw) {
             if (!raw) return "";
-            return stripToPlainReplyText(raw);
+            var s = String(raw);
+            if (s.indexOf("%%POLL%%") === 0) return "📊 Опрос";
+            if (s.indexOf("%%GIF%%") === 0) return "GIF";
+            if (s.indexOf("%%R%%") === 0 || s.indexOf("%%REPLY%%") === 0) return stripToPlainReplyText(s);
+            return stripToPlainReplyText(s);
         }
 
         function setReplyingTo(msg) {
@@ -3093,7 +3111,18 @@
         function withVerified(n,u) { if(u&&(u.is_verified||u.is_bot||u.username==="lumi")) return escapeHtml(n)+' <span class="verified">'+VERIFIED_SVG+'</span>'; return escapeHtml(n); }
         function showToast(t,b,o){ var s=document.getElementById("toastStack"); if(!s)return; var e=document.createElement("div"); e.className="toast"; e.innerHTML="<strong>"+escapeHtml(t)+"</strong><span>"+escapeHtml(b||"")+"</span>"; e.onclick=function(){e.remove();if(o)o();}; s.appendChild(e); setTimeout(function(){try{e.remove();}catch(e){}},5000); }
         function playNotify(){try{if(!notificationAudio){notificationAudio=new Audio("https://cdn.pixabay.com/download/audio/2022/05/22/audio_04e0e1b2c3.mp3");}notificationAudio.currentTime=0;notificationAudio.play().catch(function(){});}catch(e){}}
-        function playSend(){try{if(!sendAudio){sendAudio=new Audio("https://cdn.pixabay.com/download/audio/2022/01/18/audio_d2b8b4c3f4.mp3");}sendAudio.currentTime=0;sendAudio.play().catch(function(){});}catch(e){}}
+        function playSend(){
+            try {
+                if (!sendAudio) {
+                    sendAudio = new Audio("https://cdn.pixabay.com/download/audio/2022/01/18/audio_d2b8b4c3f4.mp3");
+                    sendAudio.preload = "auto";
+                    try { sendAudio.load(); } catch (e2) {}
+                }
+                sendAudio.currentTime = 0;
+                var p = sendAudio.play();
+                if (p && p.catch) p.catch(function(){});
+            } catch (e) {}
+        }
         function playRing(){try{if(!ringAudio){ringAudio=new Audio("https://cdn.pixabay.com/download/audio/2022/03/10/audio_1a4a8b7d6e.mp3");ringAudio.loop=true;}ringAudio.currentTime=0;ringAudio.play().catch(function(){});}catch(e){}}
         function stopRing(){try{if(ringAudio){ringAudio.pause();ringAudio.currentTime=0;}}catch(e){}}
         function openModal(h){document.getElementById("modalContent").innerHTML=h;document.getElementById("modalBg").classList.remove("hidden");}
@@ -3369,6 +3398,13 @@
             await startApp();
         }
         async function startApp() {
+            try {
+                if (!sendAudio) {
+                    sendAudio = new Audio("https://cdn.pixabay.com/download/audio/2022/01/18/audio_d2b8b4c3f4.mp3");
+                    sendAudio.preload = "auto";
+                    sendAudio.load();
+                }
+            } catch (e) {}
             var r = await req("/api/me");
             if (!r.ok) { token = ""; localStorage.removeItem("token"); document.getElementById("auth").classList.remove("hidden"); document.getElementById("app").classList.add("hidden"); return; }
             currentUser = await safeJson(r);
@@ -3473,9 +3509,15 @@
                         if (data.message.receiver_id) delete hiddenDialogs[Number(data.message.receiver_id)];
                         notifyNewMessage(data.message, "private");
                         if (selectedUserId && (Number(data.message.sender_id) === Number(selectedUserId) || Number(data.message.receiver_id) === Number(selectedUserId))) {
-                            await loadMessages(selectedUserId);
-                            if (!(currentUser && Number(data.message.sender_id) === Number(currentUser.id))) {
-                                animateLastMessages(1);
+                            // галочки/прочтение только если чат реально открыт на экране
+                            if (isDmChatVisible()) {
+                                await loadMessages(selectedUserId);
+                                if (!(currentUser && Number(data.message.sender_id) === Number(currentUser.id))) {
+                                    animateLastMessages(1);
+                                }
+                            } else {
+                                // просто обновить список чатов, не помечать прочитанным
+                                try { await loadDialogs(); } catch (e) {}
                             }
                         }
                         await loadDialogs();
@@ -3987,8 +4029,10 @@
             if (input) { input.disabled = !enabled; input.placeholder = enabled ? "Сообщение..." : t("unavailable"); }
             if (btn) { btn.disabled = !enabled; btn.style.opacity = enabled ? "1" : "0.4"; }
         }
-        async function loadMessages(userId) {
-            var r = await req("/api/messages/" + userId);
+        async function loadMessages(userId, opts) {
+            opts = opts || {};
+            var mark = (opts.markRead !== false && isDmChatVisible()) ? "1" : "0";
+            var r = await req("/api/messages/" + userId + "?mark_read=" + mark);
             if (!r.ok) return;
             var msgs = await safeJson(r);
             var container = document.getElementById("messages");
@@ -4567,7 +4611,7 @@
             closeStickerPanel();
             if (!selectedUserId) { alert("GIF пока только в ЛС"); return; }
             var r = await req("/api/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ receiver_id: selectedUserId, text: "%%GIF%%" + url }) });
-            if (r.ok) { await loadMessages(selectedUserId); animateLastMessages(1); playSend(); }
+            if (r.ok) { playSend(); await loadMessages(selectedUserId); animateLastMessages(1); }
         }
         function sendSticker(sticker) {
             if (!requireAccount()) return;
@@ -4741,8 +4785,15 @@
                 if (!requireAccount()) return;
                 var r = await req("/api/posts/" + post.id + "/repost", { method: "POST" });
                 if (!r.ok) { var d = await safeJson(r); alert((d&&d.detail)||"Ошибка"); return; }
-                repost.innerHTML = '<img width="20" height="20" src="https://img.icons8.ru/external-inkubators-basic-outline-inkubators/50/external-repost-user-interface-inkubators-basic-outline-inkubators.png" alt="repost"> '+((post.reposts_count||0)+1);
-                if (typeof showToast === "function") showToast("Репост", "Опубликовано у вас");
+                var d = await safeJson(r);
+                if (d && d.removed) {
+                    post.reposts_count = Math.max(0, (post.reposts_count||1)-1);
+                    if (typeof showToast === "function") showToast("Репост", "Убран");
+                } else {
+                    post.reposts_count = (post.reposts_count||0)+1;
+                    if (typeof showToast === "function") showToast("Репост", "В вашем профиле");
+                }
+                repost.innerHTML = '<img width="20" height="20" src="https://img.icons8.ru/external-inkubators-basic-outline-inkubators/50/external-repost-user-interface-inkubators-basic-outline-inkubators.png" alt="repost"> '+(post.reposts_count||0);
             };
             actions.appendChild(like); actions.appendChild(comments); actions.appendChild(repost); actions.appendChild(share);
             if (Number(post.author_id) === Number(currentUser.id)) {
@@ -4924,6 +4975,22 @@
             var saveProf = document.querySelector("#profileView .card:first-child .btn-row .primary");
             if (saveProf) saveProf.style.display = isGuest ? "none" : "";
             if (user.theme) applyTheme(user.theme);
+        
+            var box = document.getElementById("myProfilePosts");
+            if (!box) {
+                var pv = document.querySelector("#profileView .profile-container") || document.getElementById("profileView");
+                if (pv) {
+                    box = document.createElement("div");
+                    box.id = "myProfilePosts";
+                    box.className = "card";
+                    box.style.marginTop = "12px";
+                    pv.appendChild(box);
+                }
+            }
+            if (box && currentUser) {
+                box.innerHTML = "";
+                loadUserPostsInto(box, currentUser.id);
+            }
         }
         async function saveProfile() {
             if (!requireAccount()) return;
@@ -4997,14 +5064,31 @@
         }
 
         // SETTINGS
+        function fixSettingsTabLabels() {
+            document.querySelectorAll(".settings-tabs button[data-tab]").forEach(function(btn) {
+                var key = btn.getAttribute("data-tab");
+                if (key === "general") btn.textContent = (typeof t === "function" ? t("general") : null) || "Общие";
+                else if (key === "privacy") btn.textContent = (typeof t === "function" ? t("privacy") : null) || "Приватность";
+                else if (key === "devices") btn.textContent = "Сессии";
+                else if (key === "accounts") btn.textContent = (typeof t === "function" ? t("accounts") : null) || "Аккаунты";
+                else if (key === "calls") btn.textContent = (typeof t === "function" ? t("calls") : null) || "Звонки";
+            });
+        }
         function switchSettingsTab(tab) {
+            fixSettingsTabLabels();
             document.querySelectorAll(".settings-tabs button").forEach(function(b) {
                 b.classList.toggle("active", b.getAttribute("data-tab") === tab);
             });
             document.querySelectorAll(".settings-tab").forEach(function(el) {
                 el.classList.remove("active");
             });
-            var map = { general: "settingsTabGeneral", privacy: "settingsTabPrivacy", accounts: "settingsTabAccounts", calls: "settingsTabCalls", devices: "settingsTabDevices" };
+            var map = {
+                general: "settingsTabGeneral",
+                privacy: "settingsTabPrivacy",
+                devices: "settingsTabDevices",
+                accounts: "settingsTabAccounts",
+                calls: "settingsTabCalls"
+            };
             var id = map[tab] || "settingsTabGeneral";
             var panel = document.getElementById(id);
             if (panel) panel.classList.add("active");
@@ -5058,6 +5142,7 @@
             loadSessions();
         }
         async function showSettings() {
+            try { fixSettingsTabLabels(); } catch (e) {}
             if (isMobileLayout() && typeof mobileOpenMain === "function") { mobileOpenMain(); mobileSetTab("settings"); document.body.classList.remove("mobile-chat-open"); }
 
             showOnly("settingsView");
@@ -5503,6 +5588,7 @@
             var text = (input?.value || "").trim();
             if (!text) return;
             if (!requireAccount()) return;
+            playSend();
             if (typeof replyingTo !== "undefined" && replyingTo) {
                 var q = (replyingTo.text || (replyingTo.media_type === "voice" ? "Голосовое сообщение" : (replyingTo.media_type === "video_note" ? "Видеосообщение" : "Сообщение"))).slice(0, 120);
                 var who = replyingTo.name || (currentChatPeer && (currentChatPeer.display_name || currentChatPeer.username)) || "Пользователь";
@@ -5510,7 +5596,6 @@
                 if (input) input.value = text;
                 clearReplyingTo();
             }
-            playSend();
             markComposerSending(true);
             try {
                 if (selectedGroupId) {
@@ -5620,7 +5705,7 @@
             } else {
                 html += '<button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-bottom:6px" onclick="closeModal();showProfile()">Редактировать</button>';
             }
-            html += '<div id="userProfilePosts" style="margin-top:12px;text-align:left"><div style="font-size:13px;color:#8a8a9a;margin-bottom:6px">Посты</div></div>';
+            html += '<div id="userProfilePosts" style="margin-top:12px;text-align:left"></div>';
             html += '<button class="secondary" style="width:100%;padding:10px;border-radius:10px;background:#2a2a38;border:none;color:#fff;margin-top:8px" onclick="closeModal()">Закрыть</button></div>';
             openModal(html);
             var postsBox = document.getElementById("userProfilePosts");
@@ -5631,21 +5716,58 @@
                 var r = await req("/api/users/" + userId + "/posts");
                 if (!r.ok) return;
                 var posts = await safeJson(r);
-                if (!posts.length) {
-                    container.innerHTML += '<div style="color:#8a8a9a;text-align:center;padding:8px">Нет постов</div>';
-                    return;
+                var originals = posts.filter(function(p){ return !p.repost_of; });
+                var reposts = posts.filter(function(p){ return !!p.repost_of; });
+                var isMe = currentUser && Number(userId) === Number(currentUser.id);
+
+                var postsTitle = document.createElement("div");
+                postsTitle.style.cssText = "font-size:13px;color:#8a8a9a;margin:10px 0 6px;font-weight:600";
+                postsTitle.textContent = "Посты";
+                container.appendChild(postsTitle);
+                if (!originals.length) {
+                    var empty = document.createElement("div");
+                    empty.style.cssText = "color:#8a8a9a;text-align:center;padding:8px;font-size:13px";
+                    empty.textContent = "Нет постов";
+                    container.appendChild(empty);
                 }
-                posts.forEach(function(p) {
-                    var card = document.createElement("div");
-                    card.style.cssText = "background:#1a1a24;border-radius:10px;padding:10px;margin-top:8px;text-align:left";
-                    var head = "";
-                    if (p.repost_of) {
-                        head = '<div style="font-size:12px;color:#8a8a9a;margin-bottom:4px">↻ репост '+(p.origin_display_name||p.origin_username||"")+'</div>';
-                    }
-                    card.innerHTML = head + '<div style="font-size:14px;color:#e8eaed;white-space:pre-wrap">'+escapeHtml(p.text||"")+'</div><div style="font-size:11px;color:#6a6a7a;margin-top:6px">'+new Date(p.created_at).toLocaleString()+' · ♥ '+(p.likes_count||0)+' · ↻ '+(p.reposts_count||0)+'</div>';
-                    container.appendChild(card);
-                });
+                originals.forEach(function(p){ container.appendChild(renderProfilePostCard(p, false, isMe)); });
+
+                var repTitle = document.createElement("div");
+                repTitle.style.cssText = "font-size:13px;color:#8a8a9a;margin:14px 0 6px;font-weight:600";
+                repTitle.textContent = "Репосты";
+                container.appendChild(repTitle);
+                if (!reposts.length) {
+                    var empty2 = document.createElement("div");
+                    empty2.style.cssText = "color:#8a8a9a;text-align:center;padding:8px;font-size:13px";
+                    empty2.textContent = "Нет репостов";
+                    container.appendChild(empty2);
+                }
+                reposts.forEach(function(p){ container.appendChild(renderProfilePostCard(p, true, isMe)); });
             } catch (e) {}
+        }
+        function renderProfilePostCard(p, isRepost, isMe) {
+            var card = document.createElement("div");
+            card.style.cssText = "background:#1a1a24;border-radius:10px;padding:10px;margin-top:8px;text-align:left";
+            var head = "";
+            if (isRepost) {
+                head = '<div style="font-size:12px;color:#8a8a9a;margin-bottom:4px">↻ репост ' + escapeHtml(p.origin_display_name || p.origin_username || "") + '</div>';
+            }
+            card.innerHTML = head + '<div style="font-size:14px;color:#e8eaed;white-space:pre-wrap">' + escapeHtml(p.text || "") + '</div>' +
+                '<div style="font-size:11px;color:#6a6a7a;margin-top:6px;display:flex;justify-content:space-between;align-items:center">' +
+                '<span>' + new Date(p.created_at).toLocaleString() + ' · ♥ ' + (p.likes_count || 0) + '</span></div>';
+            if (isMe && isRepost) {
+                var btn = document.createElement("button");
+                btn.textContent = "Убрать репост";
+                btn.style.cssText = "margin-top:8px;padding:6px 10px;border-radius:8px;border:none;background:#e74c4c;color:#fff;font-size:12px;cursor:pointer;width:100%";
+                btn.onclick = async function() {
+                    if (!confirm("Убрать репост?")) return;
+                    var r = await req("/api/posts/" + p.id, { method: "DELETE" });
+                    if (r.ok) card.remove();
+                    else alert("Ошибка");
+                };
+                card.appendChild(btn);
+            }
+            return card;
         }
 
 
@@ -6124,7 +6246,7 @@
             }
             // опрос доступен везде
             if (selectedUserId || selectedGroupId || selectedChannelId || selectedCommunityChatId) {
-                addBtn("📊 Опрос", function(){ openCreatePoll(); });
+                addBtn("Опрос", function(){ openCreatePoll(); });
             }
             if (selectedUserId) {
                 addBtn(t("to_favorites"), function(){ favoritePickMode = true; alert(t("fav_hint")); });
@@ -6287,7 +6409,7 @@
                 if (ch.joined) html += '<button class="secondary" style="width:100%;padding:10px;border-radius:10px;background:#e74c4c;border:none;color:#fff;margin-bottom:6px" onclick="closeModal();leaveChannel()">Выйти</button>';
                 else html += '<button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-bottom:6px" onclick="closeModal();joinChannelNow()">Вступить</button>';
             }
-            html += '<div id="userProfilePosts" style="margin-top:12px;text-align:left"><div style="font-size:13px;color:#8a8a9a;margin-bottom:6px">Посты</div></div>';
+            html += '<div id="userProfilePosts" style="margin-top:12px;text-align:left"></div>';
             html += '<button class="secondary" style="width:100%;padding:10px;border-radius:10px;background:#2a2a38;border:none;color:#fff;margin-top:8px" onclick="closeModal()">Закрыть</button></div>';
             openModal(html);
             var postsBox = document.getElementById("userProfilePosts");
@@ -6300,7 +6422,7 @@
             var cm = await safeJson(r);
             var html = '<div style="text-align:center"><div style="font-size:18px;font-weight:700;color:#e8eaed;margin-bottom:8px">'+escapeHtml(cm.name||"")+'</div>';
             html += '<div style="color:#8a8a9a;margin-bottom:12px">'+escapeHtml(cm.description||"Нет описания")+'</div>';
-            html += '<div id="userProfilePosts" style="margin-top:12px;text-align:left"><div style="font-size:13px;color:#8a8a9a;margin-bottom:6px">Посты</div></div>';
+            html += '<div id="userProfilePosts" style="margin-top:12px;text-align:left"></div>';
             html += '<button class="secondary" style="width:100%;padding:10px;border-radius:10px;background:#2a2a38;border:none;color:#fff;margin-top:8px" onclick="closeModal()">Закрыть</button></div>';
             openModal(html);
             var postsBox = document.getElementById("userProfilePosts");
