@@ -396,7 +396,8 @@ init_db()
 # =========================================================
 
 def now():
-    return datetime.utcnow().isoformat()
+    # UTC с суффиксом Z — фронт корректно считает last_seen
+    return datetime.utcnow().isoformat() + "Z"
 
 
 def hash_password(password):
