@@ -4026,24 +4026,26 @@ async def broadcast_presence(user_id: int, online: bool):
         LIMIT 200
     """, (user_id, user_id, user_id)).fetchall()
     connection.close()
-   payload = {
-    "type": "presence",
-    "user_id": user_id,
-    "online": online,
-    "last_seen": datetime.utcnow().isoformat() + "Z" if not online else None,
-}
+    
+    # Отправляем статус только тем, с кем есть диалог
+    payload = {
+        "type": "presence",
+        "user_id": user_id,
+        "online": online,
+        "last_seen": datetime.utcnow().isoformat() + "Z" if not online else None,
     }
+    
     sent = set()
     for row in peers:
         pid = row["peer_id"]
         if pid and pid != user_id:
             sent.add(pid)
             await send_ws(pid, payload)
-    # также всем, у кого сейчас открыт WS (быстрый апдейт статуса)
+    
+    # Также отправляем всем активным WS-клиентам
     for pid in list(connections.keys()):
         if pid != user_id and pid not in sent:
             await send_ws(pid, payload)
-
 
 
 
