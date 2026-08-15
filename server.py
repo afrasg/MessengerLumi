@@ -3853,6 +3853,63 @@ def get_dialogs(request: Request):
     return result
 
 
+
+# =========================================================
+# PRESENCE (HTTP fallback for instant offline on page close)
+# =========================================================
+
+@app.post("/api/presence")
+async def set_presence(request: Request):
+    """Быстрый сигнал online/offline (в т.ч. через sendBeacon при закрытии вкладки)."""
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+
+    # sendBeacon не шлёт Authorization — token из body/query
+    token = data.get("token") or request.query_params.get("token")
+    user_id = None
+    if token and not request.cookies.get(SESSION_COOKIE):
+        connection = db()
+        session = connection.execute("""
+            SELECT s.id AS session_id, s.user_id, s.expires_at
+            FROM sessions s
+            WHERE s.token_hash = ?
+        """, (hash_token(token),)).fetchone()
+        if not session:
+            connection.close()
+            raise HTTPException(401, "Не авторизован")
+        try:
+            expires = datetime.fromisoformat(session["expires_at"])
+        except Exception:
+            expires = datetime.utcnow()
+        if expires < datetime.utcnow():
+            connection.close()
+            raise HTTPException(401, "Сессия истекла")
+        user_id = session["user_id"]
+        connection.close()
+    else:
+        user_id = get_auth_user(request, update_last_seen=False)
+
+    online = bool(data.get("online", True))
+
+    connection = db()
+    connection.execute("UPDATE users SET last_seen = ? WHERE id = ?", (now(), user_id))
+    connection.commit()
+    connection.close()
+
+    has_ws = bool(connections.get(user_id))
+    if online:
+        await broadcast_presence(user_id, True)
+    else:
+        if not has_ws:
+            await broadcast_presence(user_id, False)
+
+    return {"ok": True, "online": online if online else (not has_ws)}
+
+
 # =========================================================
 # WEBSOCKET
 # =========================================================
@@ -3954,15 +4011,16 @@ async def websocket_endpoint(websocket: WebSocket):
         connections[user_id].discard(websocket)
         if not connections[user_id]:
             connections.pop(user_id, None)
+            # сначала broadcast offline (мгновенно у клиентов), потом last_seen
+            try:
+                await broadcast_presence(user_id, False)
+            except Exception:
+                pass
             try:
                 connection = db()
                 connection.execute("UPDATE users SET last_seen = ? WHERE id = ?", (now(), user_id))
                 connection.commit()
                 connection.close()
-            except Exception:
-                pass
-            try:
-                await broadcast_presence(user_id, False)
             except Exception:
                 pass
 
