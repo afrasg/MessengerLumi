@@ -3701,10 +3701,19 @@ function isUserOnline(ls, user) {
                     else if (selectedChannelId) { await loadChannelMessages(selectedChannelId); }
                     else if (selectedCommunityChatId) { await loadCommunityChatMessages(selectedCommunityChatId); }
                 };
-               ws.onclose = function(){ 
+             ws.onclose = function() {
     console.log("WebSocket closed");
-    // УБИРАЕМ АВТОМАТИЧЕСКОЕ ПЕРЕПОДКЛЮЧЕНИЕ
-    // if(token) setTimeout(connectWS, 3000); 
+    // Переподключаемся только если есть токен и страница видима
+    if (token && document.visibilityState === "visible") {
+        console.log("Reconnecting WebSocket...");
+        setTimeout(function() {
+            // Проверяем, не истек ли токен
+            if (token) {
+                connectWS();
+            }
+        }, 2000);
+    }
+};
 };
         }
 
