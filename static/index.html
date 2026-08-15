@@ -499,6 +499,23 @@
             body.theme-light #messages {
                 background: #8ba6c1 !important; /* Telegram light wallpaper-ish */
             }
+            /* custom chat wallpaper (mobile) — must override theme bg */
+            .messages.has-wallpaper,
+            #messages.has-wallpaper {
+                background-color: transparent !important;
+                background-size: cover !important;
+                background-position: center center !important;
+                background-repeat: no-repeat !important;
+            }
+            body.theme-light .messages.has-wallpaper,
+            body.theme-light #messages.has-wallpaper {
+                background-color: transparent !important;
+            }
+            .chat-container.has-wallpaper {
+                background-size: cover !important;
+                background-position: center center !important;
+                background-repeat: no-repeat !important;
+            }
 
             .message-bubble {
                 max-width: 82% !important;
@@ -2763,6 +2780,64 @@
             return false;
         }
         var presenceMap = {};
+        var replyingTo = null; // {id, text, name, media_type}
+        function setReplyingTo(msg) {
+            if (!msg) { clearReplyingTo(); return; }
+            replyingTo = {
+                id: msg.id,
+                text: msg.text || "",
+                name: msg.sender_name || msg.sender_username || "",
+                media_type: msg.media_type || null
+            };
+            var bar = document.getElementById("replyBar");
+            if (!bar) {
+                bar = document.createElement("div");
+                bar.id = "replyBar";
+                bar.style.cssText = "display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(51,144,236,.12);border-left:3px solid #3390ec;margin:0 8px 6px;border-radius:8px;";
+                var composer = document.querySelector(".composer");
+                if (composer) composer.parentNode.insertBefore(bar, composer);
+            }
+            var preview = msg.media_type === "voice" ? "🎤 Голосовое" :
+                (msg.media_type === "video_note" ? "⭕ Кружок" :
+                (msg.media_type === "image" ? "🖼 Фото" : (msg.text || "").slice(0, 80)));
+            bar.innerHTML = '<div style="flex:1;min-width:0"><div style="font-size:12px;color:#3390ec;font-weight:600">Ответ</div><div style="font-size:13px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escapeHtml(preview) + '</div></div><button type="button" id="replyBarClose" style="border:none;background:transparent;color:#fff;font-size:18px;cursor:pointer;padding:4px 8px">×</button>';
+            bar.style.display = "flex";
+            var cl = document.getElementById("replyBarClose");
+            if (cl) cl.onclick = clearReplyingTo;
+            var input = document.getElementById("messageInput");
+            if (input) input.focus();
+        }
+        function clearReplyingTo() {
+            replyingTo = null;
+            var bar = document.getElementById("replyBar");
+            if (bar) bar.style.display = "none";
+        }
+        function broadcastActivity(activity) {
+            if (!selectedUserId || !ws || ws.readyState !== 1) return;
+            try {
+                ws.send(JSON.stringify({
+                    type: "activity",
+                    target_id: Number(selectedUserId),
+                    activity: activity || null
+                }));
+            } catch (e) {}
+        }
+        function showPeerActivity(activity) {
+            var el = document.getElementById("chatStatus");
+            if (!el) return;
+            if (activity === "voice") {
+                el.textContent = "записывает голосовое сообщение…";
+                el.className = "status typing";
+                return;
+            }
+            if (activity === "video_note") {
+                el.textContent = "записывает видеосообщение…";
+                el.className = "status typing";
+                return;
+            }
+            updateChatStatus(currentChatPeer);
+        }
+
         var hiddenDialogs = {};
         function markPresence(userId, online, lastSeen) {
             if (userId == null) return;
@@ -3078,17 +3153,28 @@
         }
 
         
-        window.addEventListener("pagehide", function() {
+        function forceOfflineSignal() {
+            try {
+                if (ws && ws.readyState === 1) {
+                    ws.send(JSON.stringify({ type: "presence", online: false }));
+                    if (selectedUserId) {
+                        ws.send(JSON.stringify({ type: "activity", target_id: Number(selectedUserId), activity: null }));
+                        ws.send(JSON.stringify({ type: "typing_stop", target_id: Number(selectedUserId) }));
+                    }
+                }
+            } catch (e) {}
             try { if (ws) { ws.onclose = null; ws.close(); } } catch (e) {}
-        });
-        window.addEventListener("beforeunload", function() {
-            try { if (ws) { ws.onclose = null; ws.close(); } } catch (e) {}
-        });
+        }
+        window.addEventListener("pagehide", forceOfflineSignal);
+        window.addEventListener("beforeunload", forceOfflineSignal);
         document.addEventListener("visibilitychange", function() {
             if (document.visibilityState === "hidden") {
                 try {
                     if (ws && ws.readyState === 1) {
                         ws.send(JSON.stringify({ type: "presence", online: false }));
+                        if (selectedUserId) {
+                            ws.send(JSON.stringify({ type: "activity", target_id: Number(selectedUserId), activity: null }));
+                        }
                     }
                 } catch (e) {}
             } else if (document.visibilityState === "visible" && token) {
@@ -3169,6 +3255,17 @@
                         }
                         return;
                     }
+                    if (data.type === "activity") {
+                        var fromA = data.user_id;
+                        if (selectedUserId && Number(fromA) === Number(selectedUserId)) {
+                            showPeerActivity(data.activity);
+                            clearTimeout(window.activityTimeout);
+                            if (data.activity) {
+                                window.activityTimeout = setTimeout(function(){ showPeerActivity(null); }, 60000);
+                            }
+                        }
+                        return;
+                    }
                     if (data.type === "presence" || data.type === "user_status" || data.type === "online") {
                         var uid = data.user_id || data.id;
                         var onlineFlag = data.online != null ? data.online : data.is_online;
@@ -3185,9 +3282,9 @@
                             else if (onlineFlag === false) currentChatPeer.last_seen = new Date().toISOString();
                             updateChatStatus(currentChatPeer);
                         }
-                        // подтянуть is_online в сайдбаре
+                        // сайдбар без задержки статуса
                         if (onlineFlag === false || onlineFlag === true) {
-                            loadDialogs();
+                            setTimeout(function(){ loadDialogs(); }, 50);
                         }
                         return;
                     }
@@ -3505,7 +3602,7 @@
                         if (el && !el.classList.contains("typing")) updateChatStatus(currentChatPeer);
                     }
                 } catch (e) {}
-            }, 15000);
+            }, 5000);
         }
 
         function updateChatStatus(user) {
@@ -3531,16 +3628,47 @@
         }
         function applyChatWallpaper(url, blur) {
             var chat = document.querySelector(".chat-container");
-            if (!chat) return;
-            if (!url) { chat.style.background = ""; return; }
-            chat.style.backgroundImage = "url(" + url + ")";
-            chat.style.backgroundSize = "cover";
-            chat.style.backgroundPosition = "center";
             var msgs = document.getElementById("messages");
-            if (msgs) {
-                msgs.style.backdropFilter = blur ? "blur(8px)" : "";
-                msgs.style.background = blur ? "rgba(10,10,15,0.6)" : "transparent";
+            function clearBg(el) {
+                if (!el) return;
+                el.classList.remove("has-wallpaper");
+                el.style.removeProperty("background-image");
+                el.style.removeProperty("background-size");
+                el.style.removeProperty("background-position");
+                el.style.removeProperty("background-repeat");
+                el.style.removeProperty("background-color");
+                el.style.removeProperty("background");
+                el.style.removeProperty("backdrop-filter");
+                el.style.removeProperty("-webkit-backdrop-filter");
             }
+            if (!url) {
+                clearBg(chat);
+                clearBg(msgs);
+                return;
+            }
+            // экранируем url для CSS
+            var safe = String(url).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "");
+            var cssUrl = 'url("' + safe + '")';
+            function setWall(el) {
+                if (!el) return;
+                el.classList.add("has-wallpaper");
+                el.style.setProperty("background-image", cssUrl, "important");
+                el.style.setProperty("background-size", "cover", "important");
+                el.style.setProperty("background-position", "center center", "important");
+                el.style.setProperty("background-repeat", "no-repeat", "important");
+                el.style.setProperty("background-attachment", "local", "important");
+                if (blur) {
+                    el.style.setProperty("background-color", "rgba(10,10,15,0.45)", "important");
+                    el.style.setProperty("backdrop-filter", "blur(6px)", "important");
+                    el.style.setProperty("-webkit-backdrop-filter", "blur(6px)", "important");
+                } else {
+                    el.style.setProperty("background-color", "transparent", "important");
+                    el.style.removeProperty("backdrop-filter");
+                    el.style.removeProperty("-webkit-backdrop-filter");
+                }
+            }
+            setWall(chat);
+            setWall(msgs);
         }
         function setComposerEnabled(enabled) {
             var input = document.getElementById("messageInput");
@@ -3775,26 +3903,69 @@
             bubble.appendChild(meta);
             row.appendChild(bubble);
             container.appendChild(row);
-            if (mine && !msg.deleted) {
-                bubble.addEventListener("click", function(e){
-                    e.stopPropagation();
-                    if (favoritePickMode) { req("/api/messages/" + msg.id + "/favorite", { method: "POST" }).then(function(){ alert(t("added_fav")); }); return; }
+            if (!msg.deleted) {
+                function openCtx(e) {
+                    if (e) { e.preventDefault(); e.stopPropagation(); }
+                    if (favoritePickMode) {
+                        req("/api/messages/" + msg.id + "/favorite", { method: "POST" }).then(function(){ alert(t("added_fav")); });
+                        return;
+                    }
                     openMessageContext(msg, bubble);
-                });
-            } else if (!mine && !msg.deleted) {
-                bubble.addEventListener("click", function(e){
-                    if (favoritePickMode) { e.stopPropagation(); req("/api/messages/" + msg.id + "/favorite", { method: "POST" }).then(function(){ alert(t("added_fav")); }); }
-                });
+                }
+                bubble.addEventListener("contextmenu", openCtx);
+                // long press for mobile
+                var lpTimer = null;
+                bubble.addEventListener("touchstart", function(e) {
+                    if (lpTimer) clearTimeout(lpTimer);
+                    lpTimer = setTimeout(function(){ openCtx(e); }, 450);
+                }, { passive: true });
+                bubble.addEventListener("touchend", function(){ if (lpTimer) clearTimeout(lpTimer); lpTimer = null; });
+                bubble.addEventListener("touchmove", function(){ if (lpTimer) clearTimeout(lpTimer); lpTimer = null; });
+                if (mine) {
+                    bubble.addEventListener("click", function(e){
+                        // desktop click still opens menu for own msgs
+                        if (window.matchMedia && window.matchMedia("(pointer: fine)").matches) openCtx(e);
+                    });
+                }
             }
         }
         function openMessageContext(msg, el) {
             closeContext();
+            if (!msg || msg.deleted) return;
+            var mine = currentUser && Number(msg.sender_id) === Number(currentUser.id);
             var menu = document.createElement("div"); menu.className = "context-menu";
-            var edit = document.createElement("button"); edit.textContent = t("edit"); edit.onclick = function(){ closeContext(); openEditMessage(msg); };
-            var copy = document.createElement("button"); copy.textContent = t("copy"); copy.onclick = async function(){ try { await navigator.clipboard.writeText(msg.text || ""); } catch(ex) {} closeContext(); };
-            var forward = document.createElement("button"); forward.textContent = t("forward"); forward.onclick = function(){ closeContext(); openForwardDialog(msg); };
-            var del = document.createElement("button"); del.className = "danger"; del.textContent = t("delete"); del.onclick = function(){ closeContext(); selectedMessageId = msg.id; deleteSelectedMessage(); };
-            menu.appendChild(edit); menu.appendChild(copy); menu.appendChild(forward); menu.appendChild(del);
+            function addItem(label, fn, danger) {
+                var b = document.createElement("button");
+                b.textContent = label;
+                if (danger) b.className = "danger";
+                b.onclick = function(){ closeContext(); fn(); };
+                menu.appendChild(b);
+            }
+            // Ответить — для чужих и своих в ЛС
+            if (selectedUserId) {
+                addItem("Ответить", function(){ setReplyingTo(msg); });
+            }
+            addItem("Копировать", async function(){
+                var text = msg.text || "";
+                if (!text && msg.media_type === "voice") text = "Голосовое сообщение";
+                if (!text && msg.media_type === "video_note") text = "Видеосообщение";
+                if (!text && msg.media_url) text = mediaUrl(msg.media_url);
+                try { await navigator.clipboard.writeText(text); } catch (ex) {
+                    try {
+                        var ta = document.createElement("textarea");
+                        ta.value = text; document.body.appendChild(ta); ta.select();
+                        document.execCommand("copy"); ta.remove();
+                    } catch (e2) {}
+                }
+            });
+            addItem("Переслать", function(){ openForwardDialog(msg); });
+            // Редактировать только свой текст (не медиа)
+            if (mine && !msg.media_type && (msg.text || "").length) {
+                addItem(t("edit") || "Изменить", function(){ openEditMessage(msg); });
+            }
+            if (mine) {
+                addItem(t("delete") || "Удалить", function(){ selectedMessageId = msg.id; deleteSelectedMessage(); }, true);
+            }
             document.body.appendChild(menu);
             var rect = el.getBoundingClientRect();
             var left = rect.left, top = rect.bottom + 6;
@@ -4765,6 +4936,12 @@
             var text = (input?.value || "").trim();
             if (!text) return;
             if (!requireAccount()) return;
+            if (typeof replyingTo !== "undefined" && replyingTo) {
+                var q = (replyingTo.text || (replyingTo.media_type === "voice" ? "Голосовое" : (replyingTo.media_type === "video_note" ? "Кружок" : "Сообщение"))).slice(0, 60);
+                text = "↩️ " + q + "\n" + text;
+                if (input) input.value = text;
+                clearReplyingTo();
+            }
             playSend();
             markComposerSending(true);
             try {
@@ -5107,6 +5284,7 @@
                 videoNoteStart = Date.now();
                 videoNoteRecorder.start(100);
                 videoNoteRecording = true;
+                broadcastActivity("video_note");
                 var btn = document.getElementById("videoNoteBtn");
                 if (btn) btn.classList.add("recording");
                 renderVideoNoteRecordingUI();
@@ -5135,6 +5313,7 @@
                 videoNoteChunks = [];
                 videoNoteRecorder.start(100);
                 videoNoteRecording = true;
+                broadcastActivity("video_note");
                 renderVideoNoteRecordingUI();
             } catch (err) {
                 alert("Не удалось переключить камеру");
@@ -5146,6 +5325,7 @@
         function stopVideoNote() {
             if (!videoNoteRecording) return;
             videoNoteRecording = false;
+            broadcastActivity(null);
             var btn = document.getElementById("videoNoteBtn");
             if (btn) btn.classList.remove("recording");
             try {
@@ -5257,18 +5437,21 @@
                     var blob = new Blob(voiceChunks, { type: mime });
                     var ext = mime.includes("ogg") ? "ogg" : "webm";
                     var file = new File([blob], "voice." + ext, { type: mime.split(";")[0] });
+                    broadcastActivity(null);
                     showVoicePreview(file, blob, duration);
                     voiceChunks = [];
                 };
                 voiceStart = Date.now();
                 mediaRecorder.start(100);
                 isRecording = true;
+                broadcastActivity("voice");
                 document.getElementById("voiceBtn").classList.add("recording");
             } catch(err) { alert(t("mic_err")); }
         }
         function stopVoice() {
             if (!isRecording) return;
             isRecording = false;
+            broadcastActivity(null);
             document.getElementById("voiceBtn").classList.remove("recording");
             try { if (mediaRecorder && mediaRecorder.state !== "inactive") { mediaRecorder.stop(); } } catch(ex) {}
         }
@@ -5389,18 +5572,66 @@
             document.getElementById("chatName").textContent = alias || t("chat");
         }
         async function setWallpaper() {
-            var input = document.createElement("input"); input.type = "file"; input.accept = "image/*";
+            if (!selectedUserId) return;
+            var input = document.createElement("input");
+            input.type = "file";
+            input.accept = "image/*";
+            input.setAttribute("accept", "image/*");
             input.onchange = async function(){
-                var file = input.files[0]; if (!file) return;
+                var file = input.files && input.files[0];
+                if (!file) return;
+                try {
+                    var dataUrl = await compressImageForWallpaper(file, 1280, 0.72);
+                    var blur = confirm("Размыть обои?");
+                    var r = await req("/api/chats/" + selectedUserId + "/wallpaper", {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ wallpaper_url: dataUrl, wallpaper_blur: !!blur })
+                    });
+                    if (!r.ok) {
+                        var d = await safeJson(r);
+                        alert((d && (d.detail || d.message)) || "Не удалось сохранить обои");
+                        return;
+                    }
+                    applyChatWallpaper(dataUrl, !!blur);
+                    if (typeof showToast === "function") showToast("Обои", "Сохранено");
+                } catch (err) {
+                    alert("Ошибка загрузки обоев");
+                }
+            };
+            // iOS Safari needs input in DOM sometimes
+            input.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0;";
+            document.body.appendChild(input);
+            input.click();
+            setTimeout(function(){ try { input.remove(); } catch(e){} }, 60000);
+        }
+        function compressImageForWallpaper(file, maxSide, quality) {
+            return new Promise(function(resolve, reject) {
                 var reader = new FileReader();
-                reader.onload = async function(){
-                    var blur = confirm(t("wallpaper")+"?");
-                    await req("/api/chats/" + selectedUserId + "/wallpaper", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ wallpaper_url: reader.result, wallpaper_blur: blur }) });
-                    applyChatWallpaper(reader.result, blur);
+                reader.onerror = reject;
+                reader.onload = function() {
+                    var img = new Image();
+                    img.onload = function() {
+                        var w = img.width, h = img.height;
+                        var scale = 1;
+                        if (Math.max(w, h) > maxSide) scale = maxSide / Math.max(w, h);
+                        var cw = Math.max(1, Math.round(w * scale));
+                        var ch = Math.max(1, Math.round(h * scale));
+                        var canvas = document.createElement("canvas");
+                        canvas.width = cw; canvas.height = ch;
+                        var ctx = canvas.getContext("2d");
+                        ctx.drawImage(img, 0, 0, cw, ch);
+                        try {
+                            resolve(canvas.toDataURL("image/jpeg", quality || 0.72));
+                        } catch (e) {
+                            resolve(reader.result);
+                        }
+                    };
+                    img.onerror = reject;
+                    img.src = reader.result;
                 };
                 reader.readAsDataURL(file);
-            };
-            input.click();
+            });
         }
         async function leaveChannel() {
             if (!selectedChannelId || !confirm(t("unsubscribe")+"?")) return;
