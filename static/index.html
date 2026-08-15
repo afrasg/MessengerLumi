@@ -2826,24 +2826,26 @@
         function buildReplyPayload(name, quote, text) {
             var n = String(name || "").replace(/\n/g, " ").trim();
             var q = String(quote || "").replace(/\n/g, " ").trim().slice(0, 120);
+            // только тело цитаты, без вложенных маркеров
+            q = stripToPlainReplyText(q).slice(0, 120);
             return "%%REPLY%%\n" + n + "\n" + q + "\n%%\n" + String(text || "");
         }
         function parseReplyPayload(text) {
             if (!text) return null;
             var s = String(text);
             // новый формат
-            if (s.indexOf("%%REPLY%%\n") === 0) {
+            if (s.indexOf("%%REPLY%%\n") === 0 || s.indexOf("%%REPLY%%\r\n") === 0) {
+                s = s.replace(/\r\n/g, "\n");
                 var idx = s.indexOf("\n%%\n");
                 if (idx < 0) return null;
                 var head = s.slice(0, idx).split("\n");
-                // head[0]=%%REPLY%%, head[1]=name, head[2]=quote
                 return {
                     name: head[1] || "",
                     quote: head[2] || "",
                     body: s.slice(idx + 4)
                 };
             }
-            // старый формат с word-joiner \u2060
+            // старый формат с word-joiner
             var MARK = "\u2060REPLY\u2060";
             if (s.indexOf(MARK) === 0) {
                 var rest = s.slice(MARK.length);
@@ -2859,28 +2861,39 @@
                 }
                 return { name: name, quote: rest2.slice(0, i2), body: rest2.slice(i2 + 2) };
             }
-            // если \u2060 вырезало хранилище: REPLYnamequote\nbody или REPLY + склейка
-            if (s.indexOf("REPLY") === 0 && s.indexOf("\n") > 0) {
-                // ненадёжно — лучше не парсить как reply, а почистить для превью
-                return null;
-            }
             return null;
         }
-        function cleanReplyArtifacts(s) {
+        function stripToPlainReplyText(s) {
             if (!s) return "";
             s = String(s);
-            var rp = parseReplyPayload(s);
-            if (rp) return (rp.body || rp.quote || "").trim();
-            // вырезать остатки старых маркеров
-            s = s.replace(/\u2060REPLY\u2060/g, "")
-                 .replace(/\u2060/g, "")
-                 .replace(/^%%REPLY%%\n[\s\S]*?\n%%\n/, "")
-                 .replace(/^REPLY(?=[A-Za-zА-Яа-яЁё0-9_@])/g, "");
+            // разворачиваем вложенные ответы до 5 уровней
+            for (var i = 0; i < 5; i++) {
+                var rp = parseReplyPayload(s);
+                if (rp) {
+                    s = (rp.body || rp.quote || "").trim();
+                    continue;
+                }
+                break;
+            }
+            s = s.replace(/\u2060/g, "");
+            // %%REPLY%% блок
+            if (s.indexOf("%%REPLY%%") === 0) {
+                var j = s.indexOf("\n%%\n");
+                if (j >= 0) s = s.slice(j + 4);
+                else s = s.replace(/^%%REPLY%%\n?/, "");
+            }
+            // схлопнутый старый маркер: REPLYname...
+            s = s.replace(/^REPLY[A-Za-z0-9_@]*/i, "");
             if (s.indexOf("↩️") === 0) {
                 var lines = s.split("\n");
-                if (lines.length > 1) return lines.slice(1).join("\n").trim();
+                s = lines.length > 1 ? lines.slice(1).join("\n") : s.replace(/^↩️\s*/, "");
             }
-            return s.replace(/\s+/g, " ").trim();
+            s = s.replace(/\s+/g, " ").trim();
+            // если остался мусор вида afrasgkyky без пробелов и похож на склейку — не угадываем, оставляем как есть
+            return s;
+        }
+        function cleanReplyArtifacts(s) {
+            return stripToPlainReplyText(s);
         }
         function appendReplyQuote(bubble, name, quote) {
             var box = document.createElement("div");
@@ -2897,31 +2910,28 @@
         }
         function previewMessageText(raw) {
             if (!raw) return "";
-            var s = String(raw);
-            var rp = parseReplyPayload(s);
-            if (rp) return (rp.body || rp.quote || "").trim();
-            return cleanReplyArtifacts(s);
+            return stripToPlainReplyText(raw);
         }
 
         function setReplyingTo(msg) {
             if (!msg) { clearReplyingTo(); return; }
-            var parsed = parseReplyPayload(msg.text || "");
+            var rawText = msg.text || "";
+            var parsed = parseReplyPayload(rawText);
             var quoteText = "";
             if (msg.media_type === "voice") quoteText = "Голосовое сообщение";
             else if (msg.media_type === "video_note") quoteText = "Видеосообщение";
             else if (msg.media_type === "image") quoteText = "Фото";
-            else if (parsed) quoteText = (parsed.body || parsed.quote || "").trim();
-            else quoteText = cleanReplyArtifacts(msg.text || "");
+            else {
+                // всегда только «тело» сообщения, даже если это ответ на ответ
+                quoteText = stripToPlainReplyText(rawText);
+            }
+            if (!quoteText) quoteText = "Сообщение";
             var who = msg.sender_name || msg.sender_username || "";
             if (!who && currentUser && Number(msg.sender_id) === Number(currentUser.id)) {
                 who = currentUser.display_name || currentUser.username || "Вы";
             }
             if (!who && currentChatPeer) {
                 who = currentChatPeer.display_name || currentChatPeer.username || "";
-            }
-            // если отвечаем на ответ — в шапке ник автора исходного, в цитате тело
-            if (parsed && parsed.name && !msg.sender_name && Number(msg.sender_id) === Number(currentUser && currentUser.id)) {
-                // ok keep who as self
             }
             replyingTo = {
                 id: msg.id,
@@ -2937,7 +2947,7 @@
                 var composer = document.querySelector(".composer");
                 if (composer) composer.parentNode.insertBefore(bar, composer);
             }
-            var preview = quoteText || "Сообщение";
+            var preview = quoteText;
             if (msg.media_type === "voice") preview = "🎤 Голосовое";
             else if (msg.media_type === "video_note") preview = "⭕ Кружок";
             else if (msg.media_type === "image") preview = "🖼 Фото";
@@ -4015,7 +4025,7 @@
             else {
                 var rp = parseReplyPayload(msg.text || "");
                 if (rp) {
-                    appendReplyQuote(bubble, rp.name, rp.quote);
+                    appendReplyQuote(bubble, rp.name, stripToPlainReplyText(rp.quote));
                     text.textContent = rp.body || "";
                     if (rp.body) bubble.appendChild(text);
                 } else {
