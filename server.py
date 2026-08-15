@@ -907,9 +907,12 @@ def get_user_profile(user_id: int, request: Request):
 
     result = dict(user)
 
+    result["is_online"] = user_id in connections and len(connections.get(user_id, set())) > 0
+
     if user["is_bot"] or user["username"] == "lumi":
         result["created_at"] = None
         result["last_seen"] = None
+        result["is_online"] = True
         return result
 
     if user_id == current_user_id:
@@ -936,6 +939,7 @@ def get_user_profile(user_id: int, request: Request):
         result["last_seen"] = None
 
     result["created_at"] = None
+    result["is_online"] = user_id in connections and len(connections.get(user_id, set())) > 0
 
     return result
 
@@ -3363,6 +3367,13 @@ async def websocket_endpoint(websocket: WebSocket):
         connections[user_id].discard(websocket)
         if not connections[user_id]:
             connections.pop(user_id, None)
+            try:
+                connection = db()
+                connection.execute("UPDATE users SET last_seen = ? WHERE id = ?", (now(), user_id))
+                connection.commit()
+                connection.close()
+            except Exception:
+                pass
             try:
                 await broadcast_presence(user_id, False)
             except Exception:
