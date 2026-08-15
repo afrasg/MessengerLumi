@@ -514,33 +514,41 @@ def get_auth_user(request: Request, update_last_seen: bool = True):
         auth = request.headers.get("Authorization") or ""
         if auth.lower().startswith("bearer "):
             token = auth[7:].strip()
+
     if not token:
         raise HTTPException(401, "Не авторизован")
+
     connection = db()
+
     session = connection.execute("""
         SELECT s.id AS session_id, s.user_id, s.expires_at, u.username
         FROM sessions s
         JOIN users u ON u.id = s.user_id
         WHERE s.token_hash = ?
     """, (hash_token(token),)).fetchone()
+
     if not session:
         connection.close()
         raise HTTPException(401, "Сессия недействительна")
+
     try:
         expires = datetime.fromisoformat(session["expires_at"])
     except Exception:
         expires = datetime.utcnow()
+
     if expires < datetime.utcnow():
         connection.execute("DELETE FROM sessions WHERE id = ?", (session["session_id"],))
         connection.commit()
         connection.close()
         raise HTTPException(401, "Сессия истекла")
+
     connection.execute("UPDATE sessions SET last_seen = ? WHERE id = ?",
                        (now(), session["session_id"]))
-    # !!! ЗАКОММЕНТИРОВАНО - НЕ ОБНОВЛЯЕМ last_seen при каждом запросе !!!
-    # if update_last_seen:
-    #     connection.execute("UPDATE users SET last_seen = ? WHERE id = ?",
-    #                        (now(), session["user_id"]))
+
+    if update_last_seen:
+        connection.execute("UPDATE users SET last_seen = ? WHERE id = ?",
+                           (now(), session["user_id"]))
+
     connection.commit()
     connection.close()
     return session["user_id"]
@@ -3887,19 +3895,27 @@ async def set_presence(request: Request):
 
     online = bool(data.get("online", True))
 
+    # Сколько WS-соединений сейчас числится за пользователем.
+    # ВАЖНО: в момент unload/pagehide вкладка, которая шлёт этот сигнал,
+    # обычно САМА ещё числится в connections (сокет закрывается асинхронно
+    # чуть позже) — поэтому раньше has_ws почти всегда был True и оффлайн
+    # не рассылался мгновенно. Правильная проверка — есть ли ДРУГИЕ живые
+    # сессии, кроме текущей закрывающейся.
+    live_ws = len(connections.get(user_id, set()))
+
+    # broadcast делаем ДО записи в БД, чтобы не задерживать мгновенный сигнал
+    if online:
+        await broadcast_presence(user_id, True)
+    else:
+        if live_ws <= 1:
+            await broadcast_presence(user_id, False)
+
     connection = db()
     connection.execute("UPDATE users SET last_seen = ? WHERE id = ?", (now(), user_id))
     connection.commit()
     connection.close()
 
-    has_ws = bool(connections.get(user_id))
-    if online:
-        await broadcast_presence(user_id, True)
-    else:
-        if not has_ws:
-            await broadcast_presence(user_id, False)
-
-    return {"ok": True, "online": online if online else (not has_ws)}
+    return {"ok": True, "online": online if online else (live_ws > 1)}
 
 
 # =========================================================
@@ -3938,17 +3954,23 @@ async def websocket_endpoint(websocket: WebSocket):
         return
 
     user_id = session["user_id"]
-
-   # mark online on connect - НЕ ОБНОВЛЯЕМ last_seen через HTTP
-# connection.execute("UPDATE users SET last_seen = ? WHERE id = ?", (now(), user_id))
-    connection.commit()
     connection.close()
 
     await websocket.accept()
     connections[user_id].add(websocket)
 
+    # broadcast — сразу после accept(), до записи в БД,
+    # чтобы "в сети" появлялось у собеседников мгновенно
     try:
         await broadcast_presence(user_id, True)
+    except Exception:
+        pass
+
+    try:
+        connection = db()
+        connection.execute("UPDATE users SET last_seen = ? WHERE id = ?", (now(), user_id))
+        connection.commit()
+        connection.close()
     except Exception:
         pass
 
@@ -4026,26 +4048,23 @@ async def broadcast_presence(user_id: int, online: bool):
         LIMIT 200
     """, (user_id, user_id, user_id)).fetchall()
     connection.close()
-    
-    # Отправляем статус только тем, с кем есть диалог
     payload = {
         "type": "presence",
         "user_id": user_id,
         "online": online,
-        "last_seen": datetime.utcnow().isoformat() + "Z" if not online else None,
+        "last_seen": now(),
     }
-    
     sent = set()
     for row in peers:
         pid = row["peer_id"]
         if pid and pid != user_id:
             sent.add(pid)
             await send_ws(pid, payload)
-    
-    # Также отправляем всем активным WS-клиентам
+    # также всем, у кого сейчас открыт WS (быстрый апдейт статуса)
     for pid in list(connections.keys()):
         if pid != user_id and pid not in sent:
             await send_ws(pid, payload)
+
 
 
 
