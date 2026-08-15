@@ -3939,8 +3939,8 @@ async def websocket_endpoint(websocket: WebSocket):
 
     user_id = session["user_id"]
 
-    # mark online on connect
-    connection.execute("UPDATE users SET last_seen = ? WHERE id = ?", (now(), user_id))
+   # mark online on connect - НЕ ОБНОВЛЯЕМ last_seen через HTTP
+# connection.execute("UPDATE users SET last_seen = ? WHERE id = ?", (now(), user_id))
     connection.commit()
     connection.close()
 
@@ -4026,11 +4026,12 @@ async def broadcast_presence(user_id: int, online: bool):
         LIMIT 200
     """, (user_id, user_id, user_id)).fetchall()
     connection.close()
-    payload = {
-        "type": "presence",
-        "user_id": user_id,
-        "online": online,
-        "last_seen": now(),
+   payload = {
+    "type": "presence",
+    "user_id": user_id,
+    "online": online,
+    "last_seen": datetime.utcnow().isoformat() + "Z" if not online else None,
+}
     }
     sent = set()
     for row in peers:
