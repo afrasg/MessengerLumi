@@ -2855,20 +2855,19 @@
             }
             return String(msg);
         }
-        function isUserOnline(ls, user) {
-            if (user && user.blocked_me) return false;
-            // "в сети" ТОЛЬКО если реально есть WS-сессия (presence / is_online).
-            // Свежий last_seen сам по себе = "был(а) только что", не онлайн.
-            var uid = user && (user.id != null ? user.id : user.user_id);
-            if (uid != null && presenceMap[Number(uid)] && presenceMap[Number(uid)].online != null) {
-                return !!presenceMap[Number(uid)].online;
-            }
-            if (user) {
-                if (user.is_online === true || user.online === true || user.status === "online") return true;
-                if (user.is_online === false || user.online === false || user.status === "offline") return false;
-            }
-            return false;
-        }
+function isUserOnline(ls, user) {
+    if (user && user.blocked_me) return false;
+    var uid = user && (user.id != null ? user.id : user.user_id);
+    if (uid != null && presenceMap[Number(uid)] && presenceMap[Number(uid)].online != null) {
+        return !!presenceMap[Number(uid)].online;
+    }
+    // !!! УБИРАЕМ ПРОВЕРКУ user.is_online - ТОЛЬКО WEBSOCKET !!!
+    // if (user) {
+    //     if (user.is_online === true || user.online === true || user.status === "online") return true;
+    //     if (user.is_online === false || user.online === false || user.status === "offline") return false;
+    // }
+    return false;
+}
         var presenceMap = {};
         function isDmChatVisible() {
             var chat = document.getElementById("chatView");
@@ -3517,26 +3516,25 @@
         // WEBSOCKET
         
         var presenceHeartbeat = null;
-        function startPresenceHeartbeat() {
-            if (presenceHeartbeat) clearInterval(presenceHeartbeat);
-            async function beat() {
-                if (!token || isGuest) return;
-                try {
-                    // /api/me обновляет last_seen на бэкенде (get_auth_user)
-                    var r = await req("/api/me");
-                    if (r.ok) {
-                        var me = await safeJson(r);
-                        if (me && me.id) markPresence(me.id, true, me.last_seen || new Date().toISOString());
-                    }
-                } catch (e) {}
-                if (ws && ws.readyState === 1) {
-                    try { ws.send(JSON.stringify({ type: "ping" })); } catch (e) {}
-                }
-            }
-            beat();
-            presenceHeartbeat = setInterval(beat, 45000);
+       function startPresenceHeartbeat() {
+    if (presenceHeartbeat) clearInterval(presenceHeartbeat);
+    async function beat() {
+        // !!! УБИРАЕМ HTTP-ЗАПРОС К /api/me - ТОЛЬКО WEBSOCKET !!!
+        // if (!token || isGuest) return;
+        // try {
+        //     var r = await req("/api/me");
+        //     if (r.ok) {
+        //         var me = await safeJson(r);
+        //         if (me && me.id) markPresence(me.id, true, me.last_seen || new Date().toISOString());
+        //     }
+        // } catch (e) {}
+        if (ws && ws.readyState === 1) {
+            try { ws.send(JSON.stringify({ type: "ping" })); } catch (e) {}
         }
-
+    }
+    beat();
+    presenceHeartbeat = setInterval(beat, 45000);
+}
         
         function forceOfflineSignal() {
             try {
