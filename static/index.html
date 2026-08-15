@@ -3121,6 +3121,33 @@
 
         var hiddenDialogs = {};
         var presenceStickyOffline = {}; // id -> timestamp: ignore false "online" after real offline
+        function applyPresenceUI(userId, online) {
+            var id = Number(userId);
+            if (!isFinite(id)) return;
+            try {
+                document.querySelectorAll('.dialog-item[data-peer-id="' + id + '"], .user-item[data-peer-id="' + id + '"]').forEach(function(el) {
+                    var dot = el.querySelector(".status-dot");
+                    if (!dot) {
+                        dot = document.createElement("span");
+                        dot.className = "status-dot";
+                        el.appendChild(dot);
+                    }
+                    if (online === true) {
+                        dot.className = "status-dot online";
+                    } else if (online === false) {
+                        dot.className = "status-dot offline";
+                    }
+                });
+            } catch (e) {}
+            if (selectedUserId && Number(selectedUserId) === id && currentChatPeer) {
+                if (online != null) currentChatPeer.is_online = !!online;
+                if (online === false && !currentChatPeer.last_seen) {
+                    currentChatPeer.last_seen = new Date().toISOString();
+                }
+                var el = document.getElementById("chatStatus");
+                if (el && !el.classList.contains("typing")) updateChatStatus(currentChatPeer);
+            }
+        }
         function markPresence(userId, online, lastSeen, source) {
             if (userId == null) return;
             var id = Number(userId);
@@ -3128,8 +3155,7 @@
             source = source || "api";
             if (online === false) {
                 presenceMap[id].online = false;
-                // короткая защита от гонки (2с), presence/ws всегда проходят
-                presenceStickyOffline[id] = Date.now() + 2000;
+                presenceStickyOffline[id] = Date.now() + 1500;
             } else if (online === true) {
                 if (presenceStickyOffline[id] && Date.now() < presenceStickyOffline[id]
                     && source !== "presence" && source !== "ws") {
@@ -3159,6 +3185,10 @@
                 if (online != null) currentChatPeer.is_online = !!online;
                 if (lastSeen) currentChatPeer.last_seen = lastSeen;
                 else if (online === false) currentChatPeer.last_seen = new Date().toISOString();
+            }
+            if (online === true || online === false) {
+                applyPresenceUI(id, !!online);
+            } else if (selectedUserId && Number(selectedUserId) === id && currentChatPeer) {
                 var el = document.getElementById("chatStatus");
                 if (el && !el.classList.contains("typing")) updateChatStatus(currentChatPeer);
             }
@@ -3510,6 +3540,12 @@
         
         function forceOfflineSignal() {
             try {
+                if (token && navigator.sendBeacon) {
+                    var blob = new Blob([JSON.stringify({ online: false, token: token })], { type: "application/json" });
+                    navigator.sendBeacon("/api/presence", blob);
+                }
+            } catch (e) {}
+            try {
                 if (ws && ws.readyState === 1) {
                     ws.send(JSON.stringify({ type: "presence", online: false }));
                     if (selectedUserId) {
@@ -3520,13 +3556,30 @@
             } catch (e) {}
             try { if (ws) { ws.onclose = null; ws.close(); } } catch (e) {}
         }
+        function forceOnlineSignal() {
+            try {
+                if (ws && ws.readyState === 1) {
+                    ws.send(JSON.stringify({ type: "presence", online: true }));
+                }
+            } catch (e) {}
+            try {
+                if (token) {
+                    req("/api/presence", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ online: true })
+                    }).catch(function(){});
+                }
+            } catch (e) {}
+        }
         window.addEventListener("pagehide", forceOfflineSignal);
         window.addEventListener("beforeunload", forceOfflineSignal);
         document.addEventListener("visibilitychange", function() {
-            if (document.visibilityState === "visible" && token) {
+            if (!token || isGuest) return;
+            if (document.visibilityState === "visible") {
                 try {
                     if (!ws || ws.readyState > 1) connectWS();
-                    else if (ws.readyState === 1) ws.send(JSON.stringify({ type: "presence", online: true }));
+                    else forceOnlineSignal();
                 } catch (e) {}
             }
         });
@@ -3536,6 +3589,11 @@
             try {
                 var proto = location.protocol === "https:" ? "wss:" : "ws:";
                 ws = new WebSocket(proto + "//" + location.host + "/ws?token=" + encodeURIComponent(token));
+                ws.onopen = function() {
+                    try {
+                        ws.send(JSON.stringify({ type: "presence", online: true }));
+                    } catch (e) {}
+                };
                 ws.onmessage = async function(e) {
                     var data;
                     try { data = JSON.parse(e.data); } catch(ex) { return; }
@@ -3632,21 +3690,11 @@
                         var uid = data.user_id || data.id;
                         var onlineFlag = data.online != null ? data.online : data.is_online;
                         markPresence(uid, onlineFlag, data.last_seen || null, "presence");
-                        // обновить точку в списке чатов
-                        try {
-                            document.querySelectorAll(".dialog-item").forEach(function(el) {
-                                // no stable data-id — refresh status line if open
-                            });
-                        } catch (e) {}
                         if (selectedUserId && Number(uid) === Number(selectedUserId) && currentChatPeer) {
                             if (onlineFlag != null) currentChatPeer.is_online = !!onlineFlag;
                             if (data.last_seen) currentChatPeer.last_seen = data.last_seen;
                             else if (onlineFlag === false) currentChatPeer.last_seen = new Date().toISOString();
                             updateChatStatus(currentChatPeer);
-                        }
-                        // сайдбар без задержки статуса
-                        if (onlineFlag === false || onlineFlag === true) {
-                            setTimeout(function(){ loadDialogs(); }, 50);
                         }
                         return;
                     }
@@ -3713,6 +3761,7 @@
         function sectionHeader(t){var d=document.createElement("div");d.className="section-header";d.textContent=t;return d;}
         function userItem(user) {
             var div = document.createElement("div"); div.className = "user-item";
+            if (user && user.id != null) div.setAttribute("data-peer-id", String(user.id));
             var avatar = document.createElement("img"); avatar.className = "avatar";
             avatar.src = avatarSrc(user.avatar_url);
             var info = document.createElement("div"); info.className = "info";
@@ -3806,6 +3855,7 @@
                     markPresence(d.id, d.is_online != null ? d.is_online : d.online, d.last_seen);
                 }
                 var div = document.createElement("div"); div.className = "user-item dialog-item";
+                div.setAttribute("data-peer-id", String(d.id));
                 var avatar = document.createElement("img"); avatar.className = "avatar";
                 avatar.src = avatarSrc(d.avatar_url);
                 var info = document.createElement("div"); info.className = "info";
@@ -3974,7 +4024,7 @@
                         if (el && !el.classList.contains("typing")) updateChatStatus(currentChatPeer);
                     }
                 } catch (e) {}
-            }, 5000);
+            }, 2000);
         }
 
         function updateChatStatus(user) {
