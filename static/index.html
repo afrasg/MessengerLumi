@@ -2822,26 +2822,65 @@
         var presenceMap = {};
         var replyingTo = null; // {id, text, name, media_type}
         
-        var REPLY_MARK = "\u2060REPLY\u2060";
+        // Устойчивый формат (не ломается в БД/превью): %%REPLY%%\nname\nquote\n%%\nbody
         function buildReplyPayload(name, quote, text) {
-            var n = String(name || "").replace(/\u2060/g, "");
-            var q = String(quote || "").replace(/\u2060/g, "").slice(0, 120);
-            return REPLY_MARK + n + "\u2060" + q + "\u2060\n" + text;
+            var n = String(name || "").replace(/\n/g, " ").trim();
+            var q = String(quote || "").replace(/\n/g, " ").trim().slice(0, 120);
+            return "%%REPLY%%\n" + n + "\n" + q + "\n%%\n" + String(text || "");
         }
         function parseReplyPayload(text) {
-            if (!text || text.indexOf(REPLY_MARK) !== 0) return null;
-            var rest = text.slice(REPLY_MARK.length);
-            var i1 = rest.indexOf("\u2060");
-            if (i1 < 0) return null;
-            var name = rest.slice(0, i1);
-            var rest2 = rest.slice(i1 + 1);
-            var i2 = rest2.indexOf("\u2060\n");
-            if (i2 < 0) {
-                i2 = rest2.indexOf("\u2060");
-                if (i2 < 0) return null;
-                return { name: name, quote: rest2.slice(0, i2), body: rest2.slice(i2 + 1).replace(/^\n/, "") };
+            if (!text) return null;
+            var s = String(text);
+            // новый формат
+            if (s.indexOf("%%REPLY%%\n") === 0) {
+                var idx = s.indexOf("\n%%\n");
+                if (idx < 0) return null;
+                var head = s.slice(0, idx).split("\n");
+                // head[0]=%%REPLY%%, head[1]=name, head[2]=quote
+                return {
+                    name: head[1] || "",
+                    quote: head[2] || "",
+                    body: s.slice(idx + 4)
+                };
             }
-            return { name: name, quote: rest2.slice(0, i2), body: rest2.slice(i2 + 2) };
+            // старый формат с word-joiner \u2060
+            var MARK = "\u2060REPLY\u2060";
+            if (s.indexOf(MARK) === 0) {
+                var rest = s.slice(MARK.length);
+                var i1 = rest.indexOf("\u2060");
+                if (i1 < 0) return null;
+                var name = rest.slice(0, i1);
+                var rest2 = rest.slice(i1 + 1);
+                var i2 = rest2.indexOf("\u2060\n");
+                if (i2 < 0) {
+                    i2 = rest2.indexOf("\u2060");
+                    if (i2 < 0) return null;
+                    return { name: name, quote: rest2.slice(0, i2), body: rest2.slice(i2 + 1).replace(/^\n/, "") };
+                }
+                return { name: name, quote: rest2.slice(0, i2), body: rest2.slice(i2 + 2) };
+            }
+            // если \u2060 вырезало хранилище: REPLYnamequote\nbody или REPLY + склейка
+            if (s.indexOf("REPLY") === 0 && s.indexOf("\n") > 0) {
+                // ненадёжно — лучше не парсить как reply, а почистить для превью
+                return null;
+            }
+            return null;
+        }
+        function cleanReplyArtifacts(s) {
+            if (!s) return "";
+            s = String(s);
+            var rp = parseReplyPayload(s);
+            if (rp) return (rp.body || rp.quote || "").trim();
+            // вырезать остатки старых маркеров
+            s = s.replace(/\u2060REPLY\u2060/g, "")
+                 .replace(/\u2060/g, "")
+                 .replace(/^%%REPLY%%\n[\s\S]*?\n%%\n/, "")
+                 .replace(/^REPLY(?=[A-Za-zА-Яа-яЁё0-9_@])/g, "");
+            if (s.indexOf("↩️") === 0) {
+                var lines = s.split("\n");
+                if (lines.length > 1) return lines.slice(1).join("\n").trim();
+            }
+            return s.replace(/\s+/g, " ").trim();
         }
         function appendReplyQuote(bubble, name, quote) {
             var box = document.createElement("div");
@@ -2851,7 +2890,7 @@
             nm.textContent = name || "Пользователь";
             var qt = document.createElement("div");
             qt.className = "rq-text";
-            qt.textContent = quote || "";
+            qt.textContent = cleanReplyArtifacts(quote) || quote || "";
             box.appendChild(nm);
             box.appendChild(qt);
             bubble.appendChild(box);
@@ -2861,14 +2900,7 @@
             var s = String(raw);
             var rp = parseReplyPayload(s);
             if (rp) return (rp.body || rp.quote || "").trim();
-            // старый формат ↩️
-            if (s.indexOf("↩️") === 0) {
-                var lines = s.split("\n");
-                if (lines.length > 1) return lines.slice(1).join("\n").trim();
-            }
-            // на всякий случай убрать невидимые маркеры
-            s = s.replace(/\u2060REPLY\u2060/g, "").replace(/\u2060/g, " ").replace(/\s+/g, " ").trim();
-            return s;
+            return cleanReplyArtifacts(s);
         }
 
         function setReplyingTo(msg) {
@@ -2878,14 +2910,18 @@
             if (msg.media_type === "voice") quoteText = "Голосовое сообщение";
             else if (msg.media_type === "video_note") quoteText = "Видеосообщение";
             else if (msg.media_type === "image") quoteText = "Фото";
-            else if (parsed) quoteText = parsed.body || parsed.quote || "";
-            else quoteText = msg.text || "";
+            else if (parsed) quoteText = (parsed.body || parsed.quote || "").trim();
+            else quoteText = cleanReplyArtifacts(msg.text || "");
             var who = msg.sender_name || msg.sender_username || "";
             if (!who && currentUser && Number(msg.sender_id) === Number(currentUser.id)) {
                 who = currentUser.display_name || currentUser.username || "Вы";
             }
             if (!who && currentChatPeer) {
                 who = currentChatPeer.display_name || currentChatPeer.username || "";
+            }
+            // если отвечаем на ответ — в шапке ник автора исходного, в цитате тело
+            if (parsed && parsed.name && !msg.sender_name && Number(msg.sender_id) === Number(currentUser && currentUser.id)) {
+                // ok keep who as self
             }
             replyingTo = {
                 id: msg.id,
@@ -2901,10 +2937,11 @@
                 var composer = document.querySelector(".composer");
                 if (composer) composer.parentNode.insertBefore(bar, composer);
             }
-            var preview = msg.media_type === "voice" ? "🎤 Голосовое" :
-                (msg.media_type === "video_note" ? "⭕ Кружок" :
-                (msg.media_type === "image" ? "🖼 Фото" : (msg.text || "").slice(0, 80)));
-            bar.innerHTML = '<div style="flex:1;min-width:0"><div style="font-size:12px;color:#3390ec;font-weight:600">Ответ</div><div style="font-size:13px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escapeHtml(preview) + '</div></div><button type="button" id="replyBarClose" style="border:none;background:transparent;color:#fff;font-size:18px;cursor:pointer;padding:4px 8px">×</button>';
+            var preview = quoteText || "Сообщение";
+            if (msg.media_type === "voice") preview = "🎤 Голосовое";
+            else if (msg.media_type === "video_note") preview = "⭕ Кружок";
+            else if (msg.media_type === "image") preview = "🖼 Фото";
+            bar.innerHTML = '<div style="flex:1;min-width:0"><div style="font-size:12px;color:#3390ec;font-weight:600">Ответ' + (who ? ' · ' + escapeHtml(who) : '') + '</div><div style="font-size:13px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:italic">' + escapeHtml(String(preview).slice(0, 100)) + '</div></div><button type="button" id="replyBarClose" style="border:none;background:transparent;color:#fff;font-size:18px;cursor:pointer;padding:4px 8px">×</button>';
             bar.style.display = "flex";
             var cl = document.getElementById("replyBarClose");
             if (cl) cl.onclick = clearReplyingTo;
