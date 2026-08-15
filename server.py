@@ -284,6 +284,12 @@ def init_db():
             UNIQUE(user_id, peer_id)
         );
 
+        CREATE TABLE IF NOT EXISTS message_hides (
+            user_id INTEGER NOT NULL,
+            message_id INTEGER NOT NULL,
+            PRIMARY KEY (user_id, message_id)
+        );
+
         CREATE TABLE IF NOT EXISTS login_codes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
@@ -956,14 +962,16 @@ def get_messages(other_user_id: int, request: Request):
 
     messages = connection.execute("""
         SELECT
-            id, sender_id, receiver_id,
-            CASE WHEN deleted = 1 THEN '' ELSE text END AS text,
-            created_at, edited_at, deleted, is_read,
-            media_url, media_type, invite_id, invite_status, forwarded_from
-        FROM messages
-        WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
-        ORDER BY id ASC
-    """, (user_id, other_user_id, other_user_id, user_id)).fetchall()
+            m.id, m.sender_id, m.receiver_id,
+            CASE WHEN m.deleted = 1 THEN '' ELSE m.text END AS text,
+            m.created_at, m.edited_at, m.deleted, m.is_read,
+            m.media_url, m.media_type, m.invite_id, m.invite_status, m.forwarded_from
+        FROM messages m
+        LEFT JOIN message_hides h ON h.message_id = m.id AND h.user_id = ?
+        WHERE ((m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?))
+          AND h.message_id IS NULL
+        ORDER BY m.id ASC
+    """, (user_id, user_id, other_user_id, other_user_id, user_id)).fetchall()
 
     connection.execute("""
         UPDATE messages SET is_read = 1
@@ -1179,7 +1187,7 @@ async def edit_message(message_id: int, data: EditMessageRequest, request: Reque
 
 
 @app.delete("/api/messages/{message_id}")
-async def delete_message(message_id: int, request: Request):
+async def delete_message(message_id: int, request: Request, for_me: bool = False):
     user_id = get_auth_user(request)
 
     connection = db()
@@ -1190,9 +1198,25 @@ async def delete_message(message_id: int, request: Request):
         connection.close()
         raise HTTPException(404, "Сообщение не найдено")
 
+    # участник чата?
+    if user_id not in (message["sender_id"], message["receiver_id"]):
+        connection.close()
+        raise HTTPException(403, "Нет доступа")
+
+    if for_me:
+        # удалить только у себя
+        connection.execute(
+            "INSERT OR IGNORE INTO message_hides (user_id, message_id) VALUES (?, ?)",
+            (user_id, message_id),
+        )
+        connection.commit()
+        connection.close()
+        return {"ok": True, "for_me": True}
+
+    # удалить для всех — только свои
     if message["sender_id"] != user_id:
         connection.close()
-        raise HTTPException(403, "Можно удалять только свои сообщения")
+        raise HTTPException(403, "Можно удалять для всех только свои сообщения")
 
     connection.execute("UPDATE messages SET deleted = 1, text = '' WHERE id = ?", (message_id,))
 
@@ -2697,6 +2721,22 @@ def set_wallpaper(peer_id: int, data: WallpaperRequest, request: Request):
 
     return {"ok": True}
 
+
+
+
+@app.post("/api/chats/{peer_id}/clear-history")
+def clear_chat_history(peer_id: int, request: Request):
+    """Скрыть все сообщения чата только для текущего пользователя."""
+    user_id = get_auth_user(request)
+    connection = db()
+    connection.execute("""
+        INSERT OR IGNORE INTO message_hides (user_id, message_id)
+        SELECT ?, id FROM messages
+        WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
+    """, (user_id, user_id, peer_id, peer_id, user_id))
+    connection.commit()
+    connection.close()
+    return {"ok": True}
 
 @app.delete("/api/chats/{peer_id}")
 def delete_chat(peer_id: int, request: Request, for_both: bool = False):
