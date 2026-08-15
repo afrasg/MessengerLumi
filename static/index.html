@@ -2856,6 +2856,20 @@
             box.appendChild(qt);
             bubble.appendChild(box);
         }
+        function previewMessageText(raw) {
+            if (!raw) return "";
+            var s = String(raw);
+            var rp = parseReplyPayload(s);
+            if (rp) return (rp.body || rp.quote || "").trim();
+            // старый формат ↩️
+            if (s.indexOf("↩️") === 0) {
+                var lines = s.split("\n");
+                if (lines.length > 1) return lines.slice(1).join("\n").trim();
+            }
+            // на всякий случай убрать невидимые маркеры
+            s = s.replace(/\u2060REPLY\u2060/g, "").replace(/\u2060/g, " ").replace(/\s+/g, " ").trim();
+            return s;
+        }
 
         function setReplyingTo(msg) {
             if (!msg) { clearReplyingTo(); return; }
@@ -3562,11 +3576,12 @@
                 var lastText = "";
                 if (d.last_message) {
                     if (d.last_message.deleted) lastText = t("msg_deleted");
-                    else if (d.last_message.media_type === "voice") lastText = t("voice");
-                    else if (d.last_message.media_type === "image") lastText = t("photo");
-                    else if (d.last_message.media_type === "file") lastText = t("file");
+                    else if (d.last_message.media_type === "voice") lastText = t("voice") || "Голосовое сообщение";
+                    else if (d.last_message.media_type === "video_note") lastText = "Видеосообщение";
+                    else if (d.last_message.media_type === "image") lastText = t("photo") || "Фото";
+                    else if (d.last_message.media_type === "file") lastText = t("file") || "Файл";
                     else {
-                        lastText = d.last_message.text || "";
+                        lastText = previewMessageText(d.last_message.text || "");
                         if (Number(d.last_message.sender_id) === Number(currentUser?.id)) lastText = "Вы: " + lastText;
                     }
                 }
@@ -5189,10 +5204,11 @@
             if (chatKind === "group" && selectedGroupId && Number(selectedGroupId) === Number(message.group_id)) return;
             if (chatKind === "channel" && selectedChannelId && Number(selectedChannelId) === Number(message.channel_id)) return;
             if (chatKind === "community" && selectedCommunityChatId && Number(selectedCommunityChatId) === Number(message.chat_id)) return;
-            var preview = message.text || "";
-            if (message.media_type === "voice") preview = t("voice");
-            else if (message.media_type === "image") preview = t("photo");
-            else if (message.media_type === "file") preview = t("file");
+            var preview = previewMessageText(message.text || "");
+            if (message.media_type === "voice") preview = t("voice") || "Голосовое сообщение";
+            else if (message.media_type === "video_note") preview = "Видеосообщение";
+            else if (message.media_type === "image") preview = t("photo") || "Фото";
+            else if (message.media_type === "file") preview = t("file") || "Файл";
             if (preview.length > 100) preview = preview.slice(0,100) + "…";
             var uname = message.sender_name || message.sender_username || "user";
             var title = "", body = "";
