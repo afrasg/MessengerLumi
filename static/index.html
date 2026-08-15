@@ -2823,43 +2823,72 @@
         var replyingTo = null; // {id, text, name, media_type}
         
         // Устойчивый формат (не ломается в БД/превью): %%REPLY%%\nname\nquote\n%%\nbody
+        // Формат БЕЗ переносов строк (БД/JSON их часто схлопывает):
+        // %%R%%name%%Q%%quote%%B%%body
         function buildReplyPayload(name, quote, text) {
-            var n = String(name || "").replace(/\n/g, " ").trim();
-            var q = String(quote || "").replace(/\n/g, " ").trim().slice(0, 120);
-            // только тело цитаты, без вложенных маркеров
-            q = stripToPlainReplyText(q).slice(0, 120);
-            return "%%REPLY%%\n" + n + "\n" + q + "\n%%\n" + String(text || "");
+            function esc(x) {
+                return String(x || "").replace(/%%/g, "%﹤%").replace(/\n/g, " ").trim();
+            }
+            var n = esc(name);
+            var q = esc(stripToPlainReplyText(quote)).slice(0, 120);
+            var body = String(text || "");
+            return "%%R%%" + n + "%%Q%%" + q + "%%B%%" + body;
         }
         function parseReplyPayload(text) {
             if (!text) return null;
             var s = String(text);
-            // новый формат
-            if (s.indexOf("%%REPLY%%\n") === 0 || s.indexOf("%%REPLY%%\r\n") === 0) {
-                s = s.replace(/\r\n/g, "\n");
-                var idx = s.indexOf("\n%%\n");
-                if (idx < 0) return null;
-                var head = s.slice(0, idx).split("\n");
+            function unesc(x) {
+                return String(x || "").replace(/%﹤%/g, "%%");
+            }
+            // актуальный формат
+            if (s.indexOf("%%R%%") === 0) {
+                var iQ = s.indexOf("%%Q%%");
+                var iB = s.indexOf("%%B%%");
+                if (iQ < 0 || iB < 0 || iB < iQ) return null;
                 return {
-                    name: head[1] || "",
-                    quote: head[2] || "",
-                    body: s.slice(idx + 4)
+                    name: unesc(s.slice(5, iQ)),
+                    quote: unesc(s.slice(iQ + 5, iB)),
+                    body: s.slice(iB + 5)
                 };
             }
-            // старый формат с word-joiner
+            // формат с переводами строк %%REPLY%%
+            if (s.indexOf("%%REPLY%%") === 0) {
+                s = s.replace(/\r\n/g, "\n");
+                // если переносы сохранились
+                if (s.indexOf("\n%%\n") >= 0) {
+                    var idx = s.indexOf("\n%%\n");
+                    var head = s.slice(0, idx).split("\n");
+                    return {
+                        name: head[1] || "",
+                        quote: head[2] || "",
+                        body: s.slice(idx + 4)
+                    };
+                }
+                // схлопнутый: %%REPLY%%namequote%%body или %%REPLY%%name%%quote%%body
+                var rest = s.slice("%%REPLY%%".length);
+                // попытка %% ... %%
+                var m = rest.match(/^([^%]*)%%([^%]*)%%([\s\S]*)$/);
+                if (m) {
+                    return { name: m[1], quote: m[2], body: m[3] };
+                }
+                // совсем схлопнутый — не парсим
+                return null;
+            }
+            // старый word-joiner
             var MARK = "\u2060REPLY\u2060";
             if (s.indexOf(MARK) === 0) {
-                var rest = s.slice(MARK.length);
-                var i1 = rest.indexOf("\u2060");
+                var rest2 = s.slice(MARK.length);
+                var i1 = rest2.indexOf("\u2060");
                 if (i1 < 0) return null;
-                var name = rest.slice(0, i1);
-                var rest2 = rest.slice(i1 + 1);
-                var i2 = rest2.indexOf("\u2060\n");
+                var name = rest2.slice(0, i1);
+                var rest3 = rest2.slice(i1 + 1);
+                var i2 = rest3.indexOf("\u2060\n");
                 if (i2 < 0) {
-                    i2 = rest2.indexOf("\u2060");
+                    i2 = rest3.indexOf("\u2060");
                     if (i2 < 0) return null;
-                    return { name: name, quote: rest2.slice(0, i2), body: rest2.slice(i2 + 1).replace(/^\n/, "") };
+                    return { name: name, quote: rest3.slice(0, i2), body: rest3.slice(i2 + 1).replace(/^\n/, "") };
                 }
-                return { name: name, quote: rest2.slice(0, i2), body: rest2.slice(i2 + 2) };
+                return { name: name, quote: rest3.slice(0, i2), body: rest3.slice(i2 + 2) };
             }
             return null;
         }
@@ -2876,13 +2905,14 @@
                 break;
             }
             s = s.replace(/\u2060/g, "");
-            // %%REPLY%% блок
-            if (s.indexOf("%%REPLY%%") === 0) {
-                var j = s.indexOf("\n%%\n");
-                if (j >= 0) s = s.slice(j + 4);
-                else s = s.replace(/^%%REPLY%%\n?/, "");
+            // %%R%% / %%REPLY%% блок
+            if (s.indexOf("%%R%%") === 0 || s.indexOf("%%REPLY%%") === 0) {
+                var rp2 = parseReplyPayload(s);
+                if (rp2) { s = (rp2.body || rp2.quote || "").trim(); }
+                else {
+                    s = s.replace(/^%%R%%.*?%%B%%/, "").replace(/^%%REPLY%%/, "");
+                }
             }
-            // схлопнутый старый маркер: REPLYname...
             s = s.replace(/^REPLY[A-Za-z0-9_@]*/i, "");
             if (s.indexOf("↩️") === 0) {
                 var lines = s.split("\n");
