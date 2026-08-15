@@ -137,8 +137,10 @@
         .message-row.theirs .message-bubble{background:#1a1a24;color:#fff;border-bottom-left-radius:4px}
         .message-bubble .meta{display:flex;align-items:center;gap:6px;margin-top:4px;font-size:11px;opacity:0.7;justify-content:flex-end;color:#c0c0d0}
         .message-bubble .meta .status{font-size:11px}
-        .message-bubble .meta .status.read{color:#8a8aff}
-        .message-bubble .meta .status.unread{color:#f1c40f}
+        .message-bubble .meta .status.read{color:#6ec1ff}
+        .message-bubble .meta .status.unread{color:#8a8a9a}
+        body.theme-light .message-bubble .meta .status.read{color:#3390ec}
+        body.theme-light .message-bubble .meta .status.unread{color:#9aa0a6}
         .message-bubble .deleted{opacity:0.5;font-style:italic;color:#8a8a9a}
         .message-bubble .media{max-width:100%;border-radius:10px;margin-top:6px;cursor:pointer}
         .message-bubble .media-audio{width:100%;margin-top:6px}
@@ -2866,14 +2868,15 @@
         // Устойчивый формат (не ломается в БД/превью): %%REPLY%%\nname\nquote\n%%\nbody
         // Формат БЕЗ переносов строк (БД/JSON их часто схлопывает):
         // %%R%%name%%Q%%quote%%B%%body
-        function buildReplyPayload(name, quote, text) {
+        function buildReplyPayload(name, quote, text, replyToId) {
             function esc(x) {
                 return String(x || "").replace(/%%/g, "%﹤%").replace(/\n/g, " ").trim();
             }
             var n = esc(name);
             var q = esc(stripToPlainReplyText(quote)).slice(0, 120);
             var body = String(text || "");
-            return "%%R%%" + n + "%%Q%%" + q + "%%B%%" + body;
+            var idPart = (replyToId != null && replyToId !== "") ? ("%%I%%" + String(replyToId)) : "";
+            return "%%R%%" + n + "%%Q%%" + q + idPart + "%%B%%" + body;
         }
         function parseReplyPayload(text) {
             if (!text) return null;
@@ -2886,10 +2889,19 @@
                 var iQ = s.indexOf("%%Q%%");
                 var iB = s.indexOf("%%B%%");
                 if (iQ < 0 || iB < 0 || iB < iQ) return null;
+                var mid = s.slice(iQ + 5, iB);
+                var iI = mid.indexOf("%%I%%");
+                var quotePart = mid;
+                var replyId = null;
+                if (iI >= 0) {
+                    quotePart = mid.slice(0, iI);
+                    replyId = mid.slice(iI + 5).trim() || null;
+                }
                 return {
                     name: unesc(s.slice(5, iQ)),
-                    quote: unesc(s.slice(iQ + 5, iB)),
-                    body: s.slice(iB + 5)
+                    quote: unesc(quotePart),
+                    body: s.slice(iB + 5),
+                    replyToId: replyId
                 };
             }
             // формат с переводами строк %%REPLY%%
@@ -2966,9 +2978,11 @@
         function cleanReplyArtifacts(s) {
             return stripToPlainReplyText(s);
         }
-        function appendReplyQuote(bubble, name, quote) {
+        function appendReplyQuote(bubble, name, quote, replyToId) {
             var box = document.createElement("div");
             box.className = "reply-quote";
+            box.style.cursor = "pointer";
+            if (replyToId) box.dataset.replyTo = String(replyToId);
             var nm = document.createElement("div");
             nm.className = "rq-name";
             nm.textContent = name || "Пользователь";
@@ -2977,7 +2991,41 @@
             qt.textContent = cleanReplyArtifacts(quote) || quote || "";
             box.appendChild(nm);
             box.appendChild(qt);
+            box.onclick = function(ev) {
+                ev.stopPropagation();
+                scrollToRepliedMessage(replyToId, quote);
+            };
             bubble.appendChild(box);
+        }
+        function scrollToRepliedMessage(replyToId, quote) {
+            var container = document.getElementById("messages");
+            if (!container) return;
+            var target = null;
+            if (replyToId) {
+                target = container.querySelector('.message-bubble[data-id="' + replyToId + '"]');
+            }
+            if (!target && quote) {
+                var q = String(quote).trim().slice(0, 80);
+                var bubbles = container.querySelectorAll(".message-bubble");
+                for (var i = 0; i < bubbles.length; i++) {
+                    var t = (bubbles[i].innerText || "").replace(/\s+/g, " ");
+                    if (t.indexOf(q) >= 0 && !bubbles[i].querySelector(".reply-quote")) {
+                        target = bubbles[i];
+                        break;
+                    }
+                    // тоже искать в теле ответа
+                    if (q && t.indexOf(q) >= 0) { target = bubbles[i]; break; }
+                }
+            }
+            if (!target) return;
+            var row = target.closest(".message-row") || target;
+            row.scrollIntoView({ behavior: "smooth", block: "center" });
+            target.style.outline = "2px solid #3390ec";
+            target.style.outlineOffset = "2px";
+            setTimeout(function() {
+                target.style.outline = "";
+                target.style.outlineOffset = "";
+            }, 1500);
         }
         function previewMessageText(raw) {
             if (!raw) return "";
@@ -3073,11 +3121,11 @@
             source = source || "api";
             if (online === false) {
                 presenceMap[id].online = false;
-                // 15 сек не принимать online из dialogs/poll (гонка WS close)
-                presenceStickyOffline[id] = Date.now() + 15000;
+                // короткая защита от гонки (2с), presence/ws всегда проходят
+                presenceStickyOffline[id] = Date.now() + 2000;
             } else if (online === true) {
-                if (presenceStickyOffline[id] && Date.now() < presenceStickyOffline[id] && source !== "presence" && source !== "ws") {
-                    // игнор ложного online
+                if (presenceStickyOffline[id] && Date.now() < presenceStickyOffline[id]
+                    && source !== "presence" && source !== "ws") {
                     if (lastSeen) {
                         var t0 = typeof lastSeen === "number" ? lastSeen : new Date(lastSeen).getTime();
                         if (t0 < 1e12) t0 *= 1000;
@@ -3467,16 +3515,7 @@
         window.addEventListener("pagehide", forceOfflineSignal);
         window.addEventListener("beforeunload", forceOfflineSignal);
         document.addEventListener("visibilitychange", function() {
-            if (document.visibilityState === "hidden") {
-                try {
-                    if (ws && ws.readyState === 1) {
-                        ws.send(JSON.stringify({ type: "presence", online: false }));
-                        if (selectedUserId) {
-                            ws.send(JSON.stringify({ type: "activity", target_id: Number(selectedUserId), activity: null }));
-                        }
-                    }
-                } catch (e) {}
-            } else if (document.visibilityState === "visible" && token) {
+            if (document.visibilityState === "visible" && token) {
                 try {
                     if (!ws || ws.readyState > 1) connectWS();
                     else if (ws.readyState === 1) ws.send(JSON.stringify({ type: "presence", online: true }));
@@ -3917,7 +3956,8 @@
                         u.last_seen = "1970-01-01T00:00:00Z";
                         u.avatar_url = null;
                     }
-                    markPresence(selectedUserId, u.is_online, u.last_seen, u.blocked_me ? "presence" : "api");
+                    // is_online с бэка = реальные WS-коннекты → как presence
+                    markPresence(selectedUserId, u.is_online, u.last_seen, "presence");
                     if (currentChatPeer && Number(currentChatPeer.id) === Number(selectedUserId)) {
                         currentChatPeer = Object.assign(currentChatPeer, u);
                         currentChatPeer.is_online = u.is_online;
@@ -4036,9 +4076,17 @@
             if (!r.ok) return;
             var msgs = await safeJson(r);
             var container = document.getElementById("messages");
+            var nearBottom = true;
+            if (container && container.scrollHeight > 0) {
+                nearBottom = (container.scrollHeight - container.scrollTop - container.clientHeight) < 120;
+            }
             container.innerHTML = "";
             msgs.forEach(renderMessage);
-            scrollMessages();
+            if (opts.forceScroll || nearBottom || opts.markRead !== false) {
+                // первый открытие / пользователь внизу
+                if (opts.skipScroll) return;
+                scrollMessages();
+            }
         }
         
         function seedWaveFromUrl(url) {
@@ -4223,7 +4271,7 @@
                 } else {
                     var rp = parseReplyPayload(rawT);
                     if (rp) {
-                        appendReplyQuote(bubble, rp.name, stripToPlainReplyText(rp.quote));
+                        appendReplyQuote(bubble, rp.name, stripToPlainReplyText(rp.quote), rp.replyToId);
                         text.textContent = rp.body || "";
                         if (rp.body) bubble.appendChild(text);
                     } else {
@@ -4754,10 +4802,11 @@
             }
             var actions = document.createElement("div"); actions.className = "actions";
             var likeIconEmpty = '<img width="20" height="20" src="https://img.icons8.ru/external-tanah-basah-basic-outline-tanah-basah/24/external-love-social-media-ui-tanah-basah-basic-outline-tanah-basah.png" alt="like">';
+            var likeCount = post.likes_count != null ? post.likes_count : (post.likes || 0);
             var likeIconFilled = '<img width="20" height="20" src="https://img.icons8.ru/fluency/48/filled-like--v1.png" alt="liked">';
             var like = document.createElement("button");
             var isLiked = !!post.liked;
-            like.innerHTML = (isLiked ? likeIconFilled : likeIconEmpty) + ' ' + (post.likes || 0);
+            like.innerHTML = (isLiked ? likeIconFilled : likeIconEmpty) + ' ' + likeCount;
             if (isLiked) like.classList.add("liked");
             like.onclick = async function(){
                 if (!requireAccount()) return;
@@ -4765,10 +4814,12 @@
                 var d2 = await safeJson(r2);
                 if (r2.ok) {
                     isLiked = (d2.liked !== undefined) ? !!d2.liked : !isLiked;
-                    var count = (d2.likes !== undefined) ? d2.likes : (post.likes || 0);
+                    var count = (d2.likes !== undefined) ? d2.likes : likeCount;
+                    likeCount = count;
                     like.innerHTML = (isLiked ? likeIconFilled : likeIconEmpty) + ' ' + count;
                     like.classList.toggle("liked", isLiked);
                     post.likes = count;
+                    post.likes_count = count;
                     post.liked = isLiked;
                 }
             };
@@ -4784,8 +4835,8 @@
             repost.onclick = async function(){
                 if (!requireAccount()) return;
                 var r = await req("/api/posts/" + post.id + "/repost", { method: "POST" });
-                if (!r.ok) { var d = await safeJson(r); alert((d&&d.detail)||"Ошибка"); return; }
                 var d = await safeJson(r);
+                if (!r.ok) { alert((d&&d.detail)||"Ошибка"); return; }
                 if (d && d.removed) {
                     post.reposts_count = Math.max(0, (post.reposts_count||1)-1);
                     if (typeof showToast === "function") showToast("Репост", "Убран");
@@ -5351,7 +5402,7 @@
                 } else if (msg.text) {
                     var rp = parseReplyPayload(msg.text);
                     if (rp) {
-                        appendReplyQuote(bubble, rp.name, stripToPlainReplyText(rp.quote));
+                        appendReplyQuote(bubble, rp.name, stripToPlainReplyText(rp.quote), rp.replyToId);
                         text.textContent = rp.body || "";
                         if (rp.body) bubble.appendChild(text);
                     } else {
@@ -5592,7 +5643,7 @@
             if (typeof replyingTo !== "undefined" && replyingTo) {
                 var q = (replyingTo.text || (replyingTo.media_type === "voice" ? "Голосовое сообщение" : (replyingTo.media_type === "video_note" ? "Видеосообщение" : "Сообщение"))).slice(0, 120);
                 var who = replyingTo.name || (currentChatPeer && (currentChatPeer.display_name || currentChatPeer.username)) || "Пользователь";
-                text = buildReplyPayload(who, q, text);
+                text = buildReplyPayload(who, q, text, replyingTo.id);
                 if (input) input.value = text;
                 clearReplyingTo();
             }
@@ -5976,15 +6027,29 @@
             var box = document.getElementById("attachPreview");
             box.classList.remove("hidden");
             var info = box.querySelector(".file-info");
-            var faceLabel = videoNoteFacing === "user" ? "Фронт" : "Основная";
             info.innerHTML =
                 '<div class="vn-preview-wrap">' +
                 '<video id="vnLivePreview" class="vn-preview" autoplay muted playsinline style="transform:' + (videoNoteFacing === "user" ? "scaleX(-1)" : "none") + '"></video>' +
                 '<div class="vn-rec-controls">' +
-                '<div style="font-weight:700;color:#e74c3c">● REC · ' + faceLabel + '</div>' +
                 '<button type="button" class="vn-flip-btn" id="vnFlipBtn">Перевернуть</button>' +
                 '<button type="button" class="vn-stop-btn" id="vnStopBtn">Стоп</button>' +
                 '</div></div>';
+            // скрыть крестик и кнопку отправить на время записи
+            var cancel = box.querySelector(".preview-cancel, .cancel, button.secondary, [onclick*=\"clearAttach\"]");
+            box.querySelectorAll("button").forEach(function(b) {
+                var t = (b.textContent || "").trim().toLowerCase();
+                var oc = b.getAttribute("onclick") || "";
+                if (oc.indexOf("clearAttach") >= 0 || b.classList.contains("preview-cancel") || t === "×" || t === "x" || t === "✕") {
+                    b.style.display = "none";
+                    b.dataset.vnHide = "1";
+                }
+                if (oc.indexOf("sendPending") >= 0 || b.classList.contains("primary") && t.indexOf("отправ") >= 0) {
+                    b.style.display = "none";
+                    b.dataset.vnHide = "1";
+                }
+            });
+            var sendBtn = document.querySelector(".composer .send-btn");
+            if (sendBtn) { sendBtn.style.display = "none"; sendBtn.dataset.vnHide = "1"; }
             var v = document.getElementById("vnLivePreview");
             if (v) v.srcObject = videoNoteStream;
             var flip = document.getElementById("vnFlipBtn");
@@ -6056,12 +6121,18 @@
             pendingVoiceUrl = URL.createObjectURL(blob || file);
             var box = document.getElementById("attachPreview");
             box.classList.remove("hidden");
+            // показать крестик и отправить после стопа
+            box.querySelectorAll("button[data-vn-hide]").forEach(function(b) {
+                b.style.display = "";
+                delete b.dataset.vnHide;
+            });
+            var sendBtn = document.querySelector(".composer .send-btn");
+            if (sendBtn) { sendBtn.style.display = ""; delete sendBtn.dataset.vnHide; }
             var info = box.querySelector(".file-info");
             info.innerHTML =
                 '<div class="vn-preview-wrap">' +
                 '<video id="vnPreviewPlayer" class="vn-preview" src="' + pendingVoiceUrl + '" playsinline controls></video>' +
                 '<div><div style="font-weight:700">Кружок</div>' +
-                '<div style="font-size:12px;opacity:.7;margin:4px 0 8px">Проверьте со звуком и нажмите Отправить</div>' +
                 '<button type="button" class="vn-flip-btn" id="vnPreviewPlayBtn">▶ Смотреть со звуком</button></div></div>';
             var prev = document.getElementById("vnPreviewPlayer");
             var pb = document.getElementById("vnPreviewPlayBtn");
@@ -6168,8 +6239,6 @@
         }
         
         function setRecordingLock(on) {
-            var ids = ["stickerBtn", "videoNoteBtn", "voiceBtn", "attachBtn"];
-            // also file input label / buttons in composer
             document.querySelectorAll(".composer .icon-btn").forEach(function(b) {
                 if (on) {
                     if (b.id === "voiceBtn" && isRecording) return;
@@ -6184,7 +6253,13 @@
             var send = document.querySelector(".composer .send-btn");
             if (send) {
                 if (on) { send.style.display = "none"; }
-                else { send.style.display = ""; }
+                else if (!send.dataset.vnHide) { send.style.display = ""; }
+            }
+            var box = document.getElementById("attachPreview");
+            if (box) {
+                box.querySelectorAll(".preview-cancel, .preview-send").forEach(function(b) {
+                    b.style.display = on ? "none" : "";
+                });
             }
         }
 
@@ -6342,10 +6417,13 @@
                     if (p.my_vote === idx) row.style.borderColor = "#3390ec";
                     row.onclick = async function(ev) {
                         ev.stopPropagation();
+                        var msgs = document.getElementById("messages");
+                        var prevTop = msgs ? msgs.scrollTop : 0;
                         var vr = await req("/api/polls/" + pollId + "/vote?option_idx=" + idx, { method: "POST" });
                         if (vr.ok) {
                             wrap.remove();
-                            renderPollInBubble(bubble, pollId);
+                            await renderPollInBubble(bubble, pollId);
+                            if (msgs) msgs.scrollTop = prevTop;
                         }
                     };
                     wrap.appendChild(row);
