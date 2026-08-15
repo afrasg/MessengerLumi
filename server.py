@@ -3352,6 +3352,16 @@ async def websocket_endpoint(websocket: WebSocket):
                 if target:
                     await send_ws(int(target), {"type": "typing_stop", "user_id": user_id})
 
+            elif msg_type == "activity":
+                target = data.get("target_id")
+                activity = data.get("activity")  # voice | video_note | None
+                if target:
+                    await send_ws(int(target), {
+                        "type": "activity",
+                        "user_id": user_id,
+                        "activity": activity
+                    })
+
             elif msg_type == "presence":
                 connection = db()
                 connection.execute("UPDATE users SET last_seen = ? WHERE id = ?", (now(), user_id))
