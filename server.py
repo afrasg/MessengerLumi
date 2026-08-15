@@ -104,6 +104,7 @@ def init_db():
     user_id INTEGER NOT NULL,
     token_hash TEXT UNIQUE NOT NULL,
     browser_hash TEXT NOT NULL,
+    device_info TEXT,
     created_at TEXT NOT NULL,
     last_seen TEXT NOT NULL,
     expires_at TEXT NOT NULL
@@ -302,6 +303,13 @@ def init_db():
             PRIMARY KEY (poll_id, user_id)
         );
 
+        CREATE TABLE IF NOT EXISTS stickers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            image_url TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS message_hides (
             user_id INTEGER NOT NULL,
             message_id INTEGER NOT NULL,
@@ -370,6 +378,8 @@ def init_db():
     add_column_if_missing(connection, "group_messages", "media_type", "TEXT")
     add_column_if_missing(connection, "channel_messages", "media_url", "TEXT")
     add_column_if_missing(connection, "channel_messages", "media_type", "TEXT")
+    add_column_if_missing(connection, "sessions", "device_info", "TEXT")
+    add_column_if_missing(connection, "posts", "repost_of", "INTEGER")
 
     try:
         connection.execute("ALTER TABLE settings ADD COLUMN auto_answer INTEGER DEFAULT 0")
@@ -480,7 +490,7 @@ def get_or_create_browser(request: Request, response: Response):
     return value
 
 
-def create_session(user_id, browser_id):
+def create_session(user_id, browser_id, device_info=None):
     token = new_token()
     created = datetime.utcnow()
     expires = created + timedelta(days=SESSION_DAYS)
@@ -488,9 +498,10 @@ def create_session(user_id, browser_id):
     connection = db()
     connection.execute("""
         INSERT INTO sessions
-        (user_id, token_hash, browser_hash, created_at, last_seen, expires_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        (user_id, token_hash, browser_hash, device_info, created_at, last_seen, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
     """, (user_id, hash_token(token), browser_hash(browser_id),
+          (device_info or "")[:200],
           created.isoformat(), created.isoformat(), expires.isoformat()))
     connection.commit()
     connection.close()
@@ -584,6 +595,7 @@ def user_public(connection, user_id):
 class RegisterRequest(BaseModel):
     username: str
     password: str
+    display_name: str = ""
 
 
 class LoginRequest(BaseModel):
@@ -729,10 +741,11 @@ def register(data: RegisterRequest, request: Request, response: Response):
 
     created = now()
 
+    dn = (getattr(data, "display_name", None) or "").strip() or username
     cursor = connection.execute("""
         INSERT INTO users (username, password_hash, created_at, last_seen, display_name)
         VALUES (?, ?, ?, ?, ?)
-    """, (username, hash_password(data.password), created, created, username))
+    """, (username, hash_password(data.password), created, created, dn))
 
     user_id = cursor.lastrowid
 
@@ -743,7 +756,8 @@ def register(data: RegisterRequest, request: Request, response: Response):
     connection.close()
 
     browser_id = get_or_create_browser(request, response)
-    token = create_session(user_id, browser_id)
+    ua = (request.headers.get("user-agent") or "")[:200]
+    token = create_session(user_id, browser_id, ua)
     set_auth_cookie(response, token)
 
     return {"ok": True, "token": token}
@@ -768,11 +782,83 @@ def login(data: LoginRequest, request: Request, response: Response):
     connection.close()
 
     browser_id = get_or_create_browser(request, response)
-    token = create_session(user["id"], browser_id)
+    ua = (request.headers.get("user-agent") or "")[:200]
+    token = create_session(user["id"], browser_id, ua)
     set_auth_cookie(response, token)
 
     return {"ok": True, "token": token}
 
+
+
+
+@app.get("/api/sessions")
+def list_sessions(request: Request):
+    user_id = get_auth_user(request)
+    token = request.cookies.get(SESSION_COOKIE) or ""
+    auth = request.headers.get("Authorization") or ""
+    if not token and auth.lower().startswith("bearer "):
+        token = auth[7:].strip()
+    current_hash = hash_token(token) if token else ""
+    connection = db()
+    rows = connection.execute("""
+        SELECT id, browser_hash, device_info, created_at, last_seen, expires_at, token_hash
+        FROM sessions WHERE user_id = ?
+        ORDER BY last_seen DESC
+    """, (user_id,)).fetchall()
+    connection.close()
+    out = []
+    for r in rows:
+        out.append({
+            "id": r["id"],
+            "device_info": r["device_info"] or "Браузер",
+            "created_at": r["created_at"],
+            "last_seen": r["last_seen"],
+            "is_current": r["token_hash"] == current_hash,
+        })
+    return out
+
+
+@app.delete("/api/sessions/{session_id}")
+def revoke_session(session_id: int, request: Request):
+    user_id = get_auth_user(request)
+    token = request.cookies.get(SESSION_COOKIE) or ""
+    auth = request.headers.get("Authorization") or ""
+    if not token and auth.lower().startswith("bearer "):
+        token = auth[7:].strip()
+    current_hash = hash_token(token) if token else ""
+    connection = db()
+    row = connection.execute(
+        "SELECT id, token_hash FROM sessions WHERE id = ? AND user_id = ?",
+        (session_id, user_id)
+    ).fetchone()
+    if not row:
+        connection.close()
+        raise HTTPException(404, "Сессия не найдена")
+    if row["token_hash"] == current_hash:
+        connection.close()
+        raise HTTPException(400, "Нельзя завершить текущую сессию здесь")
+    connection.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+    connection.commit()
+    connection.close()
+    return {"ok": True}
+
+
+@app.post("/api/sessions/revoke-others")
+def revoke_other_sessions(request: Request):
+    user_id = get_auth_user(request)
+    token = request.cookies.get(SESSION_COOKIE) or ""
+    auth = request.headers.get("Authorization") or ""
+    if not token and auth.lower().startswith("bearer "):
+        token = auth[7:].strip()
+    current_hash = hash_token(token) if token else ""
+    connection = db()
+    connection.execute(
+        "DELETE FROM sessions WHERE user_id = ? AND token_hash != ?",
+        (user_id, current_hash)
+    )
+    connection.commit()
+    connection.close()
+    return {"ok": True}
 
 @app.post("/api/logout")
 def logout(request: Request, response: Response):
@@ -995,7 +1081,7 @@ def get_user_profile(user_id: int, request: Request):
 # =========================================================
 
 @app.get("/api/messages/{other_user_id}")
-def get_messages(other_user_id: int, request: Request):
+async def get_messages(other_user_id: int, request: Request):
     user_id = get_auth_user(request)
 
     connection = db()
@@ -1013,13 +1099,34 @@ def get_messages(other_user_id: int, request: Request):
         ORDER BY m.id ASC
     """, (user_id, user_id, other_user_id, other_user_id, user_id)).fetchall()
 
-    connection.execute("""
-        UPDATE messages SET is_read = 1
-        WHERE sender_id = ? AND receiver_id = ? AND is_read = 0
-    """, (other_user_id, user_id))
+    mark_read = True
+    try:
+        mr = request.query_params.get("mark_read", "1")
+        mark_read = str(mr) not in ("0", "false", "False", "no")
+    except Exception:
+        mark_read = True
+
+    unread_ids = []
+    if mark_read:
+        unread = connection.execute("""
+            SELECT id FROM messages
+            WHERE sender_id = ? AND receiver_id = ? AND is_read = 0
+        """, (other_user_id, user_id)).fetchall()
+        unread_ids = [r["id"] for r in unread]
+        connection.execute("""
+            UPDATE messages SET is_read = 1
+            WHERE sender_id = ? AND receiver_id = ? AND is_read = 0
+        """, (other_user_id, user_id))
 
     connection.commit()
     connection.close()
+
+    if unread_ids:
+        await send_ws(other_user_id, {
+            "type": "messages_read",
+            "reader_id": user_id,
+            "message_ids": unread_ids
+        })
 
     return [dict(m) for m in messages]
 
@@ -1343,7 +1450,7 @@ def get_favorites(request: Request):
 
 @app.get("/api/feed")
 def feed(request: Request):
-    get_auth_user(request)
+    user_id = get_auth_user(request)
 
     connection = db()
 
@@ -1352,16 +1459,25 @@ def feed(request: Request):
             p.id, p.author_id, p.text, p.media_url, p.media_type, p.created_at,
             u.username, u.display_name, u.avatar_url,
             (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) AS likes,
-            (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count
+            (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) AS likes_count,
+            (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count,
+            (SELECT COUNT(*) FROM posts WHERE repost_of = p.id) AS reposts_count,
+            EXISTS(SELECT 1 FROM post_likes WHERE post_id = p.id AND user_id = ?) AS liked
         FROM posts p
         JOIN users u ON u.id = p.author_id
+        WHERE p.repost_of IS NULL
         ORDER BY p.id DESC
         LIMIT 100
-    """).fetchall()
+    """, (user_id,)).fetchall()
 
     connection.close()
 
-    return [dict(post) for post in posts]
+    out = []
+    for post in posts:
+        d = dict(post)
+        d["liked"] = bool(d.get("liked"))
+        out.append(d)
+    return out
 
 
 @app.post("/api/posts")
@@ -1456,6 +1572,61 @@ def like_post(post_id: int, request: Request):
 
     return {"liked": liked, "likes": count}
 
+
+
+
+@app.post("/api/posts/{post_id}/repost")
+def repost_post(post_id: int, request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    post = connection.execute("SELECT * FROM posts WHERE id = ?", (post_id,)).fetchone()
+    if not post:
+        connection.close()
+        raise HTTPException(404, "Пост не найден")
+    # already reposted?
+    origin_id = post["repost_of"] or post_id
+    exists = connection.execute(
+        "SELECT id FROM posts WHERE author_id = ? AND repost_of = ?",
+        (user_id, origin_id)
+    ).fetchone()
+    if exists:
+        # toggle: убрать репост
+        connection.execute("DELETE FROM posts WHERE id = ?", (exists["id"],))
+        connection.commit()
+        connection.close()
+        return {"ok": True, "removed": True}
+    origin = connection.execute("SELECT * FROM posts WHERE id = ?", (origin_id,)).fetchone() or post
+    cur = connection.execute(
+        "INSERT INTO posts (author_id, text, created_at, repost_of) VALUES (?,?,?,?)",
+        (user_id, origin["text"], now(), origin_id)
+    )
+    new_id = cur.lastrowid
+    connection.commit()
+    connection.close()
+    return {"ok": True, "id": new_id}
+
+
+@app.get("/api/users/{user_id}/posts")
+def user_posts(user_id: int, request: Request):
+    get_auth_user(request)
+    connection = db()
+    rows = connection.execute("""
+        SELECT p.id, p.author_id, p.text, p.created_at, p.repost_of,
+               u.username, u.display_name, u.avatar_url, u.is_verified,
+               (SELECT COUNT(*) FROM likes WHERE post_id = p.id) AS likes_count,
+               (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count,
+               (SELECT COUNT(*) FROM posts WHERE repost_of = COALESCE(p.repost_of, p.id)) AS reposts_count,
+               op.username AS origin_username, op.display_name AS origin_display_name
+        FROM posts p
+        JOIN users u ON u.id = p.author_id
+        LEFT JOIN posts orig ON orig.id = p.repost_of
+        LEFT JOIN users op ON op.id = orig.author_id
+        WHERE p.author_id = ?
+        ORDER BY p.id DESC
+        LIMIT 50
+    """, (user_id,)).fetchall()
+    connection.close()
+    return [dict(r) for r in rows]
 
 @app.delete("/api/posts/{post_id}")
 def delete_post(post_id: int, request: Request):
@@ -2767,7 +2938,8 @@ def login_by_code(data: CodeLoginRequest, request: Request, response: Response):
     connection.close()
 
     browser_id = get_or_create_browser(request, response)
-    token = create_session(user["id"], browser_id)
+    ua = (request.headers.get("user-agent") or "")[:200]
+    token = create_session(user["id"], browser_id, ua)
     set_auth_cookie(response, token)
 
     return {"ok": True, "token": token}
@@ -2776,6 +2948,31 @@ def login_by_code(data: CodeLoginRequest, request: Request, response: Response):
 # =========================================================
 # BLOCKS / CHAT SETTINGS / ALIAS
 # =========================================================
+
+
+
+@app.post("/api/admin/verify")
+async def admin_verify(request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    me = connection.execute("SELECT username FROM users WHERE id = ?", (user_id,)).fetchone()
+    if not me or str(me["username"]).lower() != "afrasg":
+        connection.close()
+        raise HTTPException(403, "Нет доступа")
+    data = await request.json()
+    username = (data.get("username") or "").strip().lstrip("@")
+    verified = bool(data.get("verified"))
+    if not username:
+        connection.close()
+        raise HTTPException(400, "Укажите username")
+    target = connection.execute("SELECT id, username, is_verified FROM users WHERE lower(username) = lower(?)", (username,)).fetchone()
+    if not target:
+        connection.close()
+        raise HTTPException(404, "Пользователь не найден")
+    connection.execute("UPDATE users SET is_verified = ? WHERE id = ?", (1 if verified else 0, target["id"]))
+    connection.commit()
+    connection.close()
+    return {"ok": True, "username": target["username"], "is_verified": verified}
 
 @app.post("/api/users/{other_id}/block")
 def block_user(other_id: int, request: Request):
@@ -3061,6 +3258,53 @@ def vote_poll(poll_id: int, request: Request, option_idx: int = 0):
 
 
 # =========================================================
+
+
+@app.get("/api/stickers")
+def list_stickers(request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    rows = connection.execute(
+        "SELECT id, image_url, created_at FROM stickers WHERE user_id = ? ORDER BY id DESC",
+        (user_id,)
+    ).fetchall()
+    connection.close()
+    return [dict(r) for r in rows]
+
+
+@app.post("/api/stickers")
+async def upload_sticker(request: Request, file: UploadFile = File(...)):
+    user_id = get_auth_user(request)
+    import uuid as _uuid
+    ext = (file.filename or "sticker.png").rsplit(".", 1)[-1].lower()
+    if ext not in ("png", "jpg", "jpeg", "gif", "webp"):
+        ext = "png"
+    name = f"sticker_{user_id}_{_uuid.uuid4().hex[:10]}.{ext}"
+    path = os.path.join(UPLOAD_DIR, name)
+    with open(path, "wb") as out:
+        shutil.copyfileobj(file.file, out)
+    url = "/uploads/" + name
+    connection = db()
+    cur = connection.execute(
+        "INSERT INTO stickers (user_id, image_url, created_at) VALUES (?,?,?)",
+        (user_id, url, now())
+    )
+    sid = cur.lastrowid
+    connection.commit()
+    connection.close()
+    return {"ok": True, "id": sid, "image_url": url}
+
+
+@app.delete("/api/stickers/{sticker_id}")
+def delete_sticker(sticker_id: int, request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    connection.execute("DELETE FROM stickers WHERE id = ? AND user_id = ?", (sticker_id, user_id))
+    connection.commit()
+    connection.close()
+    return {"ok": True}
+
+
 # MESSAGE MEDIA / VOICE
 # =========================================================
 
@@ -3729,7 +3973,7 @@ async def broadcast_presence(user_id: int, online: bool):
         SELECT DISTINCT CASE WHEN sender_id = ? THEN receiver_id ELSE sender_id END AS peer_id
         FROM messages
         WHERE sender_id = ? OR receiver_id = ?
-        LIMIT 100
+        LIMIT 200
     """, (user_id, user_id, user_id)).fetchall()
     connection.close()
     payload = {
@@ -3738,10 +3982,18 @@ async def broadcast_presence(user_id: int, online: bool):
         "online": online,
         "last_seen": now(),
     }
+    sent = set()
     for row in peers:
         pid = row["peer_id"]
         if pid and pid != user_id:
+            sent.add(pid)
             await send_ws(pid, payload)
+    # также всем, у кого сейчас открыт WS (быстрый апдейт статуса)
+    for pid in list(connections.keys()):
+        if pid != user_id and pid not in sent:
+            await send_ws(pid, payload)
+
+
 
 
 # =========================================================
