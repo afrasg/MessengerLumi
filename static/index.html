@@ -4587,6 +4587,22 @@ body.theme-light .message-row.theirs .message-bubble {
   }
 }
 
+
+.spaces-block h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--tg-text, #f5f5f5);
+}
+#settingsTabSpaces .spaces-block {
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  margin-bottom: 8px;
+}
+#settingsTabSpaces .spaces-block:last-child {
+  border-bottom: none;
+}
+
 </style>
 
 </head>
@@ -4948,6 +4964,15 @@ body.theme-light .message-row.theirs .message-bubble {
                                   <span class="tg-set-sub">Автоответ, микрофон, камера</span>
                                 </span>
                             </button>
+                            <button type="button" class="tg-set-row" onclick="openSettingsSection('spaces')">
+                                <span class="tg-set-ico" style="background:#5e5ce6">
+                                  <svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M12 12.75c1.63 0 3.07.39 4.24.9 1.08.48 1.76 1.56 1.76 2.73V18H6v-1.61c0-1.18.68-2.26 1.76-2.73 1.17-.52 2.61-.91 4.24-.91zM4 13c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm18 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z"/></svg>
+                                </span>
+                                <span class="tg-set-text">
+                                  <span class="tg-set-title">Группы и каналы</span>
+                                  <span class="tg-set-sub">Группы, каналы, сообщества</span>
+                                </span>
+                            </button>
                             <button type="button" class="tg-set-row" id="adminMenuRow" style="display:none" onclick="openSettingsSection('admin')">
                                 <span class="tg-set-ico" style="background:#bf5af2">
                                   <svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
@@ -5083,64 +5108,35 @@ body.theme-light .message-row.theirs .message-bubble {
 
                             </div>
 
-                        </div>
-
-                        
-
                             <div id="settingsTabAdmin" class="settings-tab">
-
-                                <div class="card" style="border:none;padding:0;background:transparent;box-shadow:none">
-
-                                    <h3>Админ панель</h3>
-
-                                    <p style="color:#8a8a9a;font-size:13px;margin-bottom:10px">Выдать / забрать галочку верификации</p>
-
-                                    <input id="adminVerifyUser" placeholder="@username" style="width:100%;margin-bottom:8px;padding:10px;border-radius:10px;border:1px solid #2a2a38;background:#1a1a24;color:#fff">
-
-                                    <div style="display:flex;gap:8px">
-
-                                        <button class="primary" style="flex:1;padding:10px;border-radius:10px" onclick="adminSetVerified(true)">Выдать галочку</button>
-
-                                        <button class="secondary" style="flex:1;padding:10px;border-radius:10px;background:#e74c4c;border:none;color:#fff" onclick="adminSetVerified(false)">Забрать</button>
-
-                                    </div>
-
-                                    <div id="adminVerifyResult" style="margin-top:10px;font-size:13px;color:#8a8a9a"></div>
-
+                                <h3 style="margin-bottom:8px">Админ панель</h3>
+                                <p style="color:#8a8a9a;font-size:13px;margin-bottom:10px">Выдать / забрать галочку верификации</p>
+                                <input id="adminVerifyUser" placeholder="@username" style="width:100%;margin-bottom:8px;padding:10px;border-radius:10px;border:1px solid #2a2a38;background:#1a1a24;color:#fff">
+                                <div style="display:flex;gap:8px">
+                                    <button class="primary" style="flex:1;padding:10px;border-radius:10px" onclick="adminSetVerified(true)">Выдать галочку</button>
+                                    <button class="secondary" style="flex:1;padding:10px;border-radius:10px;background:#e74c4c;border:none;color:#fff" onclick="adminSetVerified(false)">Забрать</button>
                                 </div>
+                                <div id="adminVerifyResult" style="margin-top:10px;font-size:13px;color:#8a8a9a"></div>
+                            </div>
 
+                            <div id="settingsTabSpaces" class="settings-tab">
+                                <div class="spaces-block" id="spacesGroups">
+                                    <h3 id="spacesGroupsTitle">Группы</h3>
+                                    <button class="primary" id="btnCreateGroup" style="padding:10px;border-radius:10px;width:100%" onclick="openCreateGroup()">Создать группу</button>
+                                    <div id="groups" style="margin-top:8px"></div>
+                                </div>
+                                <div class="spaces-block" id="spacesChannels" style="margin-top:16px">
+                                    <h3 id="spacesChannelsTitle">Каналы</h3>
+                                    <button class="primary" id="btnCreateChannel" style="padding:10px;border-radius:10px;width:100%" onclick="openCreateChannel()">Создать канал</button>
+                                    <div id="channels" style="margin-top:8px"></div>
+                                </div>
+                                <div class="spaces-block" id="spacesCommunities" style="margin-top:16px">
+                                    <h3 id="spacesCommunitiesTitle">Сообщества</h3>
+                                    <button class="primary" id="btnCreateCommunity" style="padding:10px;border-radius:10px;width:100%" onclick="openCreateCommunity()">Создать сообщество</button>
+                                    <div id="communities" style="margin-top:8px"></div>
+                                </div>
                             </div>
                         </div><!-- /settingsDetail -->
-
-                        <div class="card">
-
-                            <h3>Группы</h3>
-
-                            <button class="primary" style="padding:10px;border-radius:10px;width:100%" onclick="openCreateGroup()">Создать группу</button>
-
-                            <div id="groups" style="margin-top:8px"></div>
-
-                        </div>
-
-                        <div class="card">
-
-                            <h3>Каналы</h3>
-
-                            <button class="primary" style="padding:10px;border-radius:10px;width:100%" onclick="openCreateChannel()">Создать канал</button>
-
-                            <div id="channels" style="margin-top:8px"></div>
-
-                        </div>
-
-                        <div class="card">
-
-                            <h3>Сообщества</h3>
-
-                            <button class="primary" style="padding:10px;border-radius:10px;width:100%" onclick="openCreateCommunity()">Создать сообщество</button>
-
-                            <div id="communities" style="margin-top:8px"></div>
-
-                        </div>
 
                     </div>
 
@@ -6064,21 +6060,18 @@ body.theme-light .message-row.theirs .message-bubble {
 
             // Groups/Channels/Communities headers
 
-            var cards = document.querySelectorAll("#settingsView .card h3");
-
-            if (cards[0]) cards[0].textContent = t("groups");
-
-            if (cards[1]) cards[1].textContent = t("channels");
-
-            if (cards[2]) cards[2].textContent = t("communities");
-
-            var createBtns = document.querySelectorAll("#settingsView .card > button.primary");
-
-            if (createBtns[0]) createBtns[0].textContent = t("create_group");
-
-            if (createBtns[1]) createBtns[1].textContent = t("create_channel");
-
-            if (createBtns[2]) createBtns[2].textContent = t("create_community");
+            var gTitle = document.getElementById("spacesGroupsTitle");
+            if (gTitle) gTitle.textContent = t("groups");
+            var cTitle = document.getElementById("spacesChannelsTitle");
+            if (cTitle) cTitle.textContent = t("channels");
+            var mTitle = document.getElementById("spacesCommunitiesTitle");
+            if (mTitle) mTitle.textContent = t("communities");
+            var bg = document.getElementById("btnCreateGroup");
+            if (bg) bg.textContent = t("create_group");
+            var bc = document.getElementById("btnCreateChannel");
+            if (bc) bc.textContent = t("create_channel");
+            var bm = document.getElementById("btnCreateCommunity");
+            if (bm) bm.textContent = t("create_community");
 
             // Favorites
 
@@ -11008,6 +11001,7 @@ body.theme-light .message-row.theirs .message-bubble {
             devices: "Сессии",
             accounts: "Аккаунт",
             calls: "Звонки",
+            spaces: "Группы и каналы",
             admin: "Админ панель"
         };
 
@@ -11040,6 +11034,9 @@ body.theme-light .message-row.theirs .message-bubble {
             if (back) back.classList.remove("hidden");
             if (title) title.textContent = SETTINGS_TITLES[tab] || "Настройки";
             switchSettingsTab(tab);
+            if (tab === "spaces") {
+                try { loadGroups(); loadChannels(); loadCommunities(); } catch (e) {}
+            }
         }
 
         function switchSettingsTab(tab) {
@@ -11069,6 +11066,8 @@ body.theme-light .message-row.theirs .message-bubble {
                 accounts: "settingsTabAccounts",
 
                 calls: "settingsTabCalls",
+
+                spaces: "settingsTabSpaces",
 
                 admin: "settingsTabAdmin"
 
