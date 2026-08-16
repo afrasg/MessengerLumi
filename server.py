@@ -17,23 +17,23 @@ from fastapi import (
  Response,
  UploadFile,
  File,
- Форма, 
-) 
-из fastapi.responses импортируйте FileResponse 
-из fastapi.staticfiles импортируйте StaticFiles 
-из fastapi.middleware.cors импортируйте CORSMiddleware 
-из базовой модели импорта pydantic
+ Form,
+)
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 
 # =========================================================
-# КОНФИГУРАЦИЯ
+# CONFIG
 # =========================================================
 
 app = FastAPI(title="Messenger Lumi")
 
-BASE_DIR = Путь(__файл__).resolve().parent
-STATIC_DIR = BASE_DIR / "статический"
-UPLOAD_DIR = BASE_DIR / "загружает"
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+UPLOAD_DIR = BASE_DIR / "uploads"
 DB_PATH = BASE_DIR / "messenger.db"
 
 STATIC_DIR.mkdir(exist_ok=True)
@@ -63,7 +63,7 @@ app.add_middleware(
 
 
 # =========================================================
-# БАЗА ДАННЫХ
+# DATABASE
 # =========================================================
 
 def db():
@@ -284,6 +284,7 @@ def init_db():
  deleted_for_me INTEGER DEFAULT 0,
  UNIQUE(user_id, peer_id)
  );
+
  CREATE TABLE IF NOT EXISTS polls (
  id INTEGER PRIMARY KEY AUTOINCREMENT,
  creator_id INTEGER NOT NULL,
@@ -388,14 +389,14 @@ def init_db():
  connection.execute("ALTER TABLE settings ADD COLUMN mute_on_join INTEGER DEFAULT 0")
  except sqlite3.OperationalError:
  pass
- попробуйте: 
- подключение.выполнить ("ИЗМЕНИТЬ настройки ТАБЛИЦЫ, ДОБАВИТЬ СТОЛБЕЦ camera_on_join с ЦЕЛЫМ ЧИСЛОМ ПО УМОЛЧАНИЮ 0")
- кроме sqlite3.OperationalError:
- передать
+ try:
+ connection.execute("ALTER TABLE settings ADD COLUMN camera_on_join INTEGER DEFAULT 0")
+ except sqlite3.OperationalError:
+ pass
 
- подключение.выполнить("""
- ОБНОВЛЕННЫЕ пользователи УСТАНАВЛИВАЮТ display_name = имя пользователя
- ГДЕ display_name РАВНО НУЛЮ ИЛИ display_name = " 
+ connection.execute("""
+ UPDATE users SET display_name = username
+ WHERE display_name IS NULL OR display_name = ''
  """)
 
  import hashlib as _hl
@@ -406,7 +407,7 @@ def init_db():
  bot = connection.execute("SELECT id FROM users WHERE username = 'lumi'").fetchone()
  if not bot:
  connection.execute("""
- ВСТАВИТЬ В пользователей
+ INSERT INTO users
  (username, password_hash, created_at, last_seen, display_name, bio, is_bot, is_verified, avatar_url)
  VALUES ('lumi', ?, ?, ?, 'Lumi', 'Официальный бот Messenger Lumi', 1, 1, ?)
  """, (_ph, _ts, _ts, LUMI_AVATAR_URL))
@@ -425,7 +426,7 @@ init_db()
 
 
 # =========================================================
-# ПОМОЩНИКИ
+# HELPERS
 # =========================================================
 
 def now():
@@ -450,57 +451,57 @@ def new_token():
 
 
 def valid_username(username):
- возврат (
-        len(username) >= 3 and len(username) <= 30 and
-        bool(re.fullmatch(r"[a-zA-Z0-9_]+", username))
-    )
+ return (
+ len(username) >= 3 and len(username) <= 30 and
+ bool(re.fullmatch(r"[a-zA-Z0-9_]+", username))
+ )
 
 
 def set_auth_cookie(response: Response, token: str, secure: bool = False):
-    response.set_cookie(
-        key=SESSION_COOKIE,
-        value=token,
-        max_age=SESSION_DAYS * 24 * 60 * 60,
-        httponly=True,
-        secure=secure,
-        samesite="lax",
-        path="/",
-    )
+ response.set_cookie(
+ key=SESSION_COOKIE,
+ value=token,
+ max_age=SESSION_DAYS * 24 * 60 * 60,
+ httponly=True,
+ secure=secure,
+ samesite="lax",
+ path="/",
+ )
 
 
 def set_browser_cookie(response: Response, browser_id: str, secure: bool = False):
-    response.set_cookie(
-        key=BROWSER_COOKIE,
-        value=browser_id,
-        max_age=365 * 24 * 60 * 60,
-        httponly=True,
-        secure=secure,
-        samesite="lax",
-        path="/",
-    )
+ response.set_cookie(
+ key=BROWSER_COOKIE,
+ value=browser_id,
+ max_age=365 * 24 * 60 * 60,
+ httponly=True,
+ secure=secure,
+ samesite="lax",
+ path="/",
+ )
 
 
 def get_or_create_browser(request: Request, response: Response):
-    value = request.cookies.get(BROWSER_COOKIE)
-    if value:
-        return value
-    value = secrets.token_urlsafe(32)
-    set_browser_cookie(response, value)
-    return value
+ value = request.cookies.get(BROWSER_COOKIE)
+ if value:
+ return value
+ value = secrets.token_urlsafe(32)
+ set_browser_cookie(response, value)
+ return value
 
 
 def create_session(user_id, browser_id, device_info=None):
-    token = new_token()
-    created = datetime.utcnow()
-    expires = created + timedelta(days=SESSION_DAYS)
+ token = new_token()
+ created = datetime.utcnow()
+ expires = created + timedelta(days=SESSION_DAYS)
 
-    connection = db()
-    connection.execute("""
-        INSERT INTO sessions
+ connection = db()
+ connection.execute("""
+ INSERT INTO sessions
  (user_id, token_hash, browser_hash, device_info, created_at, last_seen, expires_at)
- VALUES (?, ?, ?, ?, ?, ?)
+ VALUES (?, ?, ?, ?, ?, ?, ?)
  """, (user_id, hash_token(token), browser_hash(browser_id),
- (device_info или "")[:200],
+ (device_info or "")[:200],
  created.isoformat(), created.isoformat(), expires.isoformat()))
  connection.commit()
  connection.close()
@@ -539,7 +540,7 @@ def get_auth_user(request: Request, update_last_seen: bool = True):
  connection.execute("DELETE FROM sessions WHERE id = ?", (session["session_id"],))
  connection.commit()
  connection.close()
- raise HTTPException(401, "Срок действия сессии истек")
+ raise HTTPException(401, "Сессия истекла")
 
  connection.execute("UPDATE sessions SET last_seen = ? WHERE id = ?",
  (now(), session["session_id"]))
@@ -553,16 +554,16 @@ def get_auth_user(request: Request, update_last_seen: bool = True):
  return session["user_id"]
 
 
-определение get_browser_id(запрос):
- значение = запрос.cookies.get(BROWSER_COOKIE)
- если не значение:
+def get_browser_id(request):
+ value = request.cookies.get(BROWSER_COOKIE)
+ if not value:
  raise HTTPException(400, "Браузер не определён")
- возвращаемое значение
+ return value
 
 
-async def send_ws (идентификатор пользователя, полезная нагрузка):
- dead = [] 
- для сокета в списке(connections.get(user_id, set())):
+async def send_ws(user_id, payload):
+ dead = []
+ for socket in list(connections.get(user_id, set())):
  try:
  await socket.send_json(payload)
  except Exception:
@@ -574,17 +575,17 @@ async def send_ws (идентификатор пользователя, поле
 
 def clear_deleted_for_me(connection, user_a, user_b):
  connection.execute("""
-        UPDATE chat_settings SET deleted_for_me = 0
-        WHERE (user_id = ? AND peer_id = ?) OR (user_id = ? AND peer_id = ?)
-    """, (user_a, user_b, user_b, user_a))
+ UPDATE chat_settings SET deleted_for_me = 0
+ WHERE (user_id = ? AND peer_id = ?) OR (user_id = ? AND peer_id = ?)
+ """, (user_a, user_b, user_b, user_a))
 
 
 def user_public(connection, user_id):
-    row = connection.execute(
-        "SELECT id, username, display_name, avatar_url, is_bot, is_verified, last_seen FROM users WHERE id = ?",
-        (user_id,)
-    ).fetchone()
-    return dict(row) if row else {}
+ row = connection.execute(
+ "SELECT id, username, display_name, avatar_url, is_bot, is_verified, last_seen FROM users WHERE id = ?",
+ (user_id,)
+ ).fetchone()
+ return dict(row) if row else {}
 
 
 # =========================================================
@@ -592,129 +593,129 @@ def user_public(connection, user_id):
 # =========================================================
 
 class RegisterRequest(BaseModel):
-    username: str
-    password: str
-    display_name: str = ""
+ username: str
+ password: str
+ display_name: str = ""
 
 
 class LoginRequest(BaseModel):
-    username: str
-    password: str
+ username: str
+ password: str
 
 
 class MessageRequest(BaseModel):
-    receiver_id: int
-    text: str
+ receiver_id: int
+ text: str
 
 
 class EditMessageRequest(BaseModel):
-    text: str
+ text: str
 
 
 class ProfileRequest(BaseModel):
-    username: str
-    display_name: str
-    bio: str = ""
+ username: str
+ display_name: str
+ bio: str = ""
 
 
 class PostRequest(BaseModel):
-    text: str = ""
+ text: str = ""
 
 
 class CommentRequest(BaseModel):
-    text: str
-    parent_id: int | None = None
+ text: str
+ parent_id: int | None = None
 
 
 class SettingsRequest(BaseModel):
-    language: str = "ru"
-    theme: str = "dark"
-    notifications: bool = True
-    show_online: bool = True
-    show_last_seen: bool = True
-    auto_answer: bool = False
-    mute_on_join: bool = False
-    camera_on_join: bool = False
+ language: str = "ru"
+ theme: str = "dark"
+ notifications: bool = True
+ show_online: bool = True
+ show_last_seen: bool = True
+ auto_answer: bool = False
+ mute_on_join: bool = False
+ camera_on_join: bool = False
 
 
 class PrivacySettingsRequest(BaseModel):
-    phone_visibility: str = "all"
-    avatar_visibility: str = "all"
-    last_seen_visibility: str = "all"
+ phone_visibility: str = "all"
+ avatar_visibility: str = "all"
+ last_seen_visibility: str = "all"
 
 
 class GroupRequest(BaseModel):
-    name: str
-    description: str = ""
+ name: str
+ description: str = ""
 
 
 class ChannelRequest(BaseModel):
-    name: str
-    username: str
-    description: str = ""
+ name: str
+ username: str
+ description: str = ""
 
 
 class CommunityRequest(BaseModel):
-    name: str
-    description: str = ""
+ name: str
+ description: str = ""
 
 
 class CommunityChatRequest(BaseModel):
-    name: str
-    description: str = ""
+ name: str
+ description: str = ""
 
 
 class InviteRequest(BaseModel):
-    username: str
+ username: str
 
 
 class GroupMessageRequest(BaseModel):
-    text: str
+ text: str
 
 
 class ChannelMessageRequest(BaseModel):
-    text: str
+ text: str
 
 
 class DeleteAccountRequest(BaseModel):
-    password: str
+ password: str
 
 
 class CodeLoginRequest(BaseModel):
-    username: str
-    code: str
+ username: str
+ code: str
 
 
 class RequestCodeRequest(BaseModel):
-    username: str
+ username: str
 
 
 class AliasRequest(BaseModel):
-    alias: str
+ alias: str
 
 
 class WallpaperRequest(BaseModel):
-    wallpaper_url: str = ""
-    wallpaper_blur: bool = False
+ wallpaper_url: str = ""
+ wallpaper_blur: bool = False
 
 
 class RenameEntityRequest(BaseModel):
-    name: str
+ name: str
 
 
 class InviteActionRequest(BaseModel):
-    action: str
+ action: str
 
 
 class CallSignalRequest(BaseModel):
-    target_id: int
-    signal_type: str
-    payload: dict = {}
+ target_id: int
+ signal_type: str
+ payload: dict = {}
 
 
 class ForwardRequest(BaseModel):
-    target_id: int
-    target_type: str = "user"
+ target_id: int
+ target_type: str = "user"
 
 
 # =========================================================
@@ -723,212 +724,212 @@ class ForwardRequest(BaseModel):
 
 @app.post("/api/register")
 def register(data: RegisterRequest, request: Request, response: Response):
-    username = data.username.strip().lower()
+ username = data.username.strip().lower()
 
-    if not valid_username(username):
-        raise HTTPException(400, "Username: 3-30 символов, только буквы, цифры и _")
+ if not valid_username(username):
+ raise HTTPException(400, "Username: 3-30 символов, только буквы, цифры и _")
 
-    if len(data.password) < 6:
-        raise HTTPException(400, "Пароль должен содержать минимум 6 символов")
+ if len(data.password) < 6:
+ raise HTTPException(400, "Пароль должен содержать минимум 6 символов")
 
-    connection = db()
+ connection = db()
 
-    exists = connection.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
-    if exists:
-        connection.close()
-        raise HTTPException(400, "Такой username уже занят")
+ exists = connection.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
+ if exists:
+ connection.close()
+ raise HTTPException(400, "Такой username уже занят")
 
-    created = now()
+ created = now()
 
-    dn = (getattr(data, "display_name", None) or "").strip() or username
-    cursor = connection.execute("""
-        INSERT INTO users (username, password_hash, created_at, last_seen, display_name)
-        VALUES (?, ?, ?, ?, ?)
-    """, (username, hash_password(data.password), created, created, dn))
+ dn = (getattr(data, "display_name", None) or "").strip() or username
+ cursor = connection.execute("""
+ INSERT INTO users (username, password_hash, created_at, last_seen, display_name)
+ VALUES (?, ?, ?, ?, ?)
+ """, (username, hash_password(data.password), created, created, dn))
 
-    user_id = cursor.lastrowid
+ user_id = cursor.lastrowid
 
-    connection.execute("INSERT OR IGNORE INTO settings (user_id) VALUES (?)", (user_id,))
-    connection.execute("INSERT OR IGNORE INTO privacy_settings (user_id) VALUES (?)", (user_id,))
+ connection.execute("INSERT OR IGNORE INTO settings (user_id) VALUES (?)", (user_id,))
+ connection.execute("INSERT OR IGNORE INTO privacy_settings (user_id) VALUES (?)", (user_id,))
 
-    connection.commit()
-    connection.close()
+ connection.commit()
+ connection.close()
 
-    browser_id = get_or_create_browser(request, response)
-    ua = (request.headers.get("user-agent") or "")[:200]
-    token = create_session(user_id, browser_id, ua)
-    set_auth_cookie(response, token)
+ browser_id = get_or_create_browser(request, response)
+ ua = (request.headers.get("user-agent") or "")[:200]
+ token = create_session(user_id, browser_id, ua)
+ set_auth_cookie(response, token)
 
-    return {"ok": True, "token": token}
+ return {"ok": True, "token": token}
 
 
 @app.post("/api/login")
 def login(data: LoginRequest, request: Request, response: Response):
-    username = data.username.strip().lower()
+ username = data.username.strip().lower()
 
-    connection = db()
+ connection = db()
 
-    user = connection.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+ user = connection.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
 
-    if not user or user["password_hash"] != hash_password(data.password):
-        connection.close()
-        raise HTTPException(401, "Неверный логин или пароль")
+ if not user or user["password_hash"] != hash_password(data.password):
+ connection.close()
+ raise HTTPException(401, "Неверный логин или пароль")
 
-    connection.execute("INSERT OR IGNORE INTO settings (user_id) VALUES (?)", (user["id"],))
-    connection.execute("INSERT OR IGNORE INTO privacy_settings (user_id) VALUES (?)", (user["id"],))
+ connection.execute("INSERT OR IGNORE INTO settings (user_id) VALUES (?)", (user["id"],))
+ connection.execute("INSERT OR IGNORE INTO privacy_settings (user_id) VALUES (?)", (user["id"],))
 
-    connection.commit()
-    connection.close()
+ connection.commit()
+ connection.close()
 
-    browser_id = get_or_create_browser(request, response)
-    ua = (request.headers.get("user-agent") or "")[:200]
-    token = create_session(user["id"], browser_id, ua)
-    set_auth_cookie(response, token)
+ browser_id = get_or_create_browser(request, response)
+ ua = (request.headers.get("user-agent") or "")[:200]
+ token = create_session(user["id"], browser_id, ua)
+ set_auth_cookie(response, token)
 
-    return {"ok": True, "token": token}
+ return {"ok": True, "token": token}
 
 
 
 
 @app.get("/api/sessions")
 def list_sessions(request: Request):
-    user_id = get_auth_user(request)
-    token = request.cookies.get(SESSION_COOKIE) or ""
-    auth = request.headers.get("Authorization") or ""
-    if not token and auth.lower().startswith("bearer "):
-        token = auth[7:].strip()
-    current_hash = hash_token(token) if token else ""
-    connection = db()
-    rows = connection.execute("""
-        SELECT id, browser_hash, device_info, created_at, last_seen, expires_at, token_hash
-        FROM sessions WHERE user_id = ?
-        ORDER BY last_seen DESC
-    """, (user_id,)).fetchall()
-    connection.close()
-    out = []
-    for r in rows:
-        out.append({
-            "id": r["id"],
-            "device_info": r["device_info"] or "Браузер",
-            "created_at": r["created_at"],
-            "last_seen": r["last_seen"],
-            "is_current": r["token_hash"] == current_hash,
-        })
-    return out
+ user_id = get_auth_user(request)
+ token = request.cookies.get(SESSION_COOKIE) or ""
+ auth = request.headers.get("Authorization") or ""
+ if not token and auth.lower().startswith("bearer "):
+ token = auth[7:].strip()
+ current_hash = hash_token(token) if token else ""
+ connection = db()
+ rows = connection.execute("""
+ SELECT id, browser_hash, device_info, created_at, last_seen, expires_at, token_hash
+ FROM sessions WHERE user_id = ?
+ ORDER BY last_seen DESC
+ """, (user_id,)).fetchall()
+ connection.close()
+ out = []
+ for r in rows:
+ out.append({
+ "id": r["id"],
+ "device_info": r["device_info"] or "Браузер",
+ "created_at": r["created_at"],
+ "last_seen": r["last_seen"],
+ "is_current": r["token_hash"] == current_hash,
+ })
+ return out
 
 
 @app.delete("/api/sessions/{session_id}")
 def revoke_session(session_id: int, request: Request):
-    user_id = get_auth_user(request)
-    token = request.cookies.get(SESSION_COOKIE) or ""
-    auth = request.headers.get("Authorization") or ""
-    if not token and auth.lower().startswith("bearer "):
-        token = auth[7:].strip()
-    current_hash = hash_token(token) if token else ""
-    connection = db()
-    row = connection.execute(
-        "SELECT id, token_hash FROM sessions WHERE id = ? AND user_id = ?",
-        (session_id, user_id)
-    ).fetchone()
-    if not row:
-        connection.close()
-        raise HTTPException(404, "Сессия не найдена")
-    if row["token_hash"] == current_hash:
-        connection.close()
-        raise HTTPException(400, "Нельзя завершить текущую сессию здесь")
-    connection.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
-    connection.commit()
-    connection.close()
-    return {"ok": True}
+ user_id = get_auth_user(request)
+ token = request.cookies.get(SESSION_COOKIE) or ""
+ auth = request.headers.get("Authorization") or ""
+ if not token and auth.lower().startswith("bearer "):
+ token = auth[7:].strip()
+ current_hash = hash_token(token) if token else ""
+ connection = db()
+ row = connection.execute(
+ "SELECT id, token_hash FROM sessions WHERE id = ? AND user_id = ?",
+ (session_id, user_id)
+ ).fetchone()
+ if not row:
+ connection.close()
+ raise HTTPException(404, "Сессия не найдена")
+ if row["token_hash"] == current_hash:
+ connection.close()
+ raise HTTPException(400, "Нельзя завершить текущую сессию здесь")
+ connection.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+ connection.commit()
+ connection.close()
+ return {"ok": True}
 
 
 @app.post("/api/sessions/revoke-others")
 def revoke_other_sessions(request: Request):
-    user_id = get_auth_user(request)
-    token = request.cookies.get(SESSION_COOKIE) or ""
-    auth = request.headers.get("Authorization") or ""
-    if not token and auth.lower().startswith("bearer "):
-        token = auth[7:].strip()
-    current_hash = hash_token(token) if token else ""
-    connection = db()
-    connection.execute(
-        "DELETE FROM sessions WHERE user_id = ? AND token_hash != ?",
-        (user_id, current_hash)
-    )
-    connection.commit()
-    connection.close()
-    return {"ok": True}
+ user_id = get_auth_user(request)
+ token = request.cookies.get(SESSION_COOKIE) or ""
+ auth = request.headers.get("Authorization") or ""
+ if not token and auth.lower().startswith("bearer "):
+ token = auth[7:].strip()
+ current_hash = hash_token(token) if token else ""
+ connection = db()
+ connection.execute(
+ "DELETE FROM sessions WHERE user_id = ? AND token_hash != ?",
+ (user_id, current_hash)
+ )
+ connection.commit()
+ connection.close()
+ return {"ok": True}
 
 @app.post("/api/logout")
 def logout(request: Request, response: Response):
-    token = request.cookies.get(SESSION_COOKIE)
+ token = request.cookies.get(SESSION_COOKIE)
 
-    if token:
-        connection = db()
-        connection.execute("DELETE FROM sessions WHERE token_hash = ?", (hash_token(token),))
-        connection.commit()
-        connection.close()
+ if token:
+ connection = db()
+ connection.execute("DELETE FROM sessions WHERE token_hash = ?", (hash_token(token),))
+ connection.commit()
+ connection.close()
 
-    response.delete_cookie(SESSION_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
-    return {"ok": True}
+ response.delete_cookie(SESSION_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
+ return {"ok": True}
 
 
 @app.get("/api/me")
 def me(request: Request):
-    user_id = get_auth_user(request)
+ user_id = get_auth_user(request)
 
-    connection = db()
+ connection = db()
 
-    user = connection.execute("""
-        SELECT id, username, display_name, bio, avatar_url, created_at, last_seen, is_bot, is_verified
-        FROM users WHERE id = ?
-    """, (user_id,)).fetchone()
+ user = connection.execute("""
+ SELECT id, username, display_name, bio, avatar_url, created_at, last_seen, is_bot, is_verified
+ FROM users WHERE id = ?
+ """, (user_id,)).fetchone()
 
-    connection.close()
+ connection.close()
 
-    if not user:
-        raise HTTPException(404, "Пользователь не найден")
+ if not user:
+ raise HTTPException(404, "Пользователь не найден")
 
-    return dict(user)
+ return dict(user)
 
 
 @app.delete("/api/account")
 def delete_account(data: DeleteAccountRequest, request: Request, response: Response):
-    user_id = get_auth_user(request, update_last_seen=False)
+ user_id = get_auth_user(request, update_last_seen=False)
 
-    connection = db()
+ connection = db()
 
-    user = connection.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+ user = connection.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
 
-    if not user:
-        connection.close()
-        raise HTTPException(404, "Аккаунт не найден")
+ if not user:
+ connection.close()
+ raise HTTPException(404, "Аккаунт не найден")
 
-    if user["password_hash"] != hash_password(data.password):
-        connection.close()
-        raise HTTPException(403, "Неверный пароль")
+ if user["password_hash"] != hash_password(data.password):
+ connection.close()
+ raise HTTPException(403, "Неверный пароль")
 
-    connection.execute("DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?", (user_id, user_id))
-    connection.execute("DELETE FROM favorites WHERE user_id = ?", (user_id,))
-    connection.execute("DELETE FROM favorite_reels WHERE user_id = ?", (user_id,))
-    connection.execute("DELETE FROM posts WHERE author_id = ?", (user_id,))
-    connection.execute("DELETE FROM comments WHERE user_id = ?", (user_id,))
-    connection.execute("DELETE FROM post_likes WHERE user_id = ?", (user_id,))
-    connection.execute("DELETE FROM group_members WHERE user_id = ?", (user_id,))
-    connection.execute("DELETE FROM channel_subscribers WHERE user_id = ?", (user_id,))
-    connection.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
-    connection.execute("DELETE FROM settings WHERE user_id = ?", (user_id,))
-    connection.execute("DELETE FROM privacy_settings WHERE user_id = ?", (user_id,))
-    connection.execute("DELETE FROM groups WHERE owner_id = ?", (user_id,))
-    connection.execute("DELETE FROM channels WHERE owner_id = ?", (user_id,))
-    connection.execute("DELETE FROM communities WHERE owner_id = ?", (user_id,))
-    connection.execute("DELETE FROM users WHERE id = ?", (user_id,))
+ connection.execute("DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?", (user_id, user_id))
+ connection.execute("DELETE FROM favorites WHERE user_id = ?", (user_id,))
+ connection.execute("DELETE FROM favorite_reels WHERE user_id = ?", (user_id,))
+ connection.execute("DELETE FROM posts WHERE author_id = ?", (user_id,))
+ connection.execute("DELETE FROM comments WHERE user_id = ?", (user_id,))
+ connection.execute("DELETE FROM post_likes WHERE user_id = ?", (user_id,))
+ connection.execute("DELETE FROM group_members WHERE user_id = ?", (user_id,))
+ connection.execute("DELETE FROM channel_subscribers WHERE user_id = ?", (user_id,))
+ connection.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+ connection.execute("DELETE FROM settings WHERE user_id = ?", (user_id,))
+ connection.execute("DELETE FROM privacy_settings WHERE user_id = ?", (user_id,))
+ connection.execute("DELETE FROM groups WHERE owner_id = ?", (user_id,))
+ connection.execute("DELETE FROM channels WHERE owner_id = ?", (user_id,))
+ connection.execute("DELETE FROM communities WHERE owner_id = ?", (user_id,))
+ connection.execute("DELETE FROM users WHERE id = ?", (user_id,))
 
-    connection.commit()
-    connection.close()
+ connection.commit()
+ connection.close()
 
-    response.delete_cookie(SESSION_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
-    return {"ok": True}
+ response.delete_cookie(SESSION_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
+ return {"ok": True}
 
 
 # =========================================================
@@ -937,61 +938,61 @@ def delete_account(data: DeleteAccountRequest, request: Request, response: Respo
 
 @app.put("/api/profile")
 def update_profile(data: ProfileRequest, request: Request):
-    user_id = get_auth_user(request)
+ user_id = get_auth_user(request)
 
-    username = data.username.strip().lower()
-    display_name = data.display_name.strip()
-    bio = data.bio.strip()
+ username = data.username.strip().lower()
+ display_name = data.display_name.strip()
+ bio = data.bio.strip()
 
-    if not valid_username(username):
-        raise HTTPException(400, "Некорректный username")
+ if not valid_username(username):
+ raise HTTPException(400, "Некорректный username")
 
-    if not display_name:
-        display_name = username
+ if not display_name:
+ display_name = username
 
-    connection = db()
+ connection = db()
 
-    exists = connection.execute(
-        "SELECT id FROM users WHERE username = ? AND id != ?", (username, user_id)
-    ).fetchone()
+ exists = connection.execute(
+ "SELECT id FROM users WHERE username = ? AND id != ?", (username, user_id)
+ ).fetchone()
 
-    if exists:
-        connection.close()
-        raise HTTPException(400, "Этот username уже занят")
+ if exists:
+ connection.close()
+ raise HTTPException(400, "Этот username уже занят")
 
-    connection.execute("""
-        UPDATE users SET username = ?, display_name = ?, bio = ? WHERE id = ?
-    """, (username, display_name, bio, user_id))
+ connection.execute("""
+ UPDATE users SET username = ?, display_name = ?, bio = ? WHERE id = ?
+ """, (username, display_name, bio, user_id))
 
-    connection.commit()
-    connection.close()
+ connection.commit()
+ connection.close()
 
-    return {"ok": True}
+ return {"ok": True}
 
 
 @app.post("/api/avatar")
 async def upload_avatar(request: Request, file: UploadFile = File(...)):
-    user_id = get_auth_user(request)
+ user_id = get_auth_user(request)
 
-    allowed = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+ allowed = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
 
-    if file.content_type not in allowed:
-        raise HTTPException(400, "Разрешены JPG, PNG и WEBP")
+ if file.content_type not in allowed:
+ raise HTTPException(400, "Разрешены JPG, PNG и WEBP")
 
-    filename = f"avatar_{user_id}_{secrets.token_hex(8)}{allowed[file.content_type]}"
-    path = UPLOAD_DIR / filename
+ filename = f"avatar_{user_id}_{secrets.token_hex(8)}{allowed[file.content_type]}"
+ path = UPLOAD_DIR / filename
 
-    with open(path, "wb") as output:
-        shutil.copyfileobj(file.file, output)
+ with open(path, "wb") as output:
+ shutil.copyfileobj(file.file, output)
 
-    url = "/uploads/" + filename
+ url = "/uploads/" + filename
 
-    connection = db()
-    connection.execute("UPDATE users SET avatar_url = ? WHERE id = ?", (url, user_id))
-    connection.commit()
-    connection.close()
+ connection = db()
+ connection.execute("UPDATE users SET avatar_url = ? WHERE id = ?", (url, user_id))
+ connection.commit()
+ connection.close()
 
-    return {"ok": True, "avatar_url": url}
+ return {"ok": True, "avatar_url": url}
 
 
 # =========================================================
