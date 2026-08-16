@@ -6746,6 +6746,8 @@ body.theme-light .message-row.theirs .message-bubble {
 
 
         var hiddenDialogs = {};
+        var knownDialogs = {}; // peerId -> dialog, чтобы чаты не пропадали при гонках /api/dialogs
+        var dialogsLoadSeq = 0;
 
         var presenceStickyOffline = {}; // id -> timestamp: ignore false "online" after real offline
 
@@ -7737,11 +7739,13 @@ body.theme-light .message-row.theirs .message-bubble {
 
                         if (data.message.sender_id) markPresence(data.message.sender_id, true, data.message.created_at, "ws");
 
-                        // new message unhides dialog
+                        // new message unhides dialog and keeps peer in list
 
                         if (data.message.sender_id) delete hiddenDialogs[Number(data.message.sender_id)];
 
                         if (data.message.receiver_id) delete hiddenDialogs[Number(data.message.receiver_id)];
+
+                        try { rememberDialogFromMessage(data.message); renderKnownDialogs(); } catch (e) {}
 
                         notifyNewMessage(data.message, "private");
 
@@ -8202,162 +8206,232 @@ body.theme-light .message-row.theirs .message-bubble {
 
         // DIALOGS
 
-        async function loadDialogs() {
+        function dialogLastText(d) {
+            var lastText = "";
+            if (!d || !d.last_message) return lastText;
+            var lm = d.last_message;
+            if (lm.deleted) lastText = t("msg_deleted");
+            else if (lm.media_type === "voice") lastText = t("voice") || "Голосовое сообщение";
+            else if (lm.media_type === "video_note") lastText = "Видеосообщение";
+            else if (lm.media_type === "image") lastText = t("photo") || "Фото";
+            else if (lm.media_type === "file") lastText = t("file") || "Файл";
+            else {
+                lastText = previewMessageText(lm.text || "");
+                if (Number(lm.sender_id) === Number(currentUser && currentUser.id)) lastText = "Вы: " + lastText;
+            }
+            return lastText;
+        }
 
-            var searchEl = document.getElementById("search");
+        function dialogSortKey(d) {
+            if (!d) return 0;
+            var lm = d.last_message;
+            if (lm && (lm.created_at || lm.timestamp || lm.time)) {
+                var ts = Date.parse(lm.created_at || lm.timestamp || lm.time);
+                if (!isNaN(ts)) return ts;
+            }
+            if (d.updated_at) {
+                var u = Date.parse(d.updated_at);
+                if (!isNaN(u)) return u;
+            }
+            return Number(d.id) || 0;
+        }
 
-            if (searchEl && searchEl.value.trim()) {
+        function buildDialogItem(d) {
+            var div = document.createElement("div");
+            div.className = "user-item dialog-item";
+            div.setAttribute("data-peer-id", String(d.id));
 
-                // не ломаем результаты поиска
+            var avatar = document.createElement("img");
+            avatar.className = "avatar";
+            avatar.src = avatarSrc(d.avatar_url);
 
-                return;
+            var info = document.createElement("div");
+            info.className = "info";
 
+            var name = document.createElement("div");
+            name.className = "name";
+            name.innerHTML = withVerified(d.alias || d.display_name || d.username, d);
+
+            var sub = document.createElement("div");
+            sub.className = "sub";
+            sub.textContent = dialogLastText(d);
+
+            info.appendChild(name);
+            info.appendChild(sub);
+            div.appendChild(avatar);
+            div.appendChild(info);
+
+            if (d.unread > 0) {
+                var badge = document.createElement("div");
+                badge.className = "badge";
+                badge.textContent = d.unread > 99 ? "99+" : d.unread;
+                div.appendChild(badge);
             }
 
-            var r = await req("/api/dialogs");
+            var dot = document.createElement("span");
+            dot.className = "status-dot " + (isUserOnline(d.last_seen, d) ? "online" : "offline");
+            div.appendChild(dot);
 
-            if (!r.ok) return;
+            div.onclick = function(){
+                var kind = (d.type || d.chat_type || d.kind || "private").toString().toLowerCase();
+                if (kind === "group" || kind === "groups") {
+                    openGroupChat(d.group_id || d.id, d.name || d.display_name || d.username, d.avatar_url);
+                } else if (kind === "channel" || kind === "channels") {
+                    openChannelChat(d.channel_id || d.id, d.name || d.display_name || d.username, !!d.is_owner, d.avatar_url);
+                } else {
+                    openChat({
+                        id: d.id,
+                        username: d.username,
+                        display_name: d.alias || d.display_name || d.username,
+                        avatar_url: d.avatar_url,
+                        is_bot: d.is_bot,
+                        is_verified: d.is_verified,
+                        last_seen: d.last_seen,
+                        is_online: d.is_online,
+                        online: d.online
+                    });
+                }
+            };
+            return div;
+        }
 
-            var dialogs = await safeJson(r);
-            if (!Array.isArray(dialogs)) dialogs = [];
-
+        function renderKnownDialogs() {
             var container = document.getElementById("users");
-
             if (!container) return;
 
-            container.querySelectorAll(".dialog-item").forEach(function(el){ el.remove(); });
+            var searchEl = document.getElementById("search");
+            if (searchEl && searchEl.value.trim()) return;
 
+            container.querySelectorAll(".dialog-item").forEach(function(el){ el.remove(); });
             container.querySelectorAll(".dialogs-header").forEach(function(el){ el.remove(); });
 
-            if (!dialogs.length) return;
-
-            // дедуп по id — чтобы в списке было несколько чатов, а не один «последний»
-            var seenIds = {};
-            dialogs = dialogs.filter(function(d){
-                if (!d || d.id == null) return false;
-                var id = Number(d.id);
-                if (seenIds[id]) return false;
-                seenIds[id] = true;
-                return true;
+            var list = Object.keys(knownDialogs).map(function(k){ return knownDialogs[k]; }).filter(function(d){
+                return d && d.id != null && !hiddenDialogs[Number(d.id)];
             });
+            if (!list.length) {
+                var nb0 = document.getElementById("navChatsBadge");
+                if (nb0) nb0.style.display = "none";
+                return;
+            }
+
+            list.sort(function(a, b){ return dialogSortKey(b) - dialogSortKey(a); });
 
             var frag = document.createDocumentFragment();
-
             var header = sectionHeader(t("chats"));
             header.classList.add("dialogs-header");
             frag.appendChild(header);
 
             var totalUnread = 0;
-
-            dialogs.forEach(function(d){
-
-                if (hiddenDialogs[Number(d.id)]) return;
-
+            list.forEach(function(d){
                 if (d.last_seen || d.is_online != null || d.online != null) {
-
                     markPresence(d.id, d.is_online != null ? d.is_online : d.online, d.last_seen);
-
                 }
-
-                var div = document.createElement("div"); div.className = "user-item dialog-item";
-
-                div.setAttribute("data-peer-id", String(d.id));
-
-                var avatar = document.createElement("img"); avatar.className = "avatar";
-
-                avatar.src = avatarSrc(d.avatar_url);
-
-                var info = document.createElement("div"); info.className = "info";
-
-                var name = document.createElement("div"); name.className = "name";
-
-                name.innerHTML = withVerified(d.alias || d.display_name || d.username, d);
-
-                var sub = document.createElement("div"); sub.className = "sub";
-
-                var lastText = "";
-
-                if (d.last_message) {
-
-                    if (d.last_message.deleted) lastText = t("msg_deleted");
-
-                    else if (d.last_message.media_type === "voice") lastText = t("voice") || "Голосовое сообщение";
-
-                    else if (d.last_message.media_type === "video_note") lastText = "Видеосообщение";
-
-                    else if (d.last_message.media_type === "image") lastText = t("photo") || "Фото";
-
-                    else if (d.last_message.media_type === "file") lastText = t("file") || "Файл";
-
-                    else {
-
-                        lastText = previewMessageText(d.last_message.text || "");
-
-                        if (Number(d.last_message.sender_id) === Number(currentUser?.id)) lastText = "Вы: " + lastText;
-
-                    }
-
-                }
-
-                sub.textContent = lastText;
-
-                info.appendChild(name); info.appendChild(sub);
-
-                div.appendChild(avatar); div.appendChild(info);
-
-                if (d.unread > 0) {
-
-                    var badge = document.createElement("div"); badge.className = "badge";
-
-                    badge.textContent = d.unread > 99 ? "99+" : d.unread;
-
-                    div.appendChild(badge);
-
-                    totalUnread += Number(d.unread) || 0;
-
-                }
-
-                var dot = document.createElement("span");
-
-                dot.className = "status-dot " + (isUserOnline(d.last_seen, d) ? "online" : "offline");
-
-                div.appendChild(dot);
-
-                div.onclick = function(){
-
-                    var kind = (d.type || d.chat_type || d.kind || "private").toString().toLowerCase();
-
-                    if (kind === "group" || kind === "groups") {
-
-                        openGroupChat(d.group_id || d.id, d.name || d.display_name || d.username, d.avatar_url);
-
-                    } else if (kind === "channel" || kind === "channels") {
-
-                        openChannelChat(d.channel_id || d.id, d.name || d.display_name || d.username, !!d.is_owner, d.avatar_url);
-
-                    } else {
-
-                        openChat({ id: d.id, username: d.username, display_name: d.alias || d.display_name || d.username, avatar_url: d.avatar_url, is_bot: d.is_bot, is_verified: d.is_verified, last_seen: d.last_seen, is_online: d.is_online, online: d.online });
-
-                    }
-
-                };
-
-                frag.appendChild(div);
-
+                frag.appendChild(buildDialogItem(d));
+                if (d.unread > 0) totalUnread += Number(d.unread) || 0;
             });
 
             container.prepend(frag);
             var nb = document.getElementById("navChatsBadge");
             if (nb) {
-                if (typeof totalUnread === "number" && totalUnread > 0) {
+                if (totalUnread > 0) {
                     nb.style.display = "";
                     nb.textContent = totalUnread > 99 ? "99+" : String(totalUnread);
                 } else nb.style.display = "none";
             }
-
         }
 
+        function upsertKnownDialog(d) {
+            if (!d || d.id == null) return;
+            var id = Number(d.id);
+            if (!isFinite(id)) return;
+            var prev = knownDialogs[id] || {};
+            var merged = Object.assign({}, prev, d, { id: id });
+            // не затирать last_message более старым
+            if (prev.last_message && d.last_message) {
+                var pt = dialogSortKey({ last_message: prev.last_message });
+                var nt = dialogSortKey({ last_message: d.last_message });
+                if (pt > nt) merged.last_message = prev.last_message;
+            } else if (prev.last_message && !d.last_message) {
+                merged.last_message = prev.last_message;
+            }
+            if (prev.unread != null && d.unread == null) merged.unread = prev.unread;
+            knownDialogs[id] = merged;
+            delete hiddenDialogs[id];
+        }
+
+        function rememberDialogFromMessage(message) {
+            if (!message || !currentUser) return;
+            var myId = Number(currentUser.id);
+            var sender = Number(message.sender_id);
+            var receiver = Number(message.receiver_id);
+            var peerId = sender === myId ? receiver : sender;
+            if (!isFinite(peerId) || peerId === myId) return;
+            var prev = knownDialogs[peerId] || {};
+            var name = message.sender_name || message.sender_username || prev.display_name || prev.username || ("user" + peerId);
+            var username = message.sender_username || prev.username || "";
+            // если сообщение от меня — имя пира из prev
+            if (sender === myId) {
+                name = prev.alias || prev.display_name || prev.username || name;
+                username = prev.username || username;
+            }
+            upsertKnownDialog({
+                id: peerId,
+                username: username,
+                display_name: name,
+                avatar_url: prev.avatar_url || message.sender_avatar || null,
+                is_bot: prev.is_bot || false,
+                is_verified: prev.is_verified || false,
+                last_seen: prev.last_seen,
+                is_online: true,
+                last_message: {
+                    text: message.text,
+                    media_type: message.media_type,
+                    deleted: message.deleted,
+                    sender_id: message.sender_id,
+                    created_at: message.created_at || message.timestamp || new Date().toISOString()
+                },
+                unread: (selectedUserId && Number(selectedUserId) === peerId)
+                    ? 0
+                    : (Number(prev.unread) || 0) + (sender === myId ? 0 : 1)
+            });
+        }
+
+        async function loadDialogs() {
+            var searchEl = document.getElementById("search");
+            if (searchEl && searchEl.value.trim()) {
+                // не ломаем результаты поиска
+                return;
+            }
+
+            var seq = ++dialogsLoadSeq;
+            var r = await req("/api/dialogs");
+            if (seq !== dialogsLoadSeq) return; // устаревший ответ — не затираем список
+            if (!r.ok) {
+                // при ошибке сети показываем то, что уже знаем
+                renderKnownDialogs();
+                return;
+            }
+
+            var dialogs = await safeJson(r);
+            if (seq !== dialogsLoadSeq) return;
+            if (!Array.isArray(dialogs)) dialogs = [];
+
+            // дедуп и слияние в knownDialogs (не удаляем уже известные чаты)
+            var seen = {};
+            dialogs.forEach(function(d){
+                if (!d || d.id == null) return;
+                var id = Number(d.id);
+                if (!isFinite(id) || seen[id]) return;
+                seen[id] = true;
+                upsertKnownDialog(d);
+            });
+
+            // если API вернул полный список (есть хотя бы 1 или пустой массив после успешного ответа),
+            // убираем из known только те, кого сервер явно больше не отдаёт? — НЕТ:
+            // иначе гонка снова сотрёт второй чат. Чистим только при explicit delete / clear.
+
+            renderKnownDialogs();
+        }
 
 
         // CHAT
@@ -8367,6 +8441,21 @@ body.theme-light .message-row.theirs .message-bubble {
             selectedUserId = Number(user.id); selectedGroupId = null; selectedChannelId = null; selectedChannelIsOwner = false; selectedCommunityId = null; selectedCommunityChatId = null;
 
             currentChatPeer = user; favoritePickMode = false; setComposerEnabled(true);
+            try {
+                if (user && user.id != null) {
+                    upsertKnownDialog({
+                        id: user.id,
+                        username: user.username,
+                        display_name: user.display_name || user.username,
+                        avatar_url: user.avatar_url,
+                        is_bot: user.is_bot,
+                        is_verified: user.is_verified,
+                        last_seen: user.last_seen,
+                        is_online: user.is_online != null ? user.is_online : user.online,
+                        online: user.online
+                    });
+                }
+            } catch (e) {}
 
             showOnly("chatView");
 
@@ -10111,6 +10200,23 @@ body.theme-light .message-row.theirs .message-bubble {
                 await loadMessages(selectedUserId);
 
                 animateLastMessages(1);
+                try {
+                    if (currentChatPeer && selectedUserId) {
+                        upsertKnownDialog({
+                            id: selectedUserId,
+                            username: currentChatPeer.username,
+                            display_name: currentChatPeer.display_name || currentChatPeer.username,
+                            avatar_url: currentChatPeer.avatar_url,
+                            is_bot: currentChatPeer.is_bot,
+                            is_verified: currentChatPeer.is_verified,
+                            last_seen: currentChatPeer.last_seen,
+                            is_online: currentChatPeer.is_online,
+                            last_message: { text: text, sender_id: currentUser && currentUser.id, created_at: new Date().toISOString() },
+                            unread: 0
+                        });
+                        renderKnownDialogs();
+                    }
+                } catch (e) {}
 
                 await loadDialogs();
 
@@ -11306,6 +11412,8 @@ body.theme-light .message-row.theirs .message-bubble {
                 req("/api/chats/clear", { method: "DELETE" }).then(function(){
 
                     showToast(t("chats_cleared"), t("all_messages_deleted"));
+
+                    knownDialogs = {};
 
                     loadDialogs();
 
@@ -13865,7 +13973,7 @@ body.theme-light .message-row.theirs .message-bubble {
 
             } catch (e) {}
 
-            hiddenDialogs[uid] = true;
+            hiddenDialogs[uid] = true; try { delete knownDialogs[uid]; } catch (e) {}
 
             selectedUserId = null;
 
@@ -13897,7 +14005,7 @@ body.theme-light .message-row.theirs .message-bubble {
 
             } catch (e) {}
 
-            hiddenDialogs[uid] = true;
+            hiddenDialogs[uid] = true; try { delete knownDialogs[uid]; } catch (e) {}
 
             selectedUserId = null;
 
