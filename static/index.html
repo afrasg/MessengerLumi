@@ -985,7 +985,6 @@
  radial-gradient(ellipse at 80% 70%, rgba(40,60,90,.12) 0%, transparent 45%),
 
                     #0e1621 !important;
-
             }
 
             body.theme-light .messages,
@@ -4924,7 +4923,15 @@ body.theme-light .message-row.theirs .message-bubble {
                                   <svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                                 </span>
                                 <span class="tg-set-text">
-                                  <span class="tg-set-title">Аккаунт</span>
+                                  <span class="tg-set-title">Аккаунт<button type="button" class="tg-set-row" onclick="openSettingsSection('profile')">
+    <span class="tg-set-ico" style="background:#3390ec">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+    </span>
+    <span class="tg-set-text">
+        <span class="tg-set-title">Профиль</span>
+        <span class="tg-set-sub">Имя, аватар, информация</span>
+    </span>
+</button></span>
                                   <span class="tg-set-sub">Имя, аккаунты, выход</span>
                                 </span>
                             </button>
@@ -5089,7 +5096,19 @@ body.theme-light .message-row.theirs .message-bubble {
                             <div id="settingsTabAccounts" class="settings-tab">
 
                                 <div class="setting"><button class="primary" style="width:100%;padding:10px;border-radius:10px" onclick="openCreateAccount()">Добавить аккаунт</button></div>
-
+                                <div id="settingsTabProfile" class="settings-tab">
+    <div style="text-align:center;padding:10px 0">
+        <img id="settingsAvatar" class="big-avatar" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIbLnr8-3ZlGD7AB7TwXHhHdgujtsrXLmdI8laFLml5w&s=10" alt="" style="width:100px;height:100px;border-radius:50%;object-fit:cover;margin:0 auto 12px;display:block">
+        <div style="font-size:20px;font-weight:700;color:var(--tg-text)" id="settingsDisplayName">Загрузка...</div>
+        <div style="color:var(--tg-muted);font-size:14px" id="settingsUsername">@username</div>
+        <div style="color:var(--tg-muted);font-size:13px;margin-top:4px" id="settingsBio">Нет описания</div>
+    </div>
+    
+    <div class="field"><label>Имя</label><input id="settingsProfileName" placeholder="Имя"></div>
+    <div class="field"><label>О себе</label><textarea id="settingsProfileBio" placeholder="О себе" style="min-height:60px;resize:vertical"></textarea></div>
+    <div class="field"><label>Аватар</label><input type="file" id="settingsAvatarFile" accept="image/*"></div>
+    <button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px" onclick="saveSettingsProfile()">Сохранить</button>
+</div>                       
                                 <div class="setting"><button class="primary" style="width:100%;padding:10px;border-radius:10px" onclick="switchAccount()">Переключить</button></div>
 
                                 <div class="setting"><button class="danger" style="width:100%;padding:10px;border-radius:10px" onclick="logout()">Выйти</button></div>
@@ -7249,6 +7268,67 @@ body.theme-light .message-row.theirs .message-bubble {
 
             document.getElementById("app").classList.add("hidden");
 
+            async function saveSettingsProfile() {
+    if (!requireAccount()) return;
+    
+    var display_name = document.getElementById("settingsProfileName").value.trim();
+    var bio = document.getElementById("settingsProfileBio").value.trim();
+    
+    var btn = document.querySelector('#settingsTabProfile .primary');
+    var prevText = btn ? btn.textContent : "";
+    if (btn) { btn.disabled = true; btn.textContent = "..."; }
+    
+    try {
+        var payload = { display_name: display_name, bio: bio };
+        var r = await req("/api/profile", { method: "PUT", body: JSON.stringify(payload) });
+        if (!r.ok && (r.status === 404 || r.status === 405)) {
+            r = await req("/api/me", { method: "PUT", body: JSON.stringify(payload) });
+        }
+        var d = await safeJson(r);
+        if (!r.ok) {
+            alert((d && (d.detail || d.message)) || "Ошибка");
+            return;
+        }
+        
+        var fileInput = document.getElementById("settingsAvatarFile");
+        var file = fileInput && fileInput.files && fileInput.files[0];
+        if (file) {
+            var form = new FormData();
+            form.append("file", file);
+            var ar = await req("/api/avatar", { method: "POST", body: form });
+            if (!ar.ok && (ar.status === 404 || ar.status === 405)) {
+                ar = await req("/api/me/avatar", { method: "POST", body: form });
+            }
+            if (ar.ok) {
+                var ad = await safeJson(ar);
+                if (ad.avatar_url) {
+                    currentUser.avatar_url = ad.avatar_url;
+                    document.getElementById("settingsAvatar").src = avatarSrc(ad.avatar_url);
+                    document.getElementById("bigAvatar").src = avatarSrc(ad.avatar_url);
+                }
+                fileInput.value = "";
+            }
+        }
+        
+        if (d && typeof d === "object") {
+            if (d.display_name) currentUser.display_name = d.display_name;
+            if (d.bio !== undefined) currentUser.bio = d.bio;
+        }
+        
+        document.getElementById("settingsDisplayName").textContent = currentUser.display_name || currentUser.username;
+        document.getElementById("settingsUsername").textContent = "@" + currentUser.username;
+        document.getElementById("settingsBio").textContent = currentUser.bio || "Нет описания";
+        document.getElementById("settingsProfileName").value = currentUser.display_name || "";
+        document.getElementById("settingsProfileBio").value = currentUser.bio || "";
+        
+        if (typeof showToast === "function") showToast("Профиль", "Сохранено");
+        else alert("Сохранено");
+    } catch (e) {
+        alert("Ошибка: " + e.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = prevText || "Сохранить"; }
+    }
+}
             document.getElementById("auth").classList.remove("hidden");
 
             applyGuestUI(false);
@@ -7590,39 +7670,40 @@ body.theme-light .message-row.theirs .message-bubble {
         
 
         function forceOfflineSignal() {
-
+            // 1. Отправляем сигнал офлайн через WebSocket СРАЗУ
             try {
-
-                if (token && navigator.sendBeacon) {
-
-                    var blob = new Blob([JSON.stringify({ online: false, token: token })], { type: "application/json" });
-
-                    navigator.sendBeacon("/api/presence", blob);
-
-                }
-
-            } catch (e) {}
-
-            try {
-
                 if (ws && ws.readyState === 1) {
-
+                    console.log("[Presence] Sending offline signal via WS...");
                     ws.send(JSON.stringify({ type: "presence", online: false }));
-
+                    // Также отправляем сигналы остановки активности, чтобы убрать статус "печатает" и т.д.
                     if (selectedUserId) {
-
                         ws.send(JSON.stringify({ type: "activity", target_id: Number(selectedUserId), activity: null }));
-
                         ws.send(JSON.stringify({ type: "typing_stop", target_id: Number(selectedUserId) }));
-
                     }
-
                 }
+            } catch (e) {
+                console.warn("[Presence] WS offline signal failed:", e);
+            }
 
-            } catch (e) {}
+            // 2. Отправляем beacon-запрос для надежности
+            try {
+                if (token && navigator.sendBeacon) {
+                    const blob = new Blob([JSON.stringify({ online: false, token: token })], { type: "application/json" });
+                    navigator.sendBeacon(API + "/api/presence", blob);
+                }
+            } catch (e) {
+                console.warn("[Presence] Beacon offline signal failed:", e);
+            }
 
-            try { if (ws) { ws.onclose = null; ws.close(); } } catch (e) {}
-
+            // 3. Закрываем WebSocket соединение
+            try {
+                if (ws) {
+                    ws.onclose = null; // Убираем обработчик, чтобы избежать автоматического переподключения
+                    ws.close();
+                }
+            } catch (e) {
+                console.warn("[Presence] WS close failed:", e);
+            }
         }
 
         function forceOnlineSignal() {
@@ -8056,12 +8137,19 @@ body.theme-light .message-row.theirs .message-bubble {
         }
 
         function sectionHeader(t, icon){
+
             var d=document.createElement("div");
+
             d.className="section-header";
+
             if(icon==="support"||icon==="headset"){
+
                 d.innerHTML='<svg class="section-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg><span>'+String(t||'')+'</span>';
+
             } else { d.textContent=t; }
+
             return d;
+
         }
 
         function userItem(user) {
@@ -8396,43 +8484,42 @@ body.theme-light .message-row.theirs .message-bubble {
             });
         }
 
-        async function loadDialogs() {
-            var searchEl = document.getElementById("search");
-            if (searchEl && searchEl.value.trim()) {
-                // не ломаем результаты поиска
-                return;
-            }
+       async function loadDialogs() {
+    var searchEl = document.getElementById("search");
+    if (searchEl && searchEl.value.trim()) {
+        // не ломаем результаты поиска
+        return;
+    }
 
-            var seq = ++dialogsLoadSeq;
-            var r = await req("/api/dialogs");
-            if (seq !== dialogsLoadSeq) return; // устаревший ответ — не затираем список
-            if (!r.ok) {
-                // при ошибке сети показываем то, что уже знаем
-                renderKnownDialogs();
-                return;
-            }
+    var seq = ++dialogsLoadSeq;
+    var r = await req("/api/dialogs");
+    if (seq !== dialogsLoadSeq) return;
+    if (!r.ok) {
+        renderKnownDialogs();
+        return;
+    }
 
-            var dialogs = await safeJson(r);
-            if (seq !== dialogsLoadSeq) return;
-            if (!Array.isArray(dialogs)) dialogs = [];
+    var dialogs = await safeJson(r);
+    if (seq !== dialogsLoadSeq) return;
+    if (!Array.isArray(dialogs)) dialogs = [];
 
-            // дедуп и слияние в knownDialogs (не удаляем уже известные чаты)
-            var seen = {};
-            dialogs.forEach(function(d){
-                if (!d || d.id == null) return;
-                var id = Number(d.id);
-                if (!isFinite(id) || seen[id]) return;
-                seen[id] = true;
-                upsertKnownDialog(d);
-            });
+    // ОЧИЩАЕМ knownDialogs ТОЛЬКО если пришёл НЕПУСТОЙ список от сервера
+    // иначе теряем чаты при перезагрузке
+    if (dialogs.length > 0) {
+        knownDialogs = {};
+    }
 
-            // если API вернул полный список (есть хотя бы 1 или пустой массив после успешного ответа),
-            // убираем из known только те, кого сервер явно больше не отдаёт? — НЕТ:
-            // иначе гонка снова сотрёт второй чат. Чистим только при explicit delete / clear.
+    var seen = {};
+    dialogs.forEach(function(d){
+        if (!d || d.id == null) return;
+        var id = Number(d.id);
+        if (!isFinite(id) || seen[id]) return;
+        seen[id] = true;
+        upsertKnownDialog(d);
+    });
 
-            renderKnownDialogs();
-        }
-
+    renderKnownDialogs();
+}
 
         // CHAT
 
@@ -11117,6 +11204,7 @@ body.theme-light .message-row.theirs .message-bubble {
             privacy: "Конфиденциальность",
             devices: "Сессии",
             accounts: "Аккаунт",
+            profile: "Профиль",
             calls: "Звонки",
             spaces: "Группы и каналы",
             admin: "Админ панель"
@@ -11181,6 +11269,8 @@ body.theme-light .message-row.theirs .message-bubble {
                 devices: "settingsTabDevices",
 
                 accounts: "settingsTabAccounts",
+
+                profile: "settingsTabProfile",
 
                 calls: "settingsTabCalls",
 
@@ -12347,16 +12437,17 @@ body.theme-light .message-row.theirs .message-bubble {
 
         }
 
+        // === ИСПРАВЛЕННАЯ ФУНКЦИЯ ВЫХОДА ===
         function logout() {
-
+            // Отправляем сигнал офлайн и закрываем соединение
             forceOfflineSignal();
 
-            token = ""; localStorage.removeItem("token");
-
-            if (ws) try { ws.close(); } catch(ex) {}
-
-            location.reload();
-
+            // Небольшая задержка, чтобы гарантировать отправку всех сигналов перед перезагрузкой
+            setTimeout(function() {
+                token = "";
+                localStorage.removeItem("token");
+                location.reload();
+            }, 300);
         }
 
 
@@ -14970,6 +15061,45 @@ body.theme-light .message-row.theirs .message-bubble {
         }
 
     </script>
+<style>
+/* ===== FIX: иконки в светлой теме ===== */
+body.theme-light .top-actions .icon-btn img,
+body.theme-light .chat-header .actions button img,
+body.theme-light .composer .icon-btn img,
+body.theme-light .settings-tabs button img,
+body.theme-light .settings-tabs button svg,
+body.theme-light .tg-set-ico svg {
+    filter: brightness(0) invert(0) !important;
+    opacity: 0.7 !important;
+}
+
+body.theme-light .top-actions .icon-btn:hover img,
+body.theme-light .chat-header .actions button:hover img,
+body.theme-light .composer .icon-btn:hover img {
+    opacity: 1 !important;
+}
+
+body.theme-light .chat-header .actions button svg path {
+    fill: #111 !important;
+}
+
+body.theme-light .settings-menu .tg-set-row .tg-set-ico {
+    background: #e8eaed !important;
+}
+
+body.theme-light .settings-menu .tg-set-row .tg-set-ico svg {
+    fill: #111 !important;
+}
+
+body.theme-light .settings-tabs button.active {
+    background: #111 !important;
+    color: #fff !important;
+}
+
+body.theme-light .settings-tabs button:not(.active) {
+    color: #111 !important;
+}
+</style>
 
 </body>
 
