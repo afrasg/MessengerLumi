@@ -9,15 +9,15 @@ from pathlib import Path
 from collections import defaultdict
 
 from fastapi import (
- FastAPI,
- WebSocket,
- WebSocketDisconnect,
- HTTPException,
- Request,
- Response,
- UploadFile,
- File,
- Form,
+    FastAPI,
+    WebSocket,
+    WebSocketDisconnect,
+    HTTPException,
+    Request,
+    Response,
+    UploadFile,
+    File,
+    Form,
 )
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -54,11 +54,11 @@ LUMI_AVATAR_URL = "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/5
 # =========================================================
 
 app.add_middleware(
- CORSMiddleware,
- allow_origins=["*"],
- allow_credentials=False,
- allow_methods=["*"],
- allow_headers=["*"],
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -67,359 +67,359 @@ app.add_middleware(
 # =========================================================
 
 def db():
- connection = sqlite3.connect(str(DB_PATH), timeout=30)
- connection.row_factory = sqlite3.Row
- return connection
+    connection = sqlite3.connect(str(DB_PATH), timeout=30)
+    connection.row_factory = sqlite3.Row
+    return connection
 
 
 def column_exists(connection, table, column):
- rows = connection.execute(f"PRAGMA table_info({table})").fetchall()
- return any(row["name"] == column for row in rows)
+    rows = connection.execute(f"PRAGMA table_info({table})").fetchall()
+    return any(row["name"] == column for row in rows)
 
 
 def add_column_if_missing(connection, table, column, definition):
- if not column_exists(connection, table, column):
- connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+    if not column_exists(connection, table, column):
+        connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
 
 def init_db():
- connection = db()
+    connection = db()
 
- connection.executescript("""
- CREATE TABLE IF NOT EXISTS users (
- id INTEGER PRIMARY KEY AUTOINCREMENT,
- username TEXT UNIQUE NOT NULL,
- password_hash TEXT NOT NULL,
- created_at TEXT NOT NULL,
- last_seen TEXT,
- display_name TEXT,
- bio TEXT DEFAULT '',
- avatar_url TEXT,
- is_bot INTEGER DEFAULT 0,
- is_verified INTEGER DEFAULT 0
- );
+    connection.executescript("""
+    CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    last_seen TEXT,
+    display_name TEXT,
+    bio TEXT DEFAULT '',
+    avatar_url TEXT,
+    is_bot INTEGER DEFAULT 0,
+    is_verified INTEGER DEFAULT 0
+    );
 
- CREATE TABLE IF NOT EXISTS sessions (
- id INTEGER PRIMARY KEY AUTOINCREMENT,
- user_id INTEGER NOT NULL,
- token_hash TEXT UNIQUE NOT NULL,
- browser_hash TEXT NOT NULL,
- device_info TEXT,
- created_at TEXT NOT NULL,
- last_seen TEXT NOT NULL,
- expires_at TEXT NOT NULL
- );
+    CREATE TABLE IF NOT EXISTS sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    token_hash TEXT UNIQUE NOT NULL,
+    browser_hash TEXT NOT NULL,
+    device_info TEXT,
+    created_at TEXT NOT NULL,
+    last_seen TEXT NOT NULL,
+    expires_at TEXT NOT NULL
+    );
 
- CREATE TABLE IF NOT EXISTS messages (
- id INTEGER PRIMARY KEY AUTOINCREMENT,
- sender_id INTEGER NOT NULL,
- receiver_id INTEGER NOT NULL,
- text TEXT NOT NULL,
- created_at TEXT NOT NULL,
- edited_at TEXT,
- deleted INTEGER DEFAULT 0,
- is_read INTEGER DEFAULT 0,
- media_url TEXT,
- media_type TEXT,
- invite_id INTEGER,
- invite_status TEXT,
- forwarded_from INTEGER
- );
+    CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sender_id INTEGER NOT NULL,
+    receiver_id INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    edited_at TEXT,
+    deleted INTEGER DEFAULT 0,
+    is_read INTEGER DEFAULT 0,
+    media_url TEXT,
+    media_type TEXT,
+    invite_id INTEGER,
+    invite_status TEXT,
+    forwarded_from INTEGER
+    );
 
- CREATE TABLE IF NOT EXISTS posts (
- id INTEGER PRIMARY KEY AUTOINCREMENT,
- author_id INTEGER NOT NULL,
- text TEXT DEFAULT '',
- media_url TEXT,
- media_type TEXT,
- created_at TEXT NOT NULL
- );
+    CREATE TABLE IF NOT EXISTS posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    author_id INTEGER NOT NULL,
+    text TEXT DEFAULT '',
+    media_url TEXT,
+    media_type TEXT,
+    created_at TEXT NOT NULL
+    );
 
- CREATE TABLE IF NOT EXISTS post_likes (
- id INTEGER PRIMARY KEY AUTOINCREMENT,
- post_id INTEGER NOT NULL,
- user_id INTEGER NOT NULL,
- UNIQUE(post_id, user_id)
- );
+    CREATE TABLE IF NOT EXISTS post_likes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    UNIQUE(post_id, user_id)
+    );
 
- CREATE TABLE IF NOT EXISTS comments (
- id INTEGER PRIMARY KEY AUTOINCREMENT,
- post_id INTEGER NOT NULL,
- user_id INTEGER NOT NULL,
- parent_id INTEGER,
- text TEXT NOT NULL,
- created_at TEXT NOT NULL
- );
+    CREATE TABLE IF NOT EXISTS comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    parent_id INTEGER,
+    text TEXT NOT NULL,
+    created_at TEXT NOT NULL
+    );
 
- CREATE TABLE IF NOT EXISTS favorites (
- id INTEGER PRIMARY KEY AUTOINCREMENT,
- user_id INTEGER NOT NULL,
- message_id INTEGER NOT NULL,
- UNIQUE(user_id, message_id)
- );
+    CREATE TABLE IF NOT EXISTS favorites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    message_id INTEGER NOT NULL,
+    UNIQUE(user_id, message_id)
+    );
 
- CREATE TABLE IF NOT EXISTS favorite_reels (
- id INTEGER PRIMARY KEY AUTOINCREMENT,
- user_id INTEGER NOT NULL,
- post_id INTEGER NOT NULL,
- created_at TEXT NOT NULL,
- UNIQUE(user_id, post_id)
- );
- CREATE TABLE IF NOT EXISTS settings (
- user_id INTEGER PRIMARY KEY,
- language TEXT DEFAULT 'ru',
- theme TEXT DEFAULT 'dark',
- notifications INTEGER DEFAULT 1,
- show_online INTEGER DEFAULT 1,
- show_last_seen INTEGER DEFAULT 1,
- auto_answer INTEGER DEFAULT 0,
- mute_on_join INTEGER DEFAULT 0,
- camera_on_join INTEGER DEFAULT 0
- );
+    CREATE TABLE IF NOT EXISTS favorite_reels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    post_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    UNIQUE(user_id, post_id)
+    );
+    CREATE TABLE IF NOT EXISTS settings (
+    user_id INTEGER PRIMARY KEY,
+    language TEXT DEFAULT 'ru',
+    theme TEXT DEFAULT 'dark',
+    notifications INTEGER DEFAULT 1,
+    show_online INTEGER DEFAULT 1,
+    show_last_seen INTEGER DEFAULT 1,
+    auto_answer INTEGER DEFAULT 0,
+    mute_on_join INTEGER DEFAULT 0,
+    camera_on_join INTEGER DEFAULT 0
+    );
 
- CREATE TABLE IF NOT EXISTS groups (
- id INTEGER PRIMARY KEY AUTOINCREMENT,
- name TEXT NOT NULL,
- description TEXT DEFAULT '',
- owner_id INTEGER NOT NULL,
- created_at TEXT NOT NULL,
- avatar_url TEXT
- );
+    CREATE TABLE IF NOT EXISTS groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    owner_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    avatar_url TEXT
+    );
 
- CREATE TABLE IF NOT EXISTS group_members (
- group_id INTEGER NOT NULL,
- user_id INTEGER NOT NULL,
- joined_at TEXT NOT NULL,
- UNIQUE(group_id, user_id)
- );
+    CREATE TABLE IF NOT EXISTS group_members (
+    group_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    joined_at TEXT NOT NULL,
+    UNIQUE(group_id, user_id)
+    );
 
- CREATE TABLE IF NOT EXISTS channels (
- id INTEGER PRIMARY KEY AUTOINCREMENT,
- name TEXT NOT NULL,
- username TEXT UNIQUE NOT NULL,
- description TEXT DEFAULT '',
- owner_id INTEGER NOT NULL,
- created_at TEXT NOT NULL,
- avatar_url TEXT
- );
+    CREATE TABLE IF NOT EXISTS channels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    username TEXT UNIQUE NOT NULL,
+            description TEXT DEFAULT '',
+            owner_id INTEGER NOT NULL,
+            created_at TEXT NOT NULL,
+            avatar_url TEXT
+        );
 
- CREATE TABLE IF NOT EXISTS channel_subscribers (
- channel_id INTEGER NOT NULL,
- user_id INTEGER NOT NULL,
- created_at TEXT NOT NULL,
- UNIQUE(channel_id, user_id)
- );
+        CREATE TABLE IF NOT EXISTS channel_subscribers (
+            channel_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE(channel_id, user_id)
+        );
 
- CREATE TABLE IF NOT EXISTS group_messages (
- id INTEGER PRIMARY KEY AUTOINCREMENT,
- group_id INTEGER NOT NULL,
- sender_id INTEGER NOT NULL,
- text TEXT NOT NULL,
- created_at TEXT NOT NULL,
- deleted INTEGER DEFAULT 0,
- media_url TEXT,
- media_type TEXT
- );
+        CREATE TABLE IF NOT EXISTS group_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_id INTEGER NOT NULL,
+            sender_id INTEGER NOT NULL,
+            text TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            deleted INTEGER DEFAULT 0,
+            media_url TEXT,
+            media_type TEXT
+        );
 
- CREATE TABLE IF NOT EXISTS channel_messages (
- id INTEGER PRIMARY KEY AUTOINCREMENT,
- channel_id INTEGER NOT NULL,
- sender_id INTEGER NOT NULL,
- text TEXT NOT NULL,
- created_at TEXT NOT NULL,
- deleted INTEGER DEFAULT 0
- );
+        CREATE TABLE IF NOT EXISTS channel_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            channel_id INTEGER NOT NULL,
+            sender_id INTEGER NOT NULL,
+            text TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            deleted INTEGER DEFAULT 0
+        );
 
- CREATE TABLE IF NOT EXISTS communities (
- id INTEGER PRIMARY KEY AUTOINCREMENT,
- name TEXT NOT NULL,
- description TEXT DEFAULT '',
- owner_id INTEGER NOT NULL,
- created_at TEXT NOT NULL
- );
+        CREATE TABLE IF NOT EXISTS communities (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            owner_id INTEGER NOT NULL,
+            created_at TEXT NOT NULL
+        );
 
- CREATE TABLE IF NOT EXISTS community_members (
- community_id INTEGER NOT NULL,
- user_id INTEGER NOT NULL,
- joined_at TEXT NOT NULL,
- UNIQUE(community_id, user_id)
- );
+        CREATE TABLE IF NOT EXISTS community_members (
+            community_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            joined_at TEXT NOT NULL,
+            UNIQUE(community_id, user_id)
+        );
 
- CREATE TABLE IF NOT EXISTS community_chats (
- id INTEGER PRIMARY KEY AUTOINCREMENT,
- community_id INTEGER NOT NULL,
- name TEXT NOT NULL,
- description TEXT DEFAULT '',
- created_at TEXT NOT NULL
- );
+        CREATE TABLE IF NOT EXISTS community_chats (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            community_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            created_at TEXT NOT NULL
+        );
 
- CREATE TABLE IF NOT EXISTS community_chat_messages (
- id INTEGER PRIMARY KEY AUTOINCREMENT,
- chat_id INTEGER NOT NULL,
- sender_id INTEGER NOT NULL,
- text TEXT NOT NULL,
- created_at TEXT NOT NULL,
- deleted INTEGER DEFAULT 0
- );
+        CREATE TABLE IF NOT EXISTS community_chat_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            chat_id INTEGER NOT NULL,
+            sender_id INTEGER NOT NULL,
+            text TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            deleted INTEGER DEFAULT 0
+        );
 
- CREATE TABLE IF NOT EXISTS blocks (
- user_id INTEGER NOT NULL,
- blocked_id INTEGER NOT NULL,
- created_at TEXT NOT NULL,
- UNIQUE(user_id, blocked_id)
- );
+        CREATE TABLE IF NOT EXISTS blocks (
+            user_id INTEGER NOT NULL,
+            blocked_id INTEGER NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE(user_id, blocked_id)
+        );
 
- CREATE TABLE IF NOT EXISTS contact_aliases (
- user_id INTEGER NOT NULL,
- contact_id INTEGER NOT NULL,
- alias TEXT NOT NULL,
- UNIQUE(user_id, contact_id)
- );
+        CREATE TABLE IF NOT EXISTS contact_aliases (
+            user_id INTEGER NOT NULL,
+            contact_id INTEGER NOT NULL,
+            alias TEXT NOT NULL,
+            UNIQUE(user_id, contact_id)
+        );
 
- CREATE TABLE IF NOT EXISTS chat_settings (
- user_id INTEGER NOT NULL,
- peer_id INTEGER NOT NULL,
- wallpaper_url TEXT,
- wallpaper_blur INTEGER DEFAULT 0,
- deleted_for_me INTEGER DEFAULT 0,
- UNIQUE(user_id, peer_id)
- );
+        CREATE TABLE IF NOT EXISTS chat_settings (
+            user_id INTEGER NOT NULL,
+            peer_id INTEGER NOT NULL,
+            wallpaper_url TEXT,
+            wallpaper_blur INTEGER DEFAULT 0,
+            deleted_for_me INTEGER DEFAULT 0,
+            UNIQUE(user_id, peer_id)
+        );
 
- CREATE TABLE IF NOT EXISTS polls (
- id INTEGER PRIMARY KEY AUTOINCREMENT,
- creator_id INTEGER NOT NULL,
- chat_type TEXT NOT NULL,
- chat_id INTEGER NOT NULL,
- question TEXT NOT NULL,
- options TEXT NOT NULL,
- created_at TEXT NOT NULL,
- message_id INTEGER
- );
+        CREATE TABLE IF NOT EXISTS polls (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            creator_id INTEGER NOT NULL,
+            chat_type TEXT NOT NULL,
+            chat_id INTEGER NOT NULL,
+            question TEXT NOT NULL,
+            options TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            message_id INTEGER
+        );
 
- CREATE TABLE IF NOT EXISTS poll_votes (
- poll_id INTEGER NOT NULL,
- user_id INTEGER NOT NULL,
- option_idx INTEGER NOT NULL,
- PRIMARY KEY (poll_id, user_id)
- );
+        CREATE TABLE IF NOT EXISTS poll_votes (
+            poll_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            option_idx INTEGER NOT NULL,
+            PRIMARY KEY (poll_id, user_id)
+        );
 
- CREATE TABLE IF NOT EXISTS stickers (
- id INTEGER PRIMARY KEY AUTOINCREMENT,
- user_id INTEGER NOT NULL,
- image_url TEXT NOT NULL,
- created_at TEXT NOT NULL
- );
+        CREATE TABLE IF NOT EXISTS stickers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            image_url TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        );
 
- CREATE TABLE IF NOT EXISTS message_hides (
- user_id INTEGER NOT NULL,
- message_id INTEGER NOT NULL,
- PRIMARY KEY (user_id, message_id)
- );
+        CREATE TABLE IF NOT EXISTS message_hides (
+            user_id INTEGER NOT NULL,
+            message_id INTEGER NOT NULL,
+            PRIMARY KEY (user_id, message_id)
+        );
 
- CREATE TABLE IF NOT EXISTS login_codes (
- id INTEGER PRIMARY KEY AUTOINCREMENT,
- user_id INTEGER NOT NULL,
- code TEXT NOT NULL,
- created_at TEXT NOT NULL,
- expires_at TEXT NOT NULL,
- used INTEGER DEFAULT 0
- );
+        CREATE TABLE IF NOT EXISTS login_codes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            code TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            used INTEGER DEFAULT 0
+        );
 
- CREATE TABLE IF NOT EXISTS invites (
- id INTEGER PRIMARY KEY AUTOINCREMENT,
- type TEXT NOT NULL,
- target_id INTEGER NOT NULL,
- from_user_id INTEGER NOT NULL,
- to_user_id INTEGER NOT NULL,
- message_id INTEGER,
- status TEXT DEFAULT 'pending',
- created_at TEXT NOT NULL
- );
+        CREATE TABLE IF NOT EXISTS invites (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            type TEXT NOT NULL,
+            target_id INTEGER NOT NULL,
+            from_user_id INTEGER NOT NULL,
+            to_user_id INTEGER NOT NULL,
+            message_id INTEGER,
+            status TEXT DEFAULT 'pending',
+            created_at TEXT NOT NULL
+        );
 
- CREATE TABLE IF NOT EXISTS channel_mutes (
- channel_id INTEGER NOT NULL,
- user_id INTEGER NOT NULL,
- muted INTEGER DEFAULT 1,
- UNIQUE(channel_id, user_id)
- );
+        CREATE TABLE IF NOT EXISTS channel_mutes (
+            channel_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            muted INTEGER DEFAULT 1,
+            UNIQUE(channel_id, user_id)
+        );
 
- CREATE TABLE IF NOT EXISTS group_mutes (
- group_id INTEGER NOT NULL,
- user_id INTEGER NOT NULL,
- muted INTEGER DEFAULT 1,
- UNIQUE(group_id, user_id)
- );
+        CREATE TABLE IF NOT EXISTS group_mutes (
+            group_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            muted INTEGER DEFAULT 1,
+            UNIQUE(group_id, user_id)
+        );
 
- CREATE TABLE IF NOT EXISTS privacy_settings (
- user_id INTEGER PRIMARY KEY,
- phone_visibility TEXT DEFAULT 'all',
- avatar_visibility TEXT DEFAULT 'all',
- last_seen_visibility TEXT DEFAULT 'all'
- );
- """)
+        CREATE TABLE IF NOT EXISTS privacy_settings (
+            user_id INTEGER PRIMARY KEY,
+            phone_visibility TEXT DEFAULT 'all',
+            avatar_visibility TEXT DEFAULT 'all',
+            last_seen_visibility TEXT DEFAULT 'all'
+        );
+    """)
 
- # Добавляем недостающие колонки
- add_column_if_missing(connection, "users", "display_name", "TEXT")
- add_column_if_missing(connection, "users", "bio", "TEXT DEFAULT ''")
- add_column_if_missing(connection, "users", "avatar_url", "TEXT")
- add_column_if_missing(connection, "users", "is_bot", "INTEGER DEFAULT 0")
- add_column_if_missing(connection, "users", "is_verified", "INTEGER DEFAULT 0")
- add_column_if_missing(connection, "messages", "edited_at", "TEXT")
- add_column_if_missing(connection, "messages", "deleted", "INTEGER DEFAULT 0")
- add_column_if_missing(connection, "messages", "media_url", "TEXT")
- add_column_if_missing(connection, "messages", "media_type", "TEXT")
- add_column_if_missing(connection, "messages", "invite_id", "INTEGER")
- add_column_if_missing(connection, "messages", "invite_status", "TEXT")
- add_column_if_missing(connection, "messages", "forwarded_from", "INTEGER")
- add_column_if_missing(connection, "comments", "parent_id", "INTEGER")
- add_column_if_missing(connection, "groups", "avatar_url", "TEXT")
- add_column_if_missing(connection, "channels", "avatar_url", "TEXT")
- add_column_if_missing(connection, "group_messages", "media_url", "TEXT")
- add_column_if_missing(connection, "group_messages", "media_type", "TEXT")
- add_column_if_missing(connection, "channel_messages", "media_url", "TEXT")
- add_column_if_missing(connection, "channel_messages", "media_type", "TEXT")
- add_column_if_missing(connection, "sessions", "device_info", "TEXT")
- add_column_if_missing(connection, "posts", "repost_of", "INTEGER")
+    # Добавляем недостающие колонки
+    add_column_if_missing(connection, "users", "display_name", "TEXT")
+    add_column_if_missing(connection, "users", "bio", "TEXT DEFAULT ''")
+    add_column_if_missing(connection, "users", "avatar_url", "TEXT")
+    add_column_if_missing(connection, "users", "is_bot", "INTEGER DEFAULT 0")
+    add_column_if_missing(connection, "users", "is_verified", "INTEGER DEFAULT 0")
+    add_column_if_missing(connection, "messages", "edited_at", "TEXT")
+    add_column_if_missing(connection, "messages", "deleted", "INTEGER DEFAULT 0")
+    add_column_if_missing(connection, "messages", "media_url", "TEXT")
+    add_column_if_missing(connection, "messages", "media_type", "TEXT")
+    add_column_if_missing(connection, "messages", "invite_id", "INTEGER")
+    add_column_if_missing(connection, "messages", "invite_status", "TEXT")
+    add_column_if_missing(connection, "messages", "forwarded_from", "INTEGER")
+    add_column_if_missing(connection, "comments", "parent_id", "INTEGER")
+    add_column_if_missing(connection, "groups", "avatar_url", "TEXT")
+    add_column_if_missing(connection, "channels", "avatar_url", "TEXT")
+    add_column_if_missing(connection, "group_messages", "media_url", "TEXT")
+    add_column_if_missing(connection, "group_messages", "media_type", "TEXT")
+    add_column_if_missing(connection, "channel_messages", "media_url", "TEXT")
+    add_column_if_missing(connection, "channel_messages", "media_type", "TEXT")
+    add_column_if_missing(connection, "sessions", "device_info", "TEXT")
+    add_column_if_missing(connection, "posts", "repost_of", "INTEGER")
 
- try:
- connection.execute("ALTER TABLE settings ADD COLUMN auto_answer INTEGER DEFAULT 0")
- except sqlite3.OperationalError:
- pass
- try:
- connection.execute("ALTER TABLE settings ADD COLUMN mute_on_join INTEGER DEFAULT 0")
- except sqlite3.OperationalError:
- pass
- try:
- connection.execute("ALTER TABLE settings ADD COLUMN camera_on_join INTEGER DEFAULT 0")
- except sqlite3.OperationalError:
- pass
+    try:
+        connection.execute("ALTER TABLE settings ADD COLUMN auto_answer INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        connection.execute("ALTER TABLE settings ADD COLUMN mute_on_join INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        connection.execute("ALTER TABLE settings ADD COLUMN camera_on_join INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
 
- connection.execute("""
- UPDATE users SET display_name = username
- WHERE display_name IS NULL OR display_name = ''
- """)
+    connection.execute("""
+        UPDATE users SET display_name = username
+        WHERE display_name IS NULL OR display_name = ''
+    """)
 
- import hashlib as _hl
- from datetime import datetime as _dt
- _ts = _dt.utcnow().isoformat()
- _ph = _hl.sha256(b'__lumi_bot_internal__').hexdigest()
+    import hashlib as _hl
+    from datetime import datetime as _dt
+    _ts = _dt.utcnow().isoformat()
+    _ph = _hl.sha256(b'__lumi_bot_internal__').hexdigest()
 
- bot = connection.execute("SELECT id FROM users WHERE username = 'lumi'").fetchone()
- if not bot:
- connection.execute("""
- INSERT INTO users
- (username, password_hash, created_at, last_seen, display_name, bio, is_bot, is_verified, avatar_url)
- VALUES ('lumi', ?, ?, ?, 'Lumi', 'Официальный бот Messenger Lumi', 1, 1, ?)
- """, (_ph, _ts, _ts, LUMI_AVATAR_URL))
- else:
- connection.execute("""
- UPDATE users
- SET is_bot = 1, is_verified = 1, display_name = 'Lumi', avatar_url = ?
- WHERE username = 'lumi'
- """, (LUMI_AVATAR_URL,))
+    bot = connection.execute("SELECT id FROM users WHERE username = 'lumi'").fetchone()
+    if not bot:
+        connection.execute("""
+            INSERT INTO users
+            (username, password_hash, created_at, last_seen, display_name, bio, is_bot, is_verified, avatar_url)
+            VALUES ('lumi', ?, ?, ?, 'Lumi', 'Официальный бот Messenger Lumi', 1, 1, ?)
+        """, (_ph, _ts, _ts, LUMI_AVATAR_URL))
+    else:
+        connection.execute("""
+            UPDATE users
+            SET is_bot = 1, is_verified = 1, display_name = 'Lumi', avatar_url = ?
+            WHERE username = 'lumi'
+        """, (LUMI_AVATAR_URL,))
 
- connection.commit()
- connection.close()
+    connection.commit()
+    connection.close()
 
 
 init_db()
@@ -430,162 +430,162 @@ init_db()
 # =========================================================
 
 def now():
- # UTC с суффиксом Z — фронт корректно считает last_seen
- return datetime.utcnow().isoformat() + "Z"
+    # UTC с суффиксом Z — фронт корректно считает last_seen
+    return datetime.utcnow().isoformat() + "Z"
 
 
 def hash_password(password):
- return hashlib.sha256(password.encode("utf-8")).hexdigest()
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 
 def hash_token(token):
- return hashlib.sha256(token.encode("utf-8")).hexdigest()
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def browser_hash(value):
- return hashlib.sha256(value.encode("utf-8")).hexdigest()
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
 def new_token():
- return secrets.token_urlsafe(48)
+    return secrets.token_urlsafe(48)
 
 
 def valid_username(username):
- return (
- len(username) >= 3 and len(username) <= 30 and
- bool(re.fullmatch(r"[a-zA-Z0-9_]+", username))
- )
+    return (
+        len(username) >= 3 and len(username) <= 30 and
+        bool(re.fullmatch(r"[a-zA-Z0-9_]+", username))
+    )
 
 
 def set_auth_cookie(response: Response, token: str, secure: bool = False):
- response.set_cookie(
- key=SESSION_COOKIE,
- value=token,
- max_age=SESSION_DAYS * 24 * 60 * 60,
- httponly=True,
- secure=secure,
- samesite="lax",
- path="/",
- )
+    response.set_cookie(
+        key=SESSION_COOKIE,
+        value=token,
+        max_age=SESSION_DAYS * 24 * 60 * 60,
+        httponly=True,
+        secure=secure,
+        samesite="lax",
+        path="/",
+    )
 
 
 def set_browser_cookie(response: Response, browser_id: str, secure: bool = False):
- response.set_cookie(
- key=BROWSER_COOKIE,
- value=browser_id,
- max_age=365 * 24 * 60 * 60,
- httponly=True,
- secure=secure,
- samesite="lax",
- path="/",
- )
+    response.set_cookie(
+        key=BROWSER_COOKIE,
+        value=browser_id,
+        max_age=365 * 24 * 60 * 60,
+        httponly=True,
+        secure=secure,
+        samesite="lax",
+        path="/",
+    )
 
 
 def get_or_create_browser(request: Request, response: Response):
- value = request.cookies.get(BROWSER_COOKIE)
- if value:
- return value
- value = secrets.token_urlsafe(32)
- set_browser_cookie(response, value)
- return value
+    value = request.cookies.get(BROWSER_COOKIE)
+    if value:
+        return value
+    value = secrets.token_urlsafe(32)
+    set_browser_cookie(response, value)
+    return value
 
 
 def create_session(user_id, browser_id, device_info=None):
- token = new_token()
- created = datetime.utcnow()
- expires = created + timedelta(days=SESSION_DAYS)
+    token = new_token()
+    created = datetime.utcnow()
+    expires = created + timedelta(days=SESSION_DAYS)
 
- connection = db()
- connection.execute("""
- INSERT INTO sessions
- (user_id, token_hash, browser_hash, device_info, created_at, last_seen, expires_at)
- VALUES (?, ?, ?, ?, ?, ?, ?)
- """, (user_id, hash_token(token), browser_hash(browser_id),
- (device_info or "")[:200],
- created.isoformat(), created.isoformat(), expires.isoformat()))
- connection.commit()
- connection.close()
- return token
+    connection = db()
+    connection.execute("""
+        INSERT INTO sessions
+        (user_id, token_hash, browser_hash, device_info, created_at, last_seen, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (user_id, hash_token(token), browser_hash(browser_id),
+          (device_info or "")[:200],
+          created.isoformat(), created.isoformat(), expires.isoformat()))
+    connection.commit()
+    connection.close()
+    return token
 
 
 def get_auth_user(request: Request, update_last_seen: bool = True):
- token = request.cookies.get(SESSION_COOKIE)
- if not token:
- auth = request.headers.get("Authorization") or ""
- if auth.lower().startswith("bearer "):
- token = auth[7:].strip()
+    token = request.cookies.get(SESSION_COOKIE)
+    if not token:
+        auth = request.headers.get("Authorization") or ""
+        if auth.lower().startswith("bearer "):
+            token = auth[7:].strip()
 
- if not token:
- raise HTTPException(401, "Не авторизован")
+    if not token:
+        raise HTTPException(401, "Не авторизован")
 
- connection = db()
+    connection = db()
 
- session = connection.execute("""
- SELECT s.id AS session_id, s.user_id, s.expires_at, u.username
- FROM sessions s
- JOIN users u ON u.id = s.user_id
- WHERE s.token_hash = ?
- """, (hash_token(token),)).fetchone()
+    session = connection.execute("""
+        SELECT s.id AS session_id, s.user_id, s.expires_at, u.username
+        FROM sessions s
+        JOIN users u ON u.id = s.user_id
+        WHERE s.token_hash = ?
+    """, (hash_token(token),)).fetchone()
 
- if not session:
- connection.close()
- raise HTTPException(401, "Сессия недействительна")
+    if not session:
+        connection.close()
+        raise HTTPException(401, "Сессия недействительна")
 
- try:
- expires = datetime.fromisoformat(session["expires_at"])
- except Exception:
- expires = datetime.utcnow()
+    try:
+        expires = datetime.fromisoformat(session["expires_at"])
+    except Exception:
+        expires = datetime.utcnow()
 
- if expires < datetime.utcnow():
- connection.execute("DELETE FROM sessions WHERE id = ?", (session["session_id"],))
- connection.commit()
- connection.close()
- raise HTTPException(401, "Сессия истекла")
+    if expires < datetime.utcnow():
+        connection.execute("DELETE FROM sessions WHERE id = ?", (session["session_id"],))
+        connection.commit()
+        connection.close()
+        raise HTTPException(401, "Сессия истекла")
 
- connection.execute("UPDATE sessions SET last_seen = ? WHERE id = ?",
- (now(), session["session_id"]))
+    connection.execute("UPDATE sessions SET last_seen = ? WHERE id = ?",
+                       (now(), session["session_id"]))
 
- if update_last_seen:
- connection.execute("UPDATE users SET last_seen = ? WHERE id = ?",
- (now(), session["user_id"]))
+    if update_last_seen:
+        connection.execute("UPDATE users SET last_seen = ? WHERE id = ?",
+                           (now(), session["user_id"]))
 
- connection.commit()
- connection.close()
- return session["user_id"]
+    connection.commit()
+    connection.close()
+    return session["user_id"]
 
 
 def get_browser_id(request):
- value = request.cookies.get(BROWSER_COOKIE)
- if not value:
- raise HTTPException(400, "Браузер не определён")
- return value
+    value = request.cookies.get(BROWSER_COOKIE)
+    if not value:
+        raise HTTPException(400, "Браузер не определён")
+    return value
 
 
 async def send_ws(user_id, payload):
- dead = []
- for socket in list(connections.get(user_id, set())):
- try:
- await socket.send_json(payload)
- except Exception:
- dead.append(socket)
+    dead = []
+    for socket in list(connections.get(user_id, set())):
+        try:
+            await socket.send_json(payload)
+        except Exception:
+            dead.append(socket)
 
- for socket in dead:
- connections[user_id].discard(socket)
+    for socket in dead:
+        connections[user_id].discard(socket)
 
 
 def clear_deleted_for_me(connection, user_a, user_b):
- connection.execute("""
- UPDATE chat_settings SET deleted_for_me = 0
- WHERE (user_id = ? AND peer_id = ?) OR (user_id = ? AND peer_id = ?)
- """, (user_a, user_b, user_b, user_a))
+    connection.execute("""
+        UPDATE chat_settings SET deleted_for_me = 0
+        WHERE (user_id = ? AND peer_id = ?) OR (user_id = ? AND peer_id = ?)
+    """, (user_a, user_b, user_b, user_a))
 
 
 def user_public(connection, user_id):
- row = connection.execute(
- "SELECT id, username, display_name, avatar_url, is_bot, is_verified, last_seen FROM users WHERE id = ?",
- (user_id,)
- ).fetchone()
- return dict(row) if row else {}
+    row = connection.execute(
+        "SELECT id, username, display_name, avatar_url, is_bot, is_verified, last_seen FROM users WHERE id = ?",
+        (user_id,)
+    ).fetchone()
+    return dict(row) if row else {}
 
 
 # =========================================================
@@ -593,129 +593,129 @@ def user_public(connection, user_id):
 # =========================================================
 
 class RegisterRequest(BaseModel):
- username: str
- password: str
- display_name: str = ""
+    username: str
+    password: str
+    display_name: str = ""
 
 
 class LoginRequest(BaseModel):
- username: str
- password: str
+    username: str
+    password: str
 
 
 class MessageRequest(BaseModel):
- receiver_id: int
- text: str
+    receiver_id: int
+    text: str
 
 
 class EditMessageRequest(BaseModel):
- text: str
+    text: str
 
 
 class ProfileRequest(BaseModel):
- username: str
- display_name: str
- bio: str = ""
+    username: str
+    display_name: str
+    bio: str = ""
 
 
 class PostRequest(BaseModel):
- text: str = ""
+    text: str = ""
 
 
 class CommentRequest(BaseModel):
- text: str
- parent_id: int | None = None
+    text: str
+    parent_id: int | None = None
 
 
 class SettingsRequest(BaseModel):
- language: str = "ru"
- theme: str = "dark"
- notifications: bool = True
- show_online: bool = True
- show_last_seen: bool = True
- auto_answer: bool = False
- mute_on_join: bool = False
- camera_on_join: bool = False
+    language: str = "ru"
+    theme: str = "dark"
+    notifications: bool = True
+    show_online: bool = True
+    show_last_seen: bool = True
+    auto_answer: bool = False
+    mute_on_join: bool = False
+    camera_on_join: bool = False
 
 
 class PrivacySettingsRequest(BaseModel):
- phone_visibility: str = "all"
- avatar_visibility: str = "all"
- last_seen_visibility: str = "all"
+    phone_visibility: str = "all"
+    avatar_visibility: str = "all"
+    last_seen_visibility: str = "all"
 
 
 class GroupRequest(BaseModel):
- name: str
- description: str = ""
+    name: str
+    description: str = ""
 
 
 class ChannelRequest(BaseModel):
- name: str
- username: str
- description: str = ""
+    name: str
+    username: str
+    description: str = ""
 
 
 class CommunityRequest(BaseModel):
- name: str
- description: str = ""
+    name: str
+    description: str = ""
 
 
 class CommunityChatRequest(BaseModel):
- name: str
- description: str = ""
+    name: str
+    description: str = ""
 
 
 class InviteRequest(BaseModel):
- username: str
+    username: str
 
 
 class GroupMessageRequest(BaseModel):
- text: str
+    text: str
 
 
 class ChannelMessageRequest(BaseModel):
- text: str
+    text: str
 
 
 class DeleteAccountRequest(BaseModel):
- password: str
+    password: str
 
 
 class CodeLoginRequest(BaseModel):
- username: str
- code: str
+    username: str
+    code: str
 
 
 class RequestCodeRequest(BaseModel):
- username: str
+    username: str
 
 
 class AliasRequest(BaseModel):
- alias: str
+    alias: str
 
 
 class WallpaperRequest(BaseModel):
- wallpaper_url: str = ""
- wallpaper_blur: bool = False
+    wallpaper_url: str = ""
+    wallpaper_blur: bool = False
 
 
 class RenameEntityRequest(BaseModel):
- name: str
+    name: str
 
 
 class InviteActionRequest(BaseModel):
- action: str
+    action: str
 
 
 class CallSignalRequest(BaseModel):
- target_id: int
- signal_type: str
- payload: dict = {}
+    target_id: int
+    signal_type: str
+    payload: dict = {}
 
 
 class ForwardRequest(BaseModel):
- target_id: int
- target_type: str = "user"
+    target_id: int
+    target_type: str = "user"
 
 
 # =========================================================
@@ -724,212 +724,212 @@ class ForwardRequest(BaseModel):
 
 @app.post("/api/register")
 def register(data: RegisterRequest, request: Request, response: Response):
- username = data.username.strip().lower()
+    username = data.username.strip().lower()
 
- if not valid_username(username):
- raise HTTPException(400, "Username: 3-30 символов, только буквы, цифры и _")
+    if not valid_username(username):
+        raise HTTPException(400, "Username: 3-30 символов, только буквы, цифры и _")
 
- if len(data.password) < 6:
- raise HTTPException(400, "Пароль должен содержать минимум 6 символов")
+    if len(data.password) < 6:
+        raise HTTPException(400, "Пароль должен содержать минимум 6 символов")
 
- connection = db()
+    connection = db()
 
- exists = connection.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
- if exists:
- connection.close()
- raise HTTPException(400, "Такой username уже занят")
+    exists = connection.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
+    if exists:
+        connection.close()
+        raise HTTPException(400, "Такой username уже занят")
 
- created = now()
+    created = now()
 
- dn = (getattr(data, "display_name", None) or "").strip() or username
- cursor = connection.execute("""
- INSERT INTO users (username, password_hash, created_at, last_seen, display_name)
- VALUES (?, ?, ?, ?, ?)
- """, (username, hash_password(data.password), created, created, dn))
+    dn = (getattr(data, "display_name", None) or "").strip() or username
+    cursor = connection.execute("""
+        INSERT INTO users (username, password_hash, created_at, last_seen, display_name)
+        VALUES (?, ?, ?, ?, ?)
+    """, (username, hash_password(data.password), created, created, dn))
 
- user_id = cursor.lastrowid
+    user_id = cursor.lastrowid
 
- connection.execute("INSERT OR IGNORE INTO settings (user_id) VALUES (?)", (user_id,))
- connection.execute("INSERT OR IGNORE INTO privacy_settings (user_id) VALUES (?)", (user_id,))
+    connection.execute("INSERT OR IGNORE INTO settings (user_id) VALUES (?)", (user_id,))
+    connection.execute("INSERT OR IGNORE INTO privacy_settings (user_id) VALUES (?)", (user_id,))
 
- connection.commit()
- connection.close()
+    connection.commit()
+    connection.close()
 
- browser_id = get_or_create_browser(request, response)
- ua = (request.headers.get("user-agent") or "")[:200]
- token = create_session(user_id, browser_id, ua)
- set_auth_cookie(response, token)
+    browser_id = get_or_create_browser(request, response)
+    ua = (request.headers.get("user-agent") or "")[:200]
+    token = create_session(user_id, browser_id, ua)
+    set_auth_cookie(response, token)
 
- return {"ok": True, "token": token}
+    return {"ok": True, "token": token}
 
 
 @app.post("/api/login")
 def login(data: LoginRequest, request: Request, response: Response):
- username = data.username.strip().lower()
+    username = data.username.strip().lower()
 
- connection = db()
+    connection = db()
 
- user = connection.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+    user = connection.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
 
- if not user or user["password_hash"] != hash_password(data.password):
- connection.close()
- raise HTTPException(401, "Неверный логин или пароль")
+    if not user or user["password_hash"] != hash_password(data.password):
+        connection.close()
+        raise HTTPException(401, "Неверный логин или пароль")
 
- connection.execute("INSERT OR IGNORE INTO settings (user_id) VALUES (?)", (user["id"],))
- connection.execute("INSERT OR IGNORE INTO privacy_settings (user_id) VALUES (?)", (user["id"],))
+    connection.execute("INSERT OR IGNORE INTO settings (user_id) VALUES (?)", (user["id"],))
+    connection.execute("INSERT OR IGNORE INTO privacy_settings (user_id) VALUES (?)", (user["id"],))
 
- connection.commit()
- connection.close()
+    connection.commit()
+    connection.close()
 
- browser_id = get_or_create_browser(request, response)
- ua = (request.headers.get("user-agent") or "")[:200]
- token = create_session(user["id"], browser_id, ua)
- set_auth_cookie(response, token)
+    browser_id = get_or_create_browser(request, response)
+    ua = (request.headers.get("user-agent") or "")[:200]
+    token = create_session(user["id"], browser_id, ua)
+    set_auth_cookie(response, token)
 
- return {"ok": True, "token": token}
+    return {"ok": True, "token": token}
 
 
 
 
 @app.get("/api/sessions")
 def list_sessions(request: Request):
- user_id = get_auth_user(request)
- token = request.cookies.get(SESSION_COOKIE) or ""
- auth = request.headers.get("Authorization") or ""
- if not token and auth.lower().startswith("bearer "):
- token = auth[7:].strip()
- current_hash = hash_token(token) if token else ""
- connection = db()
- rows = connection.execute("""
- SELECT id, browser_hash, device_info, created_at, last_seen, expires_at, token_hash
- FROM sessions WHERE user_id = ?
- ORDER BY last_seen DESC
- """, (user_id,)).fetchall()
- connection.close()
- out = []
- for r in rows:
- out.append({
- "id": r["id"],
- "device_info": r["device_info"] or "Браузер",
- "created_at": r["created_at"],
- "last_seen": r["last_seen"],
- "is_current": r["token_hash"] == current_hash,
- })
- return out
+    user_id = get_auth_user(request)
+    token = request.cookies.get(SESSION_COOKIE) or ""
+    auth = request.headers.get("Authorization") or ""
+    if not token and auth.lower().startswith("bearer "):
+        token = auth[7:].strip()
+    current_hash = hash_token(token) if token else ""
+    connection = db()
+    rows = connection.execute("""
+        SELECT id, browser_hash, device_info, created_at, last_seen, expires_at, token_hash
+        FROM sessions WHERE user_id = ?
+        ORDER BY last_seen DESC
+    """, (user_id,)).fetchall()
+    connection.close()
+    out = []
+    for r in rows:
+        out.append({
+            "id": r["id"],
+            "device_info": r["device_info"] or "Браузер",
+            "created_at": r["created_at"],
+            "last_seen": r["last_seen"],
+            "is_current": r["token_hash"] == current_hash,
+        })
+    return out
 
 
 @app.delete("/api/sessions/{session_id}")
 def revoke_session(session_id: int, request: Request):
- user_id = get_auth_user(request)
- token = request.cookies.get(SESSION_COOKIE) or ""
- auth = request.headers.get("Authorization") or ""
- if not token and auth.lower().startswith("bearer "):
- token = auth[7:].strip()
- current_hash = hash_token(token) if token else ""
- connection = db()
- row = connection.execute(
- "SELECT id, token_hash FROM sessions WHERE id = ? AND user_id = ?",
- (session_id, user_id)
- ).fetchone()
- if not row:
- connection.close()
- raise HTTPException(404, "Сессия не найдена")
- if row["token_hash"] == current_hash:
- connection.close()
- raise HTTPException(400, "Нельзя завершить текущую сессию здесь")
- connection.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
- connection.commit()
- connection.close()
- return {"ok": True}
+    user_id = get_auth_user(request)
+    token = request.cookies.get(SESSION_COOKIE) or ""
+    auth = request.headers.get("Authorization") or ""
+    if not token and auth.lower().startswith("bearer "):
+        token = auth[7:].strip()
+    current_hash = hash_token(token) if token else ""
+    connection = db()
+    row = connection.execute(
+        "SELECT id, token_hash FROM sessions WHERE id = ? AND user_id = ?",
+        (session_id, user_id)
+    ).fetchone()
+    if not row:
+        connection.close()
+        raise HTTPException(404, "Сессия не найдена")
+    if row["token_hash"] == current_hash:
+        connection.close()
+        raise HTTPException(400, "Нельзя завершить текущую сессию здесь")
+    connection.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+    connection.commit()
+    connection.close()
+    return {"ok": True}
 
 
 @app.post("/api/sessions/revoke-others")
 def revoke_other_sessions(request: Request):
- user_id = get_auth_user(request)
- token = request.cookies.get(SESSION_COOKIE) or ""
- auth = request.headers.get("Authorization") or ""
- if not token and auth.lower().startswith("bearer "):
- token = auth[7:].strip()
- current_hash = hash_token(token) if token else ""
- connection = db()
- connection.execute(
- "DELETE FROM sessions WHERE user_id = ? AND token_hash != ?",
- (user_id, current_hash)
- )
- connection.commit()
- connection.close()
- return {"ok": True}
+    user_id = get_auth_user(request)
+    token = request.cookies.get(SESSION_COOKIE) or ""
+    auth = request.headers.get("Authorization") or ""
+    if not token and auth.lower().startswith("bearer "):
+        token = auth[7:].strip()
+    current_hash = hash_token(token) if token else ""
+    connection = db()
+    connection.execute(
+        "DELETE FROM sessions WHERE user_id = ? AND token_hash != ?",
+        (user_id, current_hash)
+    )
+    connection.commit()
+    connection.close()
+    return {"ok": True}
 
 @app.post("/api/logout")
 def logout(request: Request, response: Response):
- token = request.cookies.get(SESSION_COOKIE)
+    token = request.cookies.get(SESSION_COOKIE)
 
- if token:
- connection = db()
- connection.execute("DELETE FROM sessions WHERE token_hash = ?", (hash_token(token),))
- connection.commit()
- connection.close()
+    if token:
+        connection = db()
+        connection.execute("DELETE FROM sessions WHERE token_hash = ?", (hash_token(token),))
+        connection.commit()
+        connection.close()
 
- response.delete_cookie(SESSION_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
- return {"ok": True}
+    response.delete_cookie(SESSION_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
+    return {"ok": True}
 
 
 @app.get("/api/me")
 def me(request: Request):
- user_id = get_auth_user(request)
+    user_id = get_auth_user(request)
 
- connection = db()
+    connection = db()
 
- user = connection.execute("""
- SELECT id, username, display_name, bio, avatar_url, created_at, last_seen, is_bot, is_verified
- FROM users WHERE id = ?
- """, (user_id,)).fetchone()
+    user = connection.execute("""
+        SELECT id, username, display_name, bio, avatar_url, created_at, last_seen, is_bot, is_verified
+        FROM users WHERE id = ?
+    """, (user_id,)).fetchone()
 
- connection.close()
+    connection.close()
 
- if not user:
- raise HTTPException(404, "Пользователь не найден")
+    if not user:
+        raise HTTPException(404, "Пользователь не найден")
 
- return dict(user)
+    return dict(user)
 
 
 @app.delete("/api/account")
 def delete_account(data: DeleteAccountRequest, request: Request, response: Response):
- user_id = get_auth_user(request, update_last_seen=False)
+    user_id = get_auth_user(request, update_last_seen=False)
 
- connection = db()
+    connection = db()
 
- user = connection.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    user = connection.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
 
- if not user:
- connection.close()
- raise HTTPException(404, "Аккаунт не найден")
+    if not user:
+        connection.close()
+        raise HTTPException(404, "Аккаунт не найден")
 
- if user["password_hash"] != hash_password(data.password):
- connection.close()
- raise HTTPException(403, "Неверный пароль")
+    if user["password_hash"] != hash_password(data.password):
+        connection.close()
+        raise HTTPException(403, "Неверный пароль")
 
- connection.execute("DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?", (user_id, user_id))
- connection.execute("DELETE FROM favorites WHERE user_id = ?", (user_id,))
- connection.execute("DELETE FROM favorite_reels WHERE user_id = ?", (user_id,))
- connection.execute("DELETE FROM posts WHERE author_id = ?", (user_id,))
- connection.execute("DELETE FROM comments WHERE user_id = ?", (user_id,))
- connection.execute("DELETE FROM post_likes WHERE user_id = ?", (user_id,))
- connection.execute("DELETE FROM group_members WHERE user_id = ?", (user_id,))
- connection.execute("DELETE FROM channel_subscribers WHERE user_id = ?", (user_id,))
- connection.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
- connection.execute("DELETE FROM settings WHERE user_id = ?", (user_id,))
- connection.execute("DELETE FROM privacy_settings WHERE user_id = ?", (user_id,))
- connection.execute("DELETE FROM groups WHERE owner_id = ?", (user_id,))
- connection.execute("DELETE FROM channels WHERE owner_id = ?", (user_id,))
- connection.execute("DELETE FROM communities WHERE owner_id = ?", (user_id,))
- connection.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    connection.execute("DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?", (user_id, user_id))
+    connection.execute("DELETE FROM favorites WHERE user_id = ?", (user_id,))
+    connection.execute("DELETE FROM favorite_reels WHERE user_id = ?", (user_id,))
+    connection.execute("DELETE FROM posts WHERE author_id = ?", (user_id,))
+    connection.execute("DELETE FROM comments WHERE user_id = ?", (user_id,))
+    connection.execute("DELETE FROM post_likes WHERE user_id = ?", (user_id,))
+    connection.execute("DELETE FROM group_members WHERE user_id = ?", (user_id,))
+    connection.execute("DELETE FROM channel_subscribers WHERE user_id = ?", (user_id,))
+    connection.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+    connection.execute("DELETE FROM settings WHERE user_id = ?", (user_id,))
+    connection.execute("DELETE FROM privacy_settings WHERE user_id = ?", (user_id,))
+    connection.execute("DELETE FROM groups WHERE owner_id = ?", (user_id,))
+    connection.execute("DELETE FROM channels WHERE owner_id = ?", (user_id,))
+    connection.execute("DELETE FROM communities WHERE owner_id = ?", (user_id,))
+    connection.execute("DELETE FROM users WHERE id = ?", (user_id,))
 
- connection.commit()
- connection.close()
+    connection.commit()
+    connection.close()
 
- response.delete_cookie(SESSION_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
- return {"ok": True}
+    response.delete_cookie(SESSION_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
+    return {"ok": True}
 
 
 # =========================================================
@@ -938,66 +938,67 @@ def delete_account(data: DeleteAccountRequest, request: Request, response: Respo
 
 @app.put("/api/profile")
 def update_profile(data: ProfileRequest, request: Request):
- user_id = get_auth_user(request)
+    user_id = get_auth_user(request)
 
- username = data.username.strip().lower()
- display_name = data.display_name.strip()
- bio = data.bio.strip()
+    username = data.username.strip().lower()
+    display_name = data.display_name.strip()
+    bio = data.bio.strip()
 
- if not valid_username(username):
- raise HTTPException(400, "Некорректный username")
+    if not valid_username(username):
+        raise HTTPException(400, "Некорректный username")
 
- if not display_name:
- display_name = username
+    if not display_name:
+        display_name = username
 
- connection = db()
+    connection = db()
 
- exists = connection.execute(
- "SELECT id FROM users WHERE username = ? AND id != ?", (username, user_id)
- ).fetchone()
+    exists = connection.execute(
+        "SELECT id FROM users WHERE username = ? AND id != ?", (username, user_id)
+    ).fetchone()
 
- if exists:
- connection.close()
- raise HTTPException(400, "Этот username уже занят")
+    if exists:
+        connection.close()
+        raise HTTPException(400, "Этот username уже занят")
 
- connection.execute("""
- UPDATE users SET username = ?, display_name = ?, bio = ? WHERE id = ?
- """, (username, display_name, bio, user_id))
+    connection.execute("""
+        UPDATE users SET username = ?, display_name = ?, bio = ? WHERE id = ?
+    """, (username, display_name, bio, user_id))
 
- connection.commit()
- connection.close()
+    connection.commit()
+    connection.close()
 
- return {"ok": True}
+    return {"ok": True}
 
 
 @app.post("/api/avatar")
 async def upload_avatar(request: Request, file: UploadFile = File(...)):
- user_id = get_auth_user(request)
+    user_id = get_auth_user(request)
 
- allowed = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+    allowed = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
 
- if file.content_type not in allowed:
- raise HTTPException(400, "Разрешены JPG, PNG и WEBP")
+    if file.content_type not in allowed:
+        raise HTTPException(400, "Разрешены JPG, PNG и WEBP")
 
- filename = f"avatar_{user_id}_{secrets.token_hex(8)}{allowed[file.content_type]}"
- path = UPLOAD_DIR / filename
+    filename = f"avatar_{user_id}_{secrets.token_hex(8)}{allowed[file.content_type]}"
+    path = UPLOAD_DIR / filename
 
- with open(path, "wb") as output:
- shutil.copyfileobj(file.file, output)
+    with open(path, "wb") as output:
+        shutil.copyfileobj(file.file, output)
 
- url = "/uploads/" + filename
+    url = "/uploads/" + filename
 
- connection = db()
- connection.execute("UPDATE users SET avatar_url = ? WHERE id = ?", (url, user_id))
- connection.commit()
- connection.close()
+    connection = db()
+    connection.execute("UPDATE users SET avatar_url = ? WHERE id = ?", (url, user_id))
+    connection.commit()
+    connection.close()
 
- return {"ok": True, "avatar_url": url}
+    return {"ok": True, "avatar_url": url}
 
 
 # =========================================================
 # USERS
 # =========================================================
+
 @app.get("/api/users/{user_id}")
 def get_user_profile(user_id: int, request: Request):
     current_user_id = get_auth_user(request)
