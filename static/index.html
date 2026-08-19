@@ -6363,24 +6363,22 @@ body.theme-light .message-row.theirs .message-bubble {
 
             if (user && user.blocked_me) return false;
 
-            // "в сети" ТОЛЬКО если реально есть WS-сессия (presence / is_online).
-
-            // Свежий last_seen сам по себе = "был(а) только что", не онлайн.
+            // Явный офлайн важнее всего — иначе после выхода снова "в сети".
+            if (user) {
+                if (user.is_online === false || user.online === false || user.status === "offline") return false;
+            }
 
             var uid = user && (user.id != null ? user.id : user.user_id);
-
-            if (uid != null && presenceMap[Number(uid)] && presenceMap[Number(uid)].online != null) {
-
-                return !!presenceMap[Number(uid)].online;
-
+            if (uid != null && presenceMap[Number(uid)]) {
+                var p = presenceMap[Number(uid)];
+                // sticky offline: не считаем онлайн, пока окно активно
+                if (presenceStickyOffline[uid] && Date.now() < presenceStickyOffline[uid]) return false;
+                if (p.online === false) return false;
+                if (p.online === true) return true;
             }
 
             if (user) {
-
                 if (user.is_online === true || user.online === true || user.status === "online") return true;
-
-                if (user.is_online === false || user.online === false || user.status === "offline") return false;
-
             }
 
             return false;
@@ -6998,7 +6996,7 @@ body.theme-light .message-row.theirs .message-bubble {
 
                 // не успел "воскресить" онлайн после реального мгновенного офлайна
 
-                presenceStickyOffline[id] = Date.now() + 15000;
+                presenceStickyOffline[id] = Date.now() + 45000;
 
             } else if (online === true) {
 
@@ -8788,29 +8786,18 @@ body.theme-light .message-row.theirs .message-bubble {
 
             if (isUserOnline(ls, user)) return "в сети";
 
-            // Серверный last_seen приоритетнее client-side Date.now() из markPresence —
-            // иначе статус мигает (+1–2 мин / «только что») при опросе каждые 2 с.
+            // Приоритет: серверный last_seen. presenceMap — только fallback.
+            // Не берём min() — иначе старый presence даёт ложное «вчера».
             var ms = parseLastSeenMs(ls);
-
             if (!ms && user && user.id != null && presenceMap[Number(user.id)] && presenceMap[Number(user.id)].lastSeen) {
-
                 ms = presenceMap[Number(user.id)].lastSeen;
-
-            } else if (ms && user && user.id != null && presenceMap[Number(user.id)] && presenceMap[Number(user.id)].lastSeen) {
-
-                var pMs = presenceMap[Number(user.id)].lastSeen;
-
-                // берём более «старый» (меньший) timestamp — стабильнее, без скачка к «только что»
-                if (pMs < ms) ms = pMs;
-
             }
 
             if (!ms) return "оффлайн";
 
             var sec = Math.max(0, Math.floor((Date.now() - ms) / 1000));
 
-            // чуть шире пороги, чтобы не мигало на границе минуты при poll 2с
-            if (sec < 50) return "был(а) только что";
+            if (sec < 45) return "был(а) только что";
 
             var min = Math.floor(sec / 60);
 
@@ -8878,20 +8865,29 @@ body.theme-light .message-row.theirs .message-bubble {
 
                     // отключения на сервере, поэтому не должен перебивать недавний офлайн
 
-                    markPresence(selectedUserId, u.is_online, u.last_seen, "poll");
+                    // null/undefined is_online не считаем онлайн
+                    var pollOnline = (u.is_online === true || u.online === true) ? true
+                        : (u.is_online === false || u.online === false) ? false
+                        : null;
+                    markPresence(selectedUserId, pollOnline, u.last_seen, "poll");
 
                     if (currentChatPeer && Number(currentChatPeer.id) === Number(selectedUserId)) {
-
+                        var prevOnline = currentChatPeer.is_online;
                         currentChatPeer = Object.assign(currentChatPeer, u);
-
-                        currentChatPeer.is_online = u.is_online;
-
-                        currentChatPeer.last_seen = u.last_seen;
-
+                        // не даём отстающему API «воскресить» онлайн поверх sticky/presence offline
+                        var p = presenceMap[Number(selectedUserId)];
+                        if (p && p.online === false) {
+                            currentChatPeer.is_online = false;
+                        } else if (presenceStickyOffline[Number(selectedUserId)] && Date.now() < presenceStickyOffline[Number(selectedUserId)]) {
+                            currentChatPeer.is_online = false;
+                        } else if (pollOnline != null) {
+                            currentChatPeer.is_online = pollOnline;
+                        } else {
+                            currentChatPeer.is_online = prevOnline;
+                        }
+                        if (u.last_seen) currentChatPeer.last_seen = u.last_seen;
                         var el = document.getElementById("chatStatus");
-
                         if (el && !el.classList.contains("typing")) updateChatStatus(currentChatPeer);
-
                     }
 
                 } catch (e) {}
@@ -11031,8 +11027,12 @@ body.theme-light .message-row.theirs .message-bubble {
             document.getElementById("profileBio").value = user.bio || "";
 
             var avatar = document.getElementById("bigAvatar");
-
-            if (avatar) avatar.src = avatarSrc(user.avatar_url);
+            var avUrl = user.avatar_url || null;
+            if (!avUrl && user.id != null) {
+                try { avUrl = localStorage.getItem("lumi_avatar_" + user.id); } catch (e) {}
+            }
+            if (avatar) avatar.src = avatarSrc(avUrl);
+            if (avUrl && currentUser) currentUser.avatar_url = avUrl;
 
             try {
                 var burl = user.banner_url || null;
@@ -11040,6 +11040,7 @@ body.theme-light .message-row.theirs .message-bubble {
                     try { burl = localStorage.getItem("lumi_banner_" + user.id); } catch (e) {}
                 }
                 applyProfileBanner(burl || null);
+                if (burl && currentUser) currentUser.banner_url = burl;
             } catch (e) {}
 
             // разблокируем поля если не гость
@@ -11174,26 +11175,120 @@ body.theme-light .message-row.theirs .message-bubble {
 
 
 
-                // Аватар — только если выбран файл
+                // --- helpers: compress image + multi-endpoint upload ---
+                async function compressImageFile(file, maxSide, quality) {
+                    maxSide = maxSide || 1280;
+                    quality = quality || 0.85;
+                    if (!file || !file.type || file.type.indexOf("image/") !== 0) return file;
+                    try {
+                        var dataUrl = await new Promise(function(resolve, reject) {
+                            var reader = new FileReader();
+                            reader.onload = function(){ resolve(reader.result); };
+                            reader.onerror = reject;
+                            reader.readAsDataURL(file);
+                        });
+                        var img = await new Promise(function(resolve, reject) {
+                            var i = new Image();
+                            i.onload = function(){ resolve(i); };
+                            i.onerror = reject;
+                            i.src = dataUrl;
+                        });
+                        var w = img.width, h = img.height;
+                        var scale = 1;
+                        if (Math.max(w, h) > maxSide) scale = maxSide / Math.max(w, h);
+                        var cw = Math.max(1, Math.round(w * scale));
+                        var ch = Math.max(1, Math.round(h * scale));
+                        var canvas = document.createElement("canvas");
+                        canvas.width = cw; canvas.height = ch;
+                        canvas.getContext("2d").drawImage(img, 0, 0, cw, ch);
+                        var blob = await new Promise(function(resolve) {
+                            canvas.toBlob(function(b){ resolve(b || null); }, "image/jpeg", quality);
+                        });
+                        if (!blob) return file;
+                        return new File([blob], (file.name || "photo").replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
+                    } catch (e) { return file; }
+                }
+                async function tryUploadImage(endpoints, fieldNames, file) {
+                    var lastErr = null;
+                    for (var ei = 0; ei < endpoints.length; ei++) {
+                        for (var fi = 0; fi < fieldNames.length; fi++) {
+                            try {
+                                var fd = new FormData();
+                                fd.append(fieldNames[fi], file, file.name || "upload.jpg");
+                                var rr = await req(endpoints[ei], { method: "POST", body: fd });
+                                var jj = await safeJson(rr);
+                                if (rr.ok) return { ok: true, data: jj || {}, status: rr.status };
+                                lastErr = (jj && (jj.detail || jj.message || jj.error)) || ("HTTP " + rr.status);
+                                // 404/405 — пробуем следующий endpoint
+                                if (rr.status === 404 || rr.status === 405 || rr.status === 422) continue;
+                            } catch (ex) { lastErr = ex && ex.message ? ex.message : String(ex); }
+                        }
+                    }
+                    return { ok: false, error: lastErr };
+                }
+                async function fileToDataUrl(file) {
+                    return await new Promise(function(resolve, reject) {
+                        var reader = new FileReader();
+                        reader.onload = function(){ resolve(reader.result); };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+                }
+
+                // Аватар
                 var fileInput = document.getElementById("avatarFile");
                 var file = fileInput && fileInput.files && fileInput.files[0];
                 if (file) {
-                    var form = new FormData();
-                    form.append("file", file);
-                    var ar = await req("/api/avatar", { method: "POST", body: form });
-                    if (!ar.ok && (ar.status === 404 || ar.status === 405)) {
-                        ar = await req("/api/me/avatar", { method: "POST", body: form });
-                    }
-                    var ad = await safeJson(ar);
-                    if (ar.ok) {
-                        if (ad.avatar_url) {
-                            currentUser.avatar_url = ad.avatar_url;
-                            var big = document.getElementById("bigAvatar");
-                            if (big) big.src = avatarSrc(ad.avatar_url);
+                    try {
+                        var avFile = await compressImageFile(file, 512, 0.88);
+                        var avRes = await tryUploadImage(
+                            ["/api/avatar", "/api/me/avatar", "/api/users/me/avatar", "/api/profile/avatar"],
+                            ["file", "avatar", "photo", "image"],
+                            avFile
+                        );
+                        if (avRes.ok) {
+                            var aurl = (avRes.data && (avRes.data.avatar_url || avRes.data.url || avRes.data.path)) || null;
+                            if (!aurl) {
+                                // сервер мог сохранить без url в ответе — перечитываем профиль
+                                try {
+                                    var meR = await req("/api/me");
+                                    if (meR.ok) {
+                                        var meD = await safeJson(meR);
+                                        if (meD && meD.avatar_url) aurl = meD.avatar_url;
+                                    }
+                                } catch (e) {}
+                            }
+                            if (aurl) {
+                                currentUser.avatar_url = aurl;
+                                try { localStorage.setItem("lumi_avatar_" + currentUser.id, aurl); } catch (e) {}
+                                var big = document.getElementById("bigAvatar");
+                                if (big) big.src = avatarSrc(aurl) + (aurl.indexOf("data:") === 0 ? "" : ((aurl.indexOf("?") >= 0 ? "&" : "?") + "t=" + Date.now()));
+                            }
+                            if (fileInput) fileInput.value = "";
+                        } else {
+                            // local fallback (dataURL) + попытка сохранить в profile
+                            try {
+                                var avData = await fileToDataUrl(avFile);
+                                var prA = await req("/api/profile", { method: "PUT", body: JSON.stringify({ avatar_url: avData }) });
+                                if (!prA.ok && (prA.status === 404 || prA.status === 405)) {
+                                    prA = await req("/api/me", { method: "PUT", body: JSON.stringify({ avatar_url: avData }) });
+                                }
+                                if (prA.ok) {
+                                    var pad = await safeJson(prA);
+                                    currentUser.avatar_url = (pad && pad.avatar_url) || avData;
+                                } else {
+                                    currentUser.avatar_url = avData;
+                                }
+                                try { localStorage.setItem("lumi_avatar_" + currentUser.id, currentUser.avatar_url); } catch (e) {}
+                                var big2 = document.getElementById("bigAvatar");
+                                if (big2) big2.src = avatarSrc(currentUser.avatar_url);
+                                if (fileInput) fileInput.value = "";
+                            } catch (e2) {
+                                alert((avRes.error) || t("error"));
+                            }
                         }
-                        if (fileInput) fileInput.value = "";
-                    } else {
-                        alert((ad && (ad.detail || ad.message)) || t("error"));
+                    } catch (eAv) {
+                        alert(t("error") + (eAv && eAv.message ? ": " + eAv.message : ""));
                     }
                 }
 
@@ -11201,42 +11296,24 @@ body.theme-light .message-row.theirs .message-bubble {
                 var bannerInput = document.getElementById("bannerFile");
                 var bfile = bannerInput && bannerInput.files && bannerInput.files[0];
                 if (bfile) {
-                    var bform = new FormData();
-                    bform.append("file", bfile);
-                    var br = await req("/api/banner", { method: "POST", body: bform });
-                    if (!br.ok && (br.status === 404 || br.status === 405)) {
-                        br = await req("/api/me/banner", { method: "POST", body: bform });
-                    }
-                    if (!br.ok && (br.status === 404 || br.status === 405)) {
-                        // fallback: dataURL in profile
-                        try {
-                            var dataUrl = await new Promise(function(resolve, reject) {
-                                var reader = new FileReader();
-                                reader.onload = function(){ resolve(reader.result); };
-                                reader.onerror = reject;
-                                reader.readAsDataURL(bfile);
-                            });
-                            var pr = await req("/api/profile", { method: "PUT", body: JSON.stringify({ banner_url: dataUrl }) });
-                            if (!pr.ok && (pr.status === 404 || pr.status === 405)) {
-                                pr = await req("/api/me", { method: "PUT", body: JSON.stringify({ banner_url: dataUrl }) });
+                    try {
+                        var bnFile = await compressImageFile(bfile, 1600, 0.82);
+                        var bnRes = await tryUploadImage(
+                            ["/api/banner", "/api/me/banner", "/api/users/me/banner", "/api/profile/banner"],
+                            ["file", "banner", "photo", "image"],
+                            bnFile
+                        );
+                        if (bnRes.ok) {
+                            var burl = (bnRes.data && (bnRes.data.banner_url || bnRes.data.url || bnRes.data.path)) || null;
+                            if (!burl) {
+                                try {
+                                    var meR2 = await req("/api/me");
+                                    if (meR2.ok) {
+                                        var meD2 = await safeJson(meR2);
+                                        if (meD2 && meD2.banner_url) burl = meD2.banner_url;
+                                    }
+                                } catch (e) {}
                             }
-                            var pd = await safeJson(pr);
-                            if (pr.ok) {
-                                currentUser.banner_url = (pd && pd.banner_url) || dataUrl;
-                                applyProfileBanner(currentUser.banner_url);
-                            } else {
-                                // local-only fallback
-                                currentUser.banner_url = dataUrl;
-                                try { localStorage.setItem("lumi_banner_" + currentUser.id, dataUrl); } catch (e) {}
-                                applyProfileBanner(dataUrl);
-                            }
-                        } catch (e) {
-                            alert(t("error"));
-                        }
-                    } else {
-                        var bd = await safeJson(br);
-                        if (br.ok) {
-                            var burl = (bd && (bd.banner_url || bd.url)) || null;
                             if (burl) {
                                 currentUser.banner_url = burl;
                                 applyProfileBanner(burl);
@@ -11244,10 +11321,45 @@ body.theme-light .message-row.theirs .message-bubble {
                             }
                             if (bannerInput) bannerInput.value = "";
                         } else {
-                            alert((bd && (bd.detail || bd.message)) || t("error"));
+                            // fallback: dataURL в profile / localStorage
+                            var dataUrl = await fileToDataUrl(bnFile);
+                            var pr = await req("/api/profile", { method: "PUT", body: JSON.stringify({ banner_url: dataUrl }) });
+                            if (!pr.ok && (pr.status === 404 || pr.status === 405)) {
+                                pr = await req("/api/me", { method: "PUT", body: JSON.stringify({ banner_url: dataUrl }) });
+                            }
+                            var pd = await safeJson(pr);
+                            if (pr.ok) {
+                                currentUser.banner_url = (pd && pd.banner_url) || dataUrl;
+                            } else {
+                                currentUser.banner_url = dataUrl;
+                            }
+                            try { localStorage.setItem("lumi_banner_" + currentUser.id, currentUser.banner_url); } catch (e) {}
+                            applyProfileBanner(currentUser.banner_url);
+                            if (bannerInput) bannerInput.value = "";
                         }
+                    } catch (eBn) {
+                        alert(t("error") + (eBn && eBn.message ? ": " + eBn.message : ""));
                     }
                 }
+
+                // Финальная синхронизация с сервером
+                try {
+                    var syncR = await req("/api/me");
+                    if (syncR.ok) {
+                        var syncD = await safeJson(syncR);
+                        if (syncD) {
+                            if (syncD.avatar_url) {
+                                currentUser.avatar_url = syncD.avatar_url;
+                                var bigS = document.getElementById("bigAvatar");
+                                if (bigS) bigS.src = avatarSrc(syncD.avatar_url);
+                            }
+                            if (syncD.banner_url) {
+                                currentUser.banner_url = syncD.banner_url;
+                                applyProfileBanner(syncD.banner_url);
+                            }
+                        }
+                    }
+                } catch (e) {}
 
                 if (typeof showToast === "function") showToast(t("settings_saved") || "Saved");
 
