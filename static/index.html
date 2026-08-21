@@ -6309,7 +6309,32 @@ body.theme-light .message-row.theirs .message-bubble {
 
         function escapeHtml(t) { return String(t ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }
 
-        function mediaUrl(u) { if(!u) return ""; if(u.startsWith("http://")||u.startsWith("https://")) return u; return API + u; }
+        function mediaUrl(u) {
+            if (!u) return "";
+            u = String(u).trim();
+            if (!u) return "";
+            if (u.startsWith("http://") || u.startsWith("https://") || u.startsWith("data:") || u.startsWith("blob:")) return u;
+            // //cdn... protocol-relative
+            if (u.startsWith("//")) return (typeof location !== "undefined" ? location.protocol : "https:") + u;
+            return API + (u.startsWith("/") ? u : ("/" + u));
+        }
+        function bannerSrc(u) {
+            if (!u || String(u).trim() === "") return "";
+            return mediaUrl(u);
+        }
+        function pickBannerUrl(obj) {
+            if (!obj || typeof obj !== "object") return "";
+            var keys = ["banner_url", "banner", "cover_url", "cover", "profile_banner", "profile_banner_url", "header_url", "header"];
+            for (var i = 0; i < keys.length; i++) {
+                var v = obj[keys[i]];
+                if (v && typeof v === "string" && v.trim()) return v.trim();
+            }
+            if (obj.profile && typeof obj.profile === "object") {
+                var nested = pickBannerUrl(obj.profile);
+                if (nested) return nested;
+            }
+            return "";
+        }
 
         var DEFAULT_AVATAR = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIbLnr8-3ZlGD7AB7TwXHhHdgujtsrXLmdI8laFLml5w&s=10";
 
@@ -11371,20 +11396,41 @@ body.theme-light .message-row.theirs .message-bubble {
                             bnFile
                         );
                         if (bnRes.ok) {
-                            var burl = (bnRes.data && (bnRes.data.banner_url || bnRes.data.url || bnRes.data.path)) || null;
+                            var burl = pickBannerUrl(bnRes.data) || (bnRes.data && (bnRes.data.url || bnRes.data.path)) || null;
                             if (!burl) {
                                 try {
                                     var meR2 = await req("/api/me");
                                     if (meR2.ok) {
                                         var meD2 = await safeJson(meR2);
-                                        if (meD2 && meD2.banner_url) burl = meD2.banner_url;
+                                        if (meD2) burl = pickBannerUrl(meD2) || meD2.banner_url || null;
                                     }
                                 } catch (e) {}
                             }
                             if (burl) {
+                                burl = bannerSrc(burl) || burl;
                                 currentUser.banner_url = burl;
                                 applyProfileBanner(burl);
                                 try { localStorage.setItem("lumi_banner_" + currentUser.id, burl); } catch (e) {}
+                                try {
+                                    if (!window.__lumiBannerCache) window.__lumiBannerCache = {};
+                                    window.__lumiBannerCache[currentUser.id] = burl;
+                                } catch (e) {}
+                            } else {
+                                // 200 без URL — баннер мог сохраниться, перечитаем /api/me ещё раз чуть позже
+                                setTimeout(async function(){
+                                    try {
+                                        var meR3 = await req("/api/me");
+                                        if (!meR3.ok) return;
+                                        var meD3 = await safeJson(meR3);
+                                        var b3 = pickBannerUrl(meD3);
+                                        if (b3) {
+                                            b3 = bannerSrc(b3);
+                                            currentUser.banner_url = b3;
+                                            applyProfileBanner(b3);
+                                            try { localStorage.setItem("lumi_banner_" + currentUser.id, b3); } catch (e) {}
+                                        }
+                                    } catch (e) {}
+                                }, 500);
                             }
                             if (bannerInput) bannerInput.value = "";
                         } else {
@@ -11848,7 +11894,7 @@ body.theme-light .message-row.theirs .message-bubble {
             var img = document.getElementById("profileBannerImg");
             if (!img) return;
             if (url) {
-                img.src = url;
+                img.src = bannerSrc(url) || url;
                 img.style.display = "block";
             } else {
                 img.removeAttribute("src");
@@ -12855,13 +12901,29 @@ body.theme-light .message-row.theirs .message-bubble {
             var statusText = formatLastSeen(user.last_seen, user);
 
             var html = '<div style="text-align:center;padding:0;margin:0 -8px">';
-            var burl = user.banner_url || "";
-            try { if (!burl && user.id != null) burl = localStorage.getItem("lumi_banner_" + user.id) || ""; } catch (e) {}
+            var burl = pickBannerUrl(user);
+            if (!burl && isMe && currentUser) burl = pickBannerUrl(currentUser) || (currentUser.banner_url || "");
+            try {
+                if (!burl && user.id != null) burl = localStorage.getItem("lumi_banner_" + user.id) || "";
+            } catch (e) {}
+            // кэш на сессию (если уже видели баннер этого юзера)
+            try {
+                if (!burl && user.id != null && window.__lumiBannerCache && window.__lumiBannerCache[user.id]) {
+                    burl = window.__lumiBannerCache[user.id];
+                }
+            } catch (e) {}
+            var bsrc = burl ? bannerSrc(burl) : "";
+            if (bsrc && user.id != null) {
+                try {
+                    if (!window.__lumiBannerCache) window.__lumiBannerCache = {};
+                    window.__lumiBannerCache[user.id] = bsrc;
+                } catch (e) {}
+            }
             // Баннер как в настройках профиля (градиент-fallback + аватар поверх)
             html += '<div style="position:relative;width:100%;margin:0 0 8px 0">';
             html += '<div style="width:100%;height:120px;border-radius:16px 16px 0 0;overflow:hidden;background:linear-gradient(135deg,#1a2a44,#3390ec 60%,#7289da)">';
-            if (burl) {
-                html += '<img src="'+escapeHtml(burl)+'" alt="" style="width:100%;height:100%;object-fit:cover;display:block">';
+            if (bsrc) {
+                html += '<img src="'+escapeHtml(bsrc)+'" alt="" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.style.display=\'none\'">';
             }
             html += '</div>';
             html += '<img src="'+avatarSrc(user.avatar_url)+'" style="position:absolute;left:50%;bottom:-40px;transform:translateX(-50%);width:88px;height:88px;border-radius:50%;object-fit:cover;background:#2a2a38;border:4px solid #14141e;display:block;z-index:2">';
@@ -12907,6 +12969,49 @@ body.theme-light .message-row.theirs .message-bubble {
             var postsBox = document.getElementById("userProfilePosts");
 
             if (postsBox) loadUserPostsInto(postsBox, user.id);
+
+            // Если баннера не было в /api/users — догружаем отдельными эндпоинтами
+            if (!bsrc && user && user.id != null) {
+                (async function(uid) {
+                    var endpoints = [
+                        "/api/users/" + uid,
+                        "/api/users/" + uid + "/profile",
+                        "/api/users/" + uid + "/banner",
+                        "/api/profile/" + uid
+                    ];
+                    for (var i = 0; i < endpoints.length; i++) {
+                        try {
+                            var rr = await req(endpoints[i]);
+                            if (!rr.ok) continue;
+                            var dd = await safeJson(rr);
+                            if (!dd) continue;
+                            var found = pickBannerUrl(dd);
+                            if (!found && typeof dd === "string" && (dd.indexOf("http") === 0 || dd.indexOf("/") === 0 || dd.indexOf("data:") === 0)) {
+                                found = dd;
+                            }
+                            if (!found && dd.url) found = dd.url;
+                            if (found) {
+                                var src = bannerSrc(found);
+                                try {
+                                    if (!window.__lumiBannerCache) window.__lumiBannerCache = {};
+                                    window.__lumiBannerCache[uid] = src;
+                                } catch (e) {}
+                                // вставить картинку в уже открытую модалку
+                                var wrap = document.querySelector(".modal div[style*=\"height:120px\"]");
+                                if (wrap && !wrap.querySelector("img")) {
+                                    var im = document.createElement("img");
+                                    im.src = src;
+                                    im.alt = "";
+                                    im.style.cssText = "width:100%;height:100%;object-fit:cover;display:block";
+                                    im.onerror = function(){ this.style.display = "none"; };
+                                    wrap.appendChild(im);
+                                }
+                                break;
+                            }
+                        } catch (e) {}
+                    }
+                })(user.id);
+            }
 
         }
 
