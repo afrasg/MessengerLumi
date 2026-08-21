@@ -8489,7 +8489,12 @@ body.theme-light .message-row.theirs .message-bubble {
             container.querySelectorAll(".dialogs-header").forEach(function(el){ el.remove(); });
 
             var list = Object.keys(knownDialogs).map(function(k){ return knownDialogs[k]; }).filter(function(d){
-                return d && d.id != null && !hiddenDialogs[Number(d.id)];
+                if (!d || d.id == null || hiddenDialogs[Number(d.id)]) return false;
+                // только чаты с реальной активностью (сообщение / звонок / с сервера)
+                if (d.last_message) return true;
+                if (d._fromServer) return true;
+                if (d._hasCall) return true;
+                return false;
             });
             if (!list.length) {
                 var nb0 = document.getElementById("navChatsBadge");
@@ -8608,6 +8613,7 @@ body.theme-light .message-row.theirs .message-bubble {
                 var id = Number(d.id);
                 if (!isFinite(id) || seen[id]) return;
                 seen[id] = true;
+                d._fromServer = true;
                 upsertKnownDialog(d);
             });
 
@@ -8626,8 +8632,10 @@ body.theme-light .message-row.theirs .message-bubble {
             selectedUserId = Number(user.id); selectedGroupId = null; selectedChannelId = null; selectedChannelIsOwner = false; selectedCommunityId = null; selectedCommunityChatId = null;
 
             currentChatPeer = user; favoritePickMode = false; setComposerEnabled(true);
+            // НЕ добавляем чат в список только из-за просмотра (поиск / пост / профиль).
+            // В список — только после сообщения, звонка или если диалог уже был.
             try {
-                if (user && user.id != null) {
+                if (user && user.id != null && knownDialogs[Number(user.id)]) {
                     upsertKnownDialog({
                         id: user.id,
                         username: user.username,
@@ -8652,38 +8660,65 @@ body.theme-light .message-row.theirs .message-bubble {
 
             document.getElementById("chatName").innerHTML = withVerified(user.display_name || user.username, user);
 
-            if (user.id != null) markPresence(user.id, user.is_online != null ? user.is_online : user.online, user.last_seen);
+            // Статус: сначала presence/кэш только если уже точно онлайн,
+            // иначе не рисуем «только что» — ждём /api/users (без мигания).
+            (function initStatus() {
+                var el = document.getElementById("chatStatus");
+                var uid = user && user.id != null ? Number(user.id) : null;
+                var knownOnline = false;
+                if (uid != null && presenceMap[uid] && presenceMap[uid].online === true
+                    && !(presenceStickyOffline[uid] && Date.now() < presenceStickyOffline[uid])) {
+                    knownOnline = true;
+                }
+                if (user && (user.is_online === true || user.online === true)) knownOnline = true;
+                if (user && (user.is_online === false || user.online === false)) knownOnline = false;
 
-            updateChatStatus(user);
+                if (knownOnline) {
+                    if (uid != null) markPresence(uid, true, user.last_seen, "open");
+                    if (el) { el.textContent = "в сети"; el.className = "status online"; }
+                } else if (user && (user.is_online === false || user.online === false) && user.last_seen) {
+                    if (uid != null) markPresence(uid, false, user.last_seen, "open");
+                    updateChatStatus(user);
+                } else if (el) {
+                    // неизвестно — пусто, не «только что»
+                    el.textContent = "";
+                    el.className = "status";
+                }
+            })();
 
-            // актуализировать online с сервера
-
+            // Актуальный статус с сервера — единственный «истинный» первый paint
             (async function(peerId){
-
                 try {
-
                     var r = await req("/api/users/" + peerId);
-
-                    if (!r.ok) return;
-
-                    var u = await safeJson(r);
-
-                    if (!u) return;
-
-                    markPresence(peerId, u.is_online, u.last_seen);
-
-                    if (selectedUserId && Number(selectedUserId) === Number(peerId) && currentChatPeer) {
-
-                        currentChatPeer.is_online = u.is_online;
-
-                        currentChatPeer.last_seen = u.last_seen;
-
-                        updateChatStatus(currentChatPeer);
-
+                    if (!r.ok) {
+                        // fallback на то что есть
+                        if (user.id != null) markPresence(user.id, user.is_online != null ? user.is_online : user.online, user.last_seen, "open");
+                        updateChatStatus(currentChatPeer || user);
+                        return;
                     }
+                    var u = await safeJson(r);
+                    if (!u) return;
+                    if (!(selectedUserId && Number(selectedUserId) === Number(peerId))) return;
 
-                } catch (e) {}
+                    var onlineFlag = (u.is_online === true || u.online === true) ? true
+                        : (u.is_online === false || u.online === false) ? false
+                        : null;
+                    markPresence(peerId, onlineFlag, u.last_seen, "api");
 
+                    if (currentChatPeer) {
+                        currentChatPeer = Object.assign(currentChatPeer, {
+                            is_online: onlineFlag,
+                            online: onlineFlag,
+                            last_seen: u.last_seen != null ? u.last_seen : currentChatPeer.last_seen,
+                            display_name: u.display_name || currentChatPeer.display_name,
+                            username: u.username || currentChatPeer.username,
+                            avatar_url: u.avatar_url != null ? u.avatar_url : currentChatPeer.avatar_url
+                        });
+                        updateChatStatus(currentChatPeer);
+                    }
+                } catch (e) {
+                    try { updateChatStatus(currentChatPeer || user); } catch (ex) {}
+                }
             })(user.id);
 
             var actions = document.getElementById("chatActions");
@@ -8786,12 +8821,15 @@ body.theme-light .message-row.theirs .message-bubble {
 
             if (isUserOnline(ls, user)) return "в сети";
 
-            // Приоритет: серверный last_seen. presenceMap — только fallback.
-            // Не берём min() — иначе старый presence даёт ложное «вчера».
+            // Берём самый СВЕЖИЙ last_seen (server vs presence) — иначе при
+            // перезаходе в чат на 2–4 мин «старее» из кэша, потом прыгает.
             var ms = parseLastSeenMs(ls);
-            if (!ms && user && user.id != null && presenceMap[Number(user.id)] && presenceMap[Number(user.id)].lastSeen) {
-                ms = presenceMap[Number(user.id)].lastSeen;
+            var pMs = null;
+            if (user && user.id != null && presenceMap[Number(user.id)] && presenceMap[Number(user.id)].lastSeen) {
+                pMs = presenceMap[Number(user.id)].lastSeen;
             }
+            if (ms && pMs) ms = Math.max(ms, pMs);
+            else if (!ms && pMs) ms = pMs;
 
             if (!ms) return "оффлайн";
 
@@ -9130,6 +9168,35 @@ body.theme-light .message-row.theirs .message-bubble {
             container.innerHTML = "";
 
             msgs.forEach(renderMessage);
+
+            // Если в ЛС уже есть сообщения — чат должен быть в списке
+            try {
+                if (Array.isArray(msgs) && msgs.length > 0 && userId != null) {
+                    var last = msgs[msgs.length - 1];
+                    var peer = currentChatPeer || knownDialogs[Number(userId)] || {};
+                    upsertKnownDialog({
+                        id: Number(userId),
+                        username: peer.username || last.sender_username || "",
+                        display_name: peer.display_name || peer.username || last.sender_name || ("user" + userId),
+                        avatar_url: peer.avatar_url || last.sender_avatar || null,
+                        is_bot: peer.is_bot || false,
+                        is_verified: peer.is_verified || false,
+                        last_seen: peer.last_seen,
+                        is_online: peer.is_online,
+                        last_message: {
+                            text: last.text,
+                            media_type: last.media_type,
+                            deleted: last.deleted,
+                            sender_id: last.sender_id,
+                            created_at: last.created_at
+                        },
+                        _fromServer: true
+                    });
+                    // не вызываем renderKnownDialogs здесь при активном поиске
+                    var se = document.getElementById("search");
+                    if (!se || !se.value.trim()) renderKnownDialogs();
+                }
+            } catch (e) {}
 
             if (opts.forceScroll || nearBottom || opts.markRead !== false) {
 
@@ -12787,19 +12854,25 @@ body.theme-light .message-row.theirs .message-bubble {
 
             var statusText = formatLastSeen(user.last_seen, user);
 
-            var html = '<div style="text-align:center;padding:4px 0">';
+            var html = '<div style="text-align:center;padding:0;margin:0 -8px">';
             var burl = user.banner_url || "";
             try { if (!burl && user.id != null) burl = localStorage.getItem("lumi_banner_" + user.id) || ""; } catch (e) {}
+            // Баннер как в настройках профиля (градиент-fallback + аватар поверх)
+            html += '<div style="position:relative;width:100%;margin:0 0 8px 0">';
+            html += '<div style="width:100%;height:120px;border-radius:16px 16px 0 0;overflow:hidden;background:linear-gradient(135deg,#1a2a44,#3390ec 60%,#7289da)">';
             if (burl) {
-                html += '<img class="user-profile-banner" src="'+escapeHtml(burl)+'" alt="" style="margin:0 0 8px 0">';
+                html += '<img src="'+escapeHtml(burl)+'" alt="" style="width:100%;height:100%;object-fit:cover;display:block">';
             }
-            html += '<img src="'+avatarSrc(user.avatar_url)+'" style="width:100px;height:100px;border-radius:50%;object-fit:cover;background:#2a2a38;margin:0 auto 12px;display:block;border:3px solid #2a2a38">';
+            html += '</div>';
+            html += '<img src="'+avatarSrc(user.avatar_url)+'" style="position:absolute;left:50%;bottom:-40px;transform:translateX(-50%);width:88px;height:88px;border-radius:50%;object-fit:cover;background:#2a2a38;border:4px solid #14141e;display:block;z-index:2">';
+            html += '</div>';
+            html += '<div style="height:48px"></div>';
 
-            html += '<div style="font-size:20px;font-weight:700;color:#e8eaed">'+escapeHtml(user.display_name||user.username)+'</div>';
+            html += '<div style="font-size:20px;font-weight:700;color:#e8eaed;padding:0 8px">'+escapeHtml(user.display_name||user.username)+'</div>';
 
-            html += '<div style="color:#3390ec;font-size:14px;margin-bottom:12px">@'+escapeHtml(user.username)+'</div>';
+            html += '<div style="color:#3390ec;font-size:14px;margin-bottom:12px;padding:0 8px">@'+escapeHtml(user.username)+'</div>';
 
-            html += '<div style="background:#1a1a24;border-radius:12px;padding:12px;text-align:left;margin-bottom:12px"><div style="font-size:12px;color:#8a8a9a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">'+escapeHtml(t("about_me")||"О себе")+'</div><div style="font-size:14px;color:'+(user.bio ? '#fff' : '#8a8a9a')+'">'+(user.bio ? escapeHtml(user.bio) : (t("no_bio")||"Нет описания"))+'</div></div>';
+            html += '<div style="background:#1a1a24;border-radius:12px;padding:12px;text-align:left;margin:0 8px 12px"><div style="font-size:12px;color:#8a8a9a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">'+escapeHtml(t("about_me")||"О себе")+'</div><div style="font-size:14px;color:'+(user.bio ? '#fff' : '#8a8a9a')+'">'+(user.bio ? escapeHtml(user.bio) : (t("no_bio")||"Нет описания"))+'</div></div>';
 
             html += '<div style="background:#1a1a24;border-radius:12px;padding:12px;text-align:left;margin-bottom:16px">';
 
@@ -14718,6 +14791,24 @@ body.theme-light .message-row.theirs .message-bubble {
             if (!selectedUserId) return;
 
             if (callTargetId) { alert(t("already_call")); return; }
+
+            // Звонок = активность → чат появляется в списке
+            try {
+                var peer = currentChatPeer || {};
+                upsertKnownDialog({
+                    id: selectedUserId,
+                    username: peer.username || "",
+                    display_name: peer.display_name || peer.username || ("user" + selectedUserId),
+                    avatar_url: peer.avatar_url || null,
+                    is_bot: peer.is_bot || false,
+                    is_verified: peer.is_verified || false,
+                    last_seen: peer.last_seen,
+                    is_online: peer.is_online,
+                    last_message: { text: video ? "📹 Видеозвонок" : "📞 Звонок", sender_id: currentUser && currentUser.id, created_at: new Date().toISOString() },
+                    _hasCall: true
+                });
+                renderKnownDialogs();
+            } catch (e) {}
 
             isCaller = true; callIsVideo = !!video; callTargetId = selectedUserId;
 
