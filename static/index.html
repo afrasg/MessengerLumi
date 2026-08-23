@@ -12565,7 +12565,8 @@ body.theme-light .message-row.theirs .message-bubble {
                 }
                 html += '</div>';
             });
-            html += '<button class="primary" style="width:100%;padding:12px;border-radius:10px;margin-top:8px" onclick="saveThemeEditor(' + (editId ? ("\\'" + editId + "\\'") : "null") + ')">Сохранить</button>';
+            var _teArg = editId ? ("'" + String(editId).replace(/[^a-zA-Z0-9_\-]/g, "") + "'") : "null";
+            html += '<button class="primary" style="width:100%;padding:12px;border-radius:10px;margin-top:8px" onclick="saveThemeEditor(' + _teArg + ')">Сохранить</button>';
             html += '<button class="secondary" style="width:100%;padding:10px;border-radius:10px;margin-top:6px;background:#2a2a38;border:none;color:#fff" onclick="closeModal()">Отмена</button></div>';
             openModal(html);
         }
@@ -12664,17 +12665,17 @@ body.theme-light .message-row.theirs .message-bubble {
                 gradTo: slim.gt || slim.gradTo || DEFAULT_CUSTOM_THEME.gradTo
             };
         }
-        function shareCustomTheme(id) {
+                function shareCustomTheme(id) {
             var ct = getCustomThemeById(id);
             if (!ct) return;
-            var payload = encodeThemePayload(ct);
+            var sid = String(id).replace(/[^a-zA-Z0-9_\-]/g, "");
             openModal(
-                '<h2>Поделиться темой</h2>' +
-                '<p style="font-size:13px;color:#8a8a9a;margin-bottom:12px">Тема «' + escapeHtml(ct.name) + '» будет отправлена как сообщение. Откройте чат / канал / группу и нажмите «Отправить сюда», либо опубликуйте в ленте.</p>' +
-                '<button class="primary" style="width:100%;padding:12px;border-radius:10px;margin-bottom:6px" onclick="shareThemeToCurrentChat(\\'' + id + '\\')">Отправить в текущий чат</button>' +
-                '<button class="primary" style="width:100%;padding:12px;border-radius:10px;margin-bottom:6px;background:#2ecc71" onclick="shareThemeAsPost(\\'' + id + '\\')">Опубликовать в ленте</button>' +
-                '<button class="secondary" style="width:100%;padding:10px;border-radius:10px;background:#2a2a38;border:none;color:#fff" onclick="copyThemePayload(\\'' + id + '\\')">Копировать код темы</button>' +
-                '<button class="secondary" style="width:100%;padding:10px;border-radius:10px;margin-top:6px;background:#2a2a38;border:none;color:#fff" onclick="closeModal()">Закрыть</button>'
+                "<h2>Поделиться темой</h2>" +
+                "<p style=\"font-size:13px;color:#8a8a9a;margin-bottom:12px\">Тема «" + escapeHtml(ct.name) + "» будет отправлена как сообщение. Откройте чат / канал / группу и нажмите «Отправить сюда», либо опубликуйте в ленте.</p>" +
+                "<button class=\"primary\" style=\"width:100%;padding:12px;border-radius:10px;margin-bottom:6px\" onclick=\"shareThemeToCurrentChat('" + sid + "')\">Отправить в текущий чат</button>" +
+                "<button class=\"primary\" style=\"width:100%;padding:12px;border-radius:10px;margin-bottom:6px;background:#2ecc71\" onclick=\"shareThemeAsPost('" + sid + "')\">Опубликовать в ленте</button>" +
+                "<button class=\"secondary\" style=\"width:100%;padding:10px;border-radius:10px;background:#2a2a38;border:none;color:#fff\" onclick=\"copyThemePayload('" + sid + "')\">Копировать код темы</button>" +
+                "<button class=\"secondary\" style=\"width:100%;padding:10px;border-radius:10px;margin-top:6px;background:#2a2a38;border:none;color:#fff\" onclick=\"closeModal()\">Закрыть</button>"
             );
         }
         function copyThemePayload(id) {
