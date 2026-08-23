@@ -4647,6 +4647,167 @@ body.theme-light .message-row.theirs .message-bubble {
             color: #ff8a8a !important;
         }
 
+        
+        .follow-stats {
+            display: flex;
+            gap: 24px;
+            margin: 0 0 16px 0;
+            padding: 10px 0;
+            border-bottom: 1px solid #1a1a24;
+        }
+        .follow-stats-modal {
+            justify-content: center;
+            gap: 28px;
+            margin: 0 8px 14px;
+            border-top: 1px solid #1a1a24;
+            border-bottom: 1px solid #1a1a24;
+        }
+        .follow-stat {
+            text-align: center;
+            cursor: pointer;
+        }
+        .follow-stat-num {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .follow-stat-label {
+            font-size: 12px;
+            color: #8a8a9a;
+        }
+        body.theme-light .follow-stats,
+        body.theme-light .follow-stats-modal {
+            border-color: #d0d3d9;
+        }
+        body.theme-light .follow-stat-num {
+            color: #111 !important;
+        }
+        body.theme-light .follow-stat-label {
+            color: #6a6a7a !important;
+        }
+        body.theme-blue .follow-stat-num {
+            color: #e0e8f0;
+        }
+        body.theme-blue .follow-stats,
+        body.theme-blue .follow-stats-modal {
+            border-color: #1a2a44;
+        }
+
+        
+        /* ===== Custom themes ===== */
+        .custom-themes-panel { margin: 4px 0 8px; }
+        .custom-theme-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px; border-radius: 12px;
+            background: #1a1a24; margin-bottom: 6px; border: 1px solid #2a2a38;
+        }
+        body.theme-light .custom-theme-item { background: #f0f2f5; border-color: #d0d3d9; }
+        .custom-theme-swatches { display: flex; gap: 4px; flex-shrink: 0; }
+        .custom-theme-swatches span {
+            width: 16px; height: 16px; border-radius: 50%;
+            border: 1px solid rgba(255,255,255,.2); display: inline-block;
+        }
+        .custom-theme-item .ct-name { flex: 1; min-width: 0; font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .custom-theme-item .ct-actions { display: flex; gap: 4px; flex-shrink: 0; }
+        .custom-theme-item .ct-actions button {
+            padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 600;
+            background: #2a2a38; color: #fff; border: none; cursor: pointer;
+        }
+        body.theme-light .custom-theme-item .ct-actions button { background: #e8eaed; color: #111; }
+        .custom-theme-item.active { border-color: #3390ec; box-shadow: 0 0 0 1px #3390ec; }
+
+        .theme-editor .te-row {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 12px; margin-bottom: 10px;
+        }
+        .theme-editor .te-row label { font-size: 13px; color: #c0c0d0; flex: 1; }
+        body.theme-light .theme-editor .te-row label { color: #444; }
+        .theme-editor .te-row input[type="color"] {
+            width: 48px; height: 36px; border: none; border-radius: 8px;
+            padding: 0; cursor: pointer; background: transparent;
+        }
+        .theme-editor .te-row input[type="text"] {
+            flex: 1; padding: 10px 12px; border-radius: 10px;
+        }
+
+        .theme-share-card {
+            min-width: 200px; max-width: 280px;
+            border-radius: 14px; padding: 12px 14px;
+            background: rgba(0,0,0,.2); border: 1px solid rgba(255,255,255,.12);
+        }
+        .theme-share-card .tsc-title { font-weight: 700; margin-bottom: 8px; font-size: 14px; }
+        .theme-share-card .tsc-swatches { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+        .theme-share-card .tsc-swatches span {
+            width: 22px; height: 22px; border-radius: 50%;
+            border: 2px solid rgba(255,255,255,.25); display: inline-block;
+        }
+        .theme-share-card .tsc-apply {
+            width: 100%; padding: 8px; border-radius: 10px; border: none;
+            background: #3390ec; color: #fff; font-weight: 600; cursor: pointer; font-size: 13px;
+        }
+        .theme-share-card .tsc-apply:hover { background: #2b7cd3; }
+
+        /* When custom theme is active, map key UI to CSS variables */
+        body.theme-custom {
+            background: var(--ct-bg, #0a0a0f) !important;
+            color: var(--ct-text, #fff) !important;
+        }
+        body.theme-custom .sidebar { background: var(--ct-sidebar, #0f0f17) !important; border-right-color: var(--ct-border, #1a1a24) !important; }
+        body.theme-custom .sidebar-header { border-bottom-color: var(--ct-border, #1a1a24) !important; }
+        body.theme-custom .topbar { background: var(--ct-sidebar, #0f0f17) !important; border-bottom-color: var(--ct-border, #1a1a24) !important; }
+        body.theme-custom .topbar .title { color: var(--ct-text, #fff) !important; }
+        body.theme-custom .content .view { background: var(--ct-bg, #0a0a0f) !important; }
+        body.theme-custom .card,
+        body.theme-custom .post,
+        body.theme-custom .post-box { background: var(--ct-card, #14141e) !important; border-color: var(--ct-border, #1a1a24) !important; color: var(--ct-text, #fff) !important; }
+        body.theme-custom .card h2, body.theme-custom .card h3,
+        body.theme-custom .post .text, body.theme-custom .post .head .author { color: var(--ct-text, #fff) !important; }
+        body.theme-custom .primary,
+        body.theme-custom .primary-btn,
+        body.theme-custom .composer .send-btn,
+        body.theme-custom .post-box .tools .primary-btn { background: var(--ct-accent, #3390ec) !important; color: #fff !important; }
+        body.theme-custom .message-row.mine .message-bubble {
+            background: var(--ct-bubble-mine, #3390ec) !important;
+            color: var(--ct-bubble-mine-text, #fff) !important;
+        }
+        body.theme-custom .message-row.theirs .message-bubble {
+            background: var(--ct-bubble-theirs, #1a1a24) !important;
+            color: var(--ct-bubble-theirs-text, #fff) !important;
+        }
+        body.theme-custom .composer { background: var(--ct-composer, #0f0f17) !important; border-top-color: var(--ct-border, #1a1a24) !important; }
+        body.theme-custom .composer input,
+        body.theme-custom input, body.theme-custom textarea, body.theme-custom select {
+            background: var(--ct-input, #1a1a24) !important;
+            color: var(--ct-text, #fff) !important;
+            border-color: var(--ct-border, #2a2a38) !important;
+        }
+        body.theme-custom .chat-header { background: var(--ct-sidebar, #0f0f17) !important; border-bottom-color: var(--ct-border, #1a1a24) !important; }
+        body.theme-custom .chat-header .left .info .name { color: var(--ct-text, #fff) !important; }
+        body.theme-custom .chat-container { background: var(--ct-bg, #0a0a0f) !important; }
+        body.theme-custom .user-item:hover { background: var(--ct-input, #1a1a24) !important; }
+        body.theme-custom .user-item .info .name { color: var(--ct-text, #fff) !important; }
+        body.theme-custom .user-item .info .sub { color: var(--ct-muted, #8a8a9a) !important; }
+        body.theme-custom .section-header { color: var(--ct-muted, #6a6a7a) !important; }
+        body.theme-custom .modal { background: var(--ct-card, #14141e) !important; border-color: var(--ct-border, #2a2a38) !important; }
+        body.theme-custom .modal h2 { color: var(--ct-text, #fff) !important; }
+        body.theme-custom .auth-card { background: var(--ct-card, #14141e) !important; border-color: var(--ct-border, #2a2a38) !important; }
+        body.theme-custom .profile-banner-wrap,
+        body.theme-custom .follow-stats-modal + * {
+            /* gradient used in banners */
+        }
+        body.theme-custom .profile-banner-wrap {
+            background: linear-gradient(135deg, var(--ct-grad-from, #1a2a44), var(--ct-grad-to, #3390ec) 60%, var(--ct-accent, #7289da)) !important;
+        }
+        body.theme-custom .badge { background: var(--ct-accent, #3390ec) !important; }
+        body.theme-custom .follow-stat-num { color: var(--ct-text, #fff) !important; }
+        body.theme-custom .follow-stat-label { color: var(--ct-muted, #8a8a9a) !important; }
+        body.theme-custom .mobile-nav { background: var(--ct-sidebar, #17212b) !important; }
+        body.theme-custom .mobile-nav button.active { color: var(--ct-accent, #5eb5f7) !important; }
+        body.theme-custom .tg-set-title { color: var(--ct-text, #fff) !important; }
+        body.theme-custom .settings-menu.card,
+        body.theme-custom .tg-set-row { color: var(--ct-text, #fff); }
+
+
         /* Profile banner — outer holds avatar overflow; wrap only clips banner image */
         .profile-card-with-banner {
             overflow: visible !important;
@@ -5030,14 +5191,14 @@ body.theme-light .message-row.theirs .message-bubble {
                             </div>
                             <div class="profile-banner-spacer"></div>
                             <h2><img width="24" height="24" src="https://img.icons8.ru/ios-filled/50/user.png" alt="user"> Профиль</h2>
-                            <div id="profileFollowStats" style="display:flex;gap:24px;margin:0 0 16px 0;padding:10px 0;border-bottom:1px solid #1a1a24">
-                                <div style="text-align:center;cursor:pointer" onclick="openFollowList('followers')">
-                                    <div id="profileFollowersNum" style="font-size:18px;font-weight:700;color:#fff">0</div>
-                                    <div style="font-size:12px;color:#8a8a9a">подписчиков</div>
+                            <div id="profileFollowStats" class="follow-stats">
+                                <div class="follow-stat" onclick="openFollowList('followers')">
+                                    <div id="profileFollowersNum" class="follow-stat-num">0</div>
+                                    <div class="follow-stat-label">подписчиков</div>
                                 </div>
-                                <div style="text-align:center;cursor:pointer" onclick="openFollowList('following')">
-                                    <div id="profileFollowingNum" style="font-size:18px;font-weight:700;color:#fff">0</div>
-                                    <div style="font-size:12px;color:#8a8a9a">подписок</div>
+                                <div class="follow-stat" onclick="openFollowList('following')">
+                                    <div id="profileFollowingNum" class="follow-stat-num">0</div>
+                                    <div class="follow-stat-label">подписок</div>
                                 </div>
                             </div>
                             <div class="field"><label>Username</label><input id="profileUsername" placeholder="Username"></div>
@@ -5223,7 +5384,15 @@ body.theme-light .message-row.theirs .message-bubble {
 
                                 </select></label></div>
 
-                                <div class="setting"><label><span>Тема</span><select id="theme" onchange="saveSettings()"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="blue">Синяя</option></select></label></div>
+                                <div class="setting"><label><span>Тема</span><select id="theme" onchange="onThemeSelectChange()"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="blue">Синяя</option><option value="custom">Своя тема</option></select></label></div>
+
+                                <div id="customThemesPanel" class="custom-themes-panel hidden">
+                                    <div class="setting" style="border:none;padding-bottom:4px">
+                                        <div style="font-size:13px;font-weight:600;margin-bottom:8px;opacity:.85">Мои темы</div>
+                                        <div id="customThemesList"></div>
+                                        <button type="button" class="primary" style="width:100%;padding:10px;border-radius:10px;margin-top:8px" onclick="openThemeEditor()">＋ Создать тему</button>
+                                    </div>
+                                </div>
 
                                 <div class="setting"><label>Уведомления <input id="notifications" type="checkbox" onchange="saveSettings()"></label></div>
 
@@ -6098,6 +6267,8 @@ body.theme-light .message-row.theirs .message-bubble {
                 themeSel.options[1].text = t("light");
 
                 themeSel.options[2].text = t("blue");
+
+                if (themeSel.options[3]) themeSel.options[3].text = "Своя тема";
 
             }
 
@@ -9632,6 +9803,10 @@ body.theme-light .message-row.theirs .message-bubble {
 
                     bubble.appendChild(simg);
 
+                } else if (rawT.indexOf("%%THEME%%") === 0) {
+                    var themeObj = decodeThemePayload(rawT);
+                    if (themeObj) renderThemeCard(themeObj, bubble);
+                    else text.textContent = "🎨 Тема";
                 } else {
 
                     var rp = parseReplyPayload(rawT);
@@ -10699,7 +10874,21 @@ body.theme-light .message-row.theirs .message-bubble {
 
             div.appendChild(head);
 
-            if (post.text) { var txt = document.createElement("div"); txt.className = "text"; txt.textContent = post.text; div.appendChild(txt); }
+            if (post.text) {
+                if (String(post.text).indexOf("%%THEME%%") === 0) {
+                    var themeObjP = decodeThemePayload(post.text);
+                    if (themeObjP) {
+                        var tw = document.createElement("div");
+                        tw.style.margin = "8px 0";
+                        renderThemeCard(themeObjP, tw);
+                        div.appendChild(tw);
+                    } else {
+                        var txt0 = document.createElement("div"); txt0.className = "text"; txt0.textContent = "🎨 Тема"; div.appendChild(txt0);
+                    }
+                } else {
+                    var txt = document.createElement("div"); txt.className = "text"; txt.textContent = post.text; div.appendChild(txt);
+                }
+            }
 
             if (post.media_url) {
                 var mt = (post.media_type || "").toLowerCase();
@@ -12015,7 +12204,18 @@ body.theme-light .message-row.theirs .message-bubble {
 
             document.getElementById("language").value = data.language || "ru";
 
-            document.getElementById("theme").value = data.theme || "dark";
+            var th = data.theme || "dark";
+            var themeSel = document.getElementById("theme");
+            if (themeSel) {
+                if (String(th).indexOf("custom") === 0) {
+                    themeSel.value = "custom";
+                    var panel = document.getElementById("customThemesPanel");
+                    if (panel) panel.classList.remove("hidden");
+                    renderCustomThemesList();
+                } else {
+                    themeSel.value = th;
+                }
+            }
 
             document.getElementById("notifications").checked = Boolean(data.notifications);
 
@@ -12037,11 +12237,18 @@ body.theme-light .message-row.theirs .message-bubble {
 
         async function saveSettings() {
 
+            var themeVal = document.getElementById("theme").value;
+            if (themeVal === "custom") {
+                try {
+                    var aid = localStorage.getItem("lumi_active_custom_theme");
+                    if (aid) themeVal = "custom:" + aid;
+                } catch (e) {}
+            }
             var data = {
 
                 language: document.getElementById("language").value,
 
-                theme: document.getElementById("theme").value,
+                theme: themeVal,
 
                 notifications: document.getElementById("notifications").checked,
 
@@ -12131,18 +12338,445 @@ body.theme-light .message-row.theirs .message-bubble {
         }
 
         function applyTheme(theme) {
-
             var keep = [];
-
             if (document.body.classList.contains("mobile-main-open")) keep.push("mobile-main-open");
-
             if (document.body.classList.contains("mobile-chat-open")) keep.push("mobile-chat-open");
 
-            document.body.className = "theme-" + (theme || "dark") + (keep.length ? " " + keep.join(" ") : "");
+            // custom:xxx or custom
+            if (theme && String(theme).indexOf("custom") === 0) {
+                var id = null;
+                if (String(theme).indexOf("custom:") === 0) id = String(theme).slice(7);
+                else {
+                    try { id = localStorage.getItem("lumi_active_custom_theme"); } catch (e) {}
+                }
+                var ct = id ? getCustomThemeById(id) : null;
+                if (!ct) {
+                    var list = loadCustomThemes();
+                    ct = list[0] || null;
+                }
+                document.body.className = "theme-custom" + (keep.length ? " " + keep.join(" ") : "");
+                if (ct) applyCustomThemeVars(ct);
+                try { localStorage.setItem("lumi_theme", "custom:" + (ct && ct.id ? ct.id : "")); } catch (e) {}
+                return;
+            }
 
+            clearCustomThemeVars();
+            document.body.className = "theme-" + (theme || "dark") + (keep.length ? " " + keep.join(" ") : "");
+            try { localStorage.setItem("lumi_theme", theme || "dark"); } catch (e) {}
         }
 
+        // ===== CUSTOM THEMES =====
+        var DEFAULT_CUSTOM_THEME = {
+            name: "Моя тема",
+            accent: "#3390ec",
+            bubbleMine: "#3390ec",
+            bubbleMineText: "#ffffff",
+            bubbleTheirs: "#1a1a24",
+            bubbleTheirsText: "#ffffff",
+            bg: "#0a0a0f",
+            sidebar: "#0f0f17",
+            card: "#14141e",
+            text: "#ffffff",
+            muted: "#8a8a9a",
+            border: "#1a1a24",
+            input: "#1a1a24",
+            composer: "#0f0f17",
+            gradFrom: "#1a2a44",
+            gradTo: "#3390ec"
+        };
 
+        function loadCustomThemes() {
+            try {
+                var raw = localStorage.getItem("lumi_custom_themes");
+                var arr = raw ? JSON.parse(raw) : [];
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) { return []; }
+        }
+        function saveCustomThemes(list) {
+            try { localStorage.setItem("lumi_custom_themes", JSON.stringify(list || [])); } catch (e) {}
+        }
+        function getCustomThemeById(id) {
+            var list = loadCustomThemes();
+            for (var i = 0; i < list.length; i++) if (String(list[i].id) === String(id)) return list[i];
+            return null;
+        }
+        function newThemeId() {
+            return "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+        }
+        function applyCustomThemeVars(ct) {
+            if (!ct) return;
+            var root = document.body;
+            var map = {
+                "--ct-accent": ct.accent,
+                "--ct-bubble-mine": ct.bubbleMine,
+                "--ct-bubble-mine-text": ct.bubbleMineText,
+                "--ct-bubble-theirs": ct.bubbleTheirs,
+                "--ct-bubble-theirs-text": ct.bubbleTheirsText,
+                "--ct-bg": ct.bg,
+                "--ct-sidebar": ct.sidebar,
+                "--ct-card": ct.card,
+                "--ct-text": ct.text,
+                "--ct-muted": ct.muted,
+                "--ct-border": ct.border,
+                "--ct-input": ct.input,
+                "--ct-composer": ct.composer,
+                "--ct-grad-from": ct.gradFrom,
+                "--ct-grad-to": ct.gradTo
+            };
+            Object.keys(map).forEach(function(k) {
+                if (map[k]) root.style.setProperty(k, map[k]);
+            });
+            try { localStorage.setItem("lumi_active_custom_theme", ct.id); } catch (e) {}
+        }
+        function clearCustomThemeVars() {
+            var root = document.body;
+            ["--ct-accent","--ct-bubble-mine","--ct-bubble-mine-text","--ct-bubble-theirs","--ct-bubble-theirs-text",
+             "--ct-bg","--ct-sidebar","--ct-card","--ct-text","--ct-muted","--ct-border","--ct-input","--ct-composer",
+             "--ct-grad-from","--ct-grad-to"].forEach(function(k){ root.style.removeProperty(k); });
+        }
+        function onThemeSelectChange() {
+            var sel = document.getElementById("theme");
+            if (!sel) return;
+            var v = sel.value;
+            var panel = document.getElementById("customThemesPanel");
+            if (panel) panel.classList.toggle("hidden", v !== "custom");
+            if (v === "custom") {
+                renderCustomThemesList();
+                var active = null;
+                try { active = localStorage.getItem("lumi_active_custom_theme"); } catch (e) {}
+                if (active && getCustomThemeById(active)) applyTheme("custom:" + active);
+                else {
+                    var list = loadCustomThemes();
+                    if (list.length) applyTheme("custom:" + list[0].id);
+                    else applyTheme("dark"); // пока нет своих
+                }
+            } else {
+                applyTheme(v);
+            }
+            saveSettings();
+        }
+        function renderCustomThemesList() {
+            var box = document.getElementById("customThemesList");
+            if (!box) return;
+            var list = loadCustomThemes();
+            var active = null;
+            try { active = localStorage.getItem("lumi_active_custom_theme"); } catch (e) {}
+            if (!list.length) {
+                box.innerHTML = '<div style="font-size:13px;color:#8a8a9a;padding:8px 0">Пока нет своих тем. Создайте первую!</div>';
+                return;
+            }
+            box.innerHTML = "";
+            list.forEach(function(ct) {
+                var row = document.createElement("div");
+                row.className = "custom-theme-item" + (String(ct.id) === String(active) ? " active" : "");
+                var sw = document.createElement("div");
+                sw.className = "custom-theme-swatches";
+                [ct.accent, ct.bubbleMine, ct.bg, ct.gradTo].forEach(function(c) {
+                    var s = document.createElement("span");
+                    s.style.background = c || "#333";
+                    sw.appendChild(s);
+                });
+                var name = document.createElement("div");
+                name.className = "ct-name";
+                name.textContent = ct.name || "Без имени";
+                var actions = document.createElement("div");
+                actions.className = "ct-actions";
+                var btnUse = document.createElement("button");
+                btnUse.textContent = "✓";
+                btnUse.title = "Применить";
+                btnUse.onclick = function(e){ e.stopPropagation(); applyCustomThemeById(ct.id); };
+                var btnEdit = document.createElement("button");
+                btnEdit.textContent = "✎";
+                btnEdit.title = "Изменить";
+                btnEdit.onclick = function(e){ e.stopPropagation(); openThemeEditor(ct.id); };
+                var btnShare = document.createElement("button");
+                btnShare.textContent = "↗";
+                btnShare.title = "Поделиться";
+                btnShare.onclick = function(e){ e.stopPropagation(); shareCustomTheme(ct.id); };
+                var btnDel = document.createElement("button");
+                btnDel.textContent = "✕";
+                btnDel.title = "Удалить";
+                btnDel.style.color = "#e74c4c";
+                btnDel.onclick = function(e){
+                    e.stopPropagation();
+                    if (!confirm("Удалить тему «" + (ct.name || "") + "»?")) return;
+                    var next = loadCustomThemes().filter(function(x){ return String(x.id) !== String(ct.id); });
+                    saveCustomThemes(next);
+                    try {
+                        if (localStorage.getItem("lumi_active_custom_theme") === String(ct.id)) {
+                            localStorage.removeItem("lumi_active_custom_theme");
+                        }
+                    } catch (ex) {}
+                    renderCustomThemesList();
+                };
+                actions.appendChild(btnUse);
+                actions.appendChild(btnEdit);
+                actions.appendChild(btnShare);
+                actions.appendChild(btnDel);
+                row.appendChild(sw);
+                row.appendChild(name);
+                row.appendChild(actions);
+                row.onclick = function(){ applyCustomThemeById(ct.id); };
+                box.appendChild(row);
+            });
+        }
+        function applyCustomThemeById(id) {
+            var ct = getCustomThemeById(id);
+            if (!ct) return;
+            var sel = document.getElementById("theme");
+            if (sel) sel.value = "custom";
+            var panel = document.getElementById("customThemesPanel");
+            if (panel) panel.classList.remove("hidden");
+            applyTheme("custom:" + id);
+            renderCustomThemesList();
+            try { saveSettings(); } catch (e) {}
+        }
+        function openThemeEditor(editId) {
+            if (!requireAccount()) return;
+            var ct = editId ? getCustomThemeById(editId) : null;
+            var base = Object.assign({}, DEFAULT_CUSTOM_THEME, ct || {});
+            var fields = [
+                ["name", "Название", "text"],
+                ["accent", "Акцент (кнопки)", "color"],
+                ["bubbleMine", "Пузырь своих сообщений", "color"],
+                ["bubbleMineText", "Текст своих сообщений", "color"],
+                ["bubbleTheirs", "Пузырь чужих сообщений", "color"],
+                ["bubbleTheirsText", "Текст чужих сообщений", "color"],
+                ["bg", "Фон приложения", "color"],
+                ["sidebar", "Боковая панель / шапка", "color"],
+                ["card", "Карточки / посты", "color"],
+                ["text", "Основной текст", "color"],
+                ["muted", "Приглушённый текст", "color"],
+                ["border", "Границы", "color"],
+                ["input", "Поля ввода", "color"],
+                ["composer", "Панель ввода сообщения", "color"],
+                ["gradFrom", "Градиент (начало)", "color"],
+                ["gradTo", "Градиент (конец)", "color"]
+            ];
+            var html = '<div class="theme-editor"><h2>' + (editId ? "Изменить тему" : "Новая тема") + '</h2>';
+            fields.forEach(function(f) {
+                var key = f[0], label = f[1], type = f[2];
+                var val = base[key] != null ? base[key] : "";
+                html += '<div class="te-row"><label>' + escapeHtml(label) + '</label>';
+                if (type === "color") {
+                    html += '<input type="color" id="te_' + key + '" value="' + escapeHtml(normalizeHex(val)) + '">';
+                } else {
+                    html += '<input type="text" id="te_' + key + '" value="' + escapeHtml(String(val)) + '" placeholder="Название">';
+                }
+                html += '</div>';
+            });
+            html += '<button class="primary" style="width:100%;padding:12px;border-radius:10px;margin-top:8px" onclick="saveThemeEditor(' + (editId ? ("\\'" + editId + "\\'") : "null") + ')">Сохранить</button>';
+            html += '<button class="secondary" style="width:100%;padding:10px;border-radius:10px;margin-top:6px;background:#2a2a38;border:none;color:#fff" onclick="closeModal()">Отмена</button></div>';
+            openModal(html);
+        }
+        function normalizeHex(c) {
+            if (!c || typeof c !== "string") return "#3390ec";
+            c = c.trim();
+            if (/^#[0-9a-fA-F]{6}$/.test(c)) return c;
+            if (/^#[0-9a-fA-F]{3}$/.test(c)) {
+                return "#" + c[1]+c[1]+c[2]+c[2]+c[3]+c[3];
+            }
+            return "#3390ec";
+        }
+        function saveThemeEditor(editId) {
+            var list = loadCustomThemes();
+            var obj = editId ? (getCustomThemeById(editId) || {}) : { id: newThemeId() };
+            if (!obj.id) obj.id = newThemeId();
+            var keys = Object.keys(DEFAULT_CUSTOM_THEME);
+            keys.forEach(function(k) {
+                var el = document.getElementById("te_" + k);
+                if (!el) return;
+                obj[k] = el.value;
+            });
+            obj.name = (obj.name || "").trim() || "Моя тема";
+            if (editId) {
+                list = list.map(function(x){ return String(x.id) === String(editId) ? obj : x; });
+            } else {
+                list.unshift(obj);
+            }
+            saveCustomThemes(list);
+            closeModal();
+            var sel = document.getElementById("theme");
+            if (sel) sel.value = "custom";
+            var panel = document.getElementById("customThemesPanel");
+            if (panel) panel.classList.remove("hidden");
+            applyCustomThemeById(obj.id);
+            renderCustomThemesList();
+            if (typeof showToast === "function") showToast("Тема", "Сохранена");
+        }
+        function encodeThemePayload(ct) {
+            var slim = {
+                n: ct.name,
+                a: ct.accent,
+                bm: ct.bubbleMine,
+                bmt: ct.bubbleMineText,
+                bt: ct.bubbleTheirs,
+                btt: ct.bubbleTheirsText,
+                bg: ct.bg,
+                sb: ct.sidebar,
+                cd: ct.card,
+                tx: ct.text,
+                mu: ct.muted,
+                bd: ct.border,
+                inp: ct.input,
+                cp: ct.composer,
+                gf: ct.gradFrom,
+                gt: ct.gradTo
+            };
+            try {
+                return "%%THEME%%" + btoa(unescape(encodeURIComponent(JSON.stringify(slim))));
+            } catch (e) {
+                return "%%THEME%%" + JSON.stringify(slim);
+            }
+        }
+        function decodeThemePayload(text) {
+            if (!text || text.indexOf("%%THEME%%") !== 0) return null;
+            var raw = text.slice(9);
+            try {
+                var json = decodeURIComponent(escape(atob(raw)));
+                var slim = JSON.parse(json);
+                return expandThemePayload(slim);
+            } catch (e) {
+                try {
+                    return expandThemePayload(JSON.parse(raw));
+                } catch (e2) { return null; }
+            }
+        }
+        function expandThemePayload(slim) {
+            if (!slim || typeof slim !== "object") return null;
+            return {
+                id: newThemeId(),
+                name: slim.n || slim.name || "Общая тема",
+                accent: slim.a || slim.accent || DEFAULT_CUSTOM_THEME.accent,
+                bubbleMine: slim.bm || slim.bubbleMine || DEFAULT_CUSTOM_THEME.bubbleMine,
+                bubbleMineText: slim.bmt || slim.bubbleMineText || DEFAULT_CUSTOM_THEME.bubbleMineText,
+                bubbleTheirs: slim.bt || slim.bubbleTheirs || DEFAULT_CUSTOM_THEME.bubbleTheirs,
+                bubbleTheirsText: slim.btt || slim.bubbleTheirsText || DEFAULT_CUSTOM_THEME.bubbleTheirsText,
+                bg: slim.bg || DEFAULT_CUSTOM_THEME.bg,
+                sidebar: slim.sb || slim.sidebar || DEFAULT_CUSTOM_THEME.sidebar,
+                card: slim.cd || slim.card || DEFAULT_CUSTOM_THEME.card,
+                text: slim.tx || slim.text || DEFAULT_CUSTOM_THEME.text,
+                muted: slim.mu || slim.muted || DEFAULT_CUSTOM_THEME.muted,
+                border: slim.bd || slim.border || DEFAULT_CUSTOM_THEME.border,
+                input: slim.inp || slim.input || DEFAULT_CUSTOM_THEME.input,
+                composer: slim.cp || slim.composer || DEFAULT_CUSTOM_THEME.composer,
+                gradFrom: slim.gf || slim.gradFrom || DEFAULT_CUSTOM_THEME.gradFrom,
+                gradTo: slim.gt || slim.gradTo || DEFAULT_CUSTOM_THEME.gradTo
+            };
+        }
+        function shareCustomTheme(id) {
+            var ct = getCustomThemeById(id);
+            if (!ct) return;
+            var payload = encodeThemePayload(ct);
+            openModal(
+                '<h2>Поделиться темой</h2>' +
+                '<p style="font-size:13px;color:#8a8a9a;margin-bottom:12px">Тема «' + escapeHtml(ct.name) + '» будет отправлена как сообщение. Откройте чат / канал / группу и нажмите «Отправить сюда», либо опубликуйте в ленте.</p>' +
+                '<button class="primary" style="width:100%;padding:12px;border-radius:10px;margin-bottom:6px" onclick="shareThemeToCurrentChat(\\'' + id + '\\')">Отправить в текущий чат</button>' +
+                '<button class="primary" style="width:100%;padding:12px;border-radius:10px;margin-bottom:6px;background:#2ecc71" onclick="shareThemeAsPost(\\'' + id + '\\')">Опубликовать в ленте</button>' +
+                '<button class="secondary" style="width:100%;padding:10px;border-radius:10px;background:#2a2a38;border:none;color:#fff" onclick="copyThemePayload(\\'' + id + '\\')">Копировать код темы</button>' +
+                '<button class="secondary" style="width:100%;padding:10px;border-radius:10px;margin-top:6px;background:#2a2a38;border:none;color:#fff" onclick="closeModal()">Закрыть</button>'
+            );
+        }
+        function copyThemePayload(id) {
+            var ct = getCustomThemeById(id);
+            if (!ct) return;
+            var payload = encodeThemePayload(ct);
+            try {
+                navigator.clipboard.writeText(payload);
+                if (typeof showToast === "function") showToast("Тема", "Код скопирован");
+                else alert("Скопировано");
+            } catch (e) {
+                prompt("Скопируйте код темы:", payload);
+            }
+        }
+        async function shareThemeToCurrentChat(id) {
+            var ct = getCustomThemeById(id);
+            if (!ct) return;
+            var payload = encodeThemePayload(ct);
+            closeModal();
+            if (selectedUserId) {
+                var r = await req("/api/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ receiver_id: selectedUserId, text: payload }) });
+                if (r.ok) { await loadMessages(selectedUserId); if (typeof showToast === "function") showToast("Тема", "Отправлена"); }
+                else alert(t("error"));
+                return;
+            }
+            if (selectedGroupId) {
+                var r2 = await req("/api/groups/" + selectedGroupId + "/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: payload }) });
+                if (r2.ok) { try { await loadGroupMessages(selectedGroupId); } catch(e){} if (typeof showToast === "function") showToast("Тема", "Отправлена"); }
+                else alert(t("error"));
+                return;
+            }
+            if (selectedChannelId) {
+                var r3 = await req("/api/channels/" + selectedChannelId + "/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: payload }) });
+                if (r3.ok) { try { await loadChannelMessages(selectedChannelId); } catch(e){} if (typeof showToast === "function") showToast("Тема", "Отправлена"); }
+                else alert(t("error"));
+                return;
+            }
+            if (selectedCommunityChatId) {
+                var r4 = await req("/api/community-chats/" + selectedCommunityChatId + "/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: payload }) });
+                if (r4.ok) { try { await loadCommunityChatMessages(selectedCommunityChatId); } catch(e){} if (typeof showToast === "function") showToast("Тема", "Отправлена"); }
+                else alert(t("error"));
+                return;
+            }
+            alert("Откройте чат, группу, канал или сообщество, куда отправить тему");
+        }
+        async function shareThemeAsPost(id) {
+            var ct = getCustomThemeById(id);
+            if (!ct) return;
+            var payload = encodeThemePayload(ct);
+            closeModal();
+            var r = await req("/api/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: payload }) });
+            if (!r.ok) { var d = await safeJson(r); alert((d && d.detail) || t("error")); return; }
+            if (typeof showToast === "function") showToast("Тема", "Опубликована в ленте");
+            try { await loadFeed(); } catch (e) {}
+        }
+        function renderThemeCard(ct, container) {
+            if (!ct || !container) return;
+            var card = document.createElement("div");
+            card.className = "theme-share-card";
+            var title = document.createElement("div");
+            title.className = "tsc-title";
+            title.textContent = "🎨 " + (ct.name || "Тема");
+            var sw = document.createElement("div");
+            sw.className = "tsc-swatches";
+            [ct.accent, ct.bubbleMine, ct.bubbleTheirs, ct.bg, ct.gradFrom, ct.gradTo].forEach(function(c) {
+                var s = document.createElement("span");
+                s.style.background = c || "#333";
+                sw.appendChild(s);
+            });
+            var btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "tsc-apply";
+            btn.textContent = "Применить тему";
+            btn.onclick = function(ev) {
+                ev.stopPropagation();
+                importAndApplyTheme(ct);
+            };
+            card.appendChild(title);
+            card.appendChild(sw);
+            card.appendChild(btn);
+            container.appendChild(card);
+        }
+        function importAndApplyTheme(ct) {
+            if (!ct) return;
+            var list = loadCustomThemes();
+            // не дублируем по имени+акценту
+            var exists = list.find(function(x){ return x.name === ct.name && x.accent === ct.accent && x.bg === ct.bg; });
+            if (exists) {
+                applyCustomThemeById(exists.id);
+            } else {
+                ct.id = newThemeId();
+                list.unshift(ct);
+                saveCustomThemes(list);
+                applyCustomThemeById(ct.id);
+            }
+            var sel = document.getElementById("theme");
+            if (sel) sel.value = "custom";
+            var panel = document.getElementById("customThemesPanel");
+            if (panel) panel.classList.remove("hidden");
+            renderCustomThemesList();
+            if (typeof showToast === "function") showToast("Тема", "«" + (ct.name || "") + "» применена");
+        }
 
         // GROUPS
 
@@ -13308,9 +13942,9 @@ body.theme-light .message-row.theirs .message-bubble {
             var followCounts = pickFollowCounts(user);
             var followState = pickFollowState(user);
 
-            html += '<div style="display:flex;gap:28px;justify-content:center;margin:0 8px 14px;padding:10px 0;border-top:1px solid #1a1a24;border-bottom:1px solid #1a1a24">';
-            html += '<div style="text-align:center"><div id="modalFollowersNum" style="font-size:18px;font-weight:700;color:#fff">'+followCounts.followers+'</div><div style="font-size:12px;color:#8a8a9a">подписчиков</div></div>';
-            html += '<div style="text-align:center"><div id="modalFollowingNum" style="font-size:18px;font-weight:700;color:#fff">'+followCounts.following+'</div><div style="font-size:12px;color:#8a8a9a">подписок</div></div>';
+            html += '<div class="follow-stats follow-stats-modal">';
+            html += '<div class="follow-stat"><div id="modalFollowersNum" class="follow-stat-num">'+followCounts.followers+'</div><div class="follow-stat-label">подписчиков</div></div>';
+            html += '<div class="follow-stat"><div id="modalFollowingNum" class="follow-stat-num">'+followCounts.following+'</div><div class="follow-stat-label">подписок</div></div>';
             html += '</div>';
 
             html += '<div style="background:#1a1a24;border-radius:12px;padding:12px;text-align:left;margin:0 8px 16px">';
