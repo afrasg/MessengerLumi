@@ -356,6 +356,13 @@ def init_db():
             avatar_visibility TEXT DEFAULT 'all',
             last_seen_visibility TEXT DEFAULT 'all'
         );
+
+        CREATE TABLE IF NOT EXISTS follows (
+            follower_id INTEGER NOT NULL,
+            following_id INTEGER NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE(follower_id, following_id)
+        );
     """)
 
     # Добавляем недостающие колонки
@@ -364,6 +371,7 @@ def init_db():
     add_column_if_missing(connection, "users", "avatar_url", "TEXT")
     add_column_if_missing(connection, "users", "is_bot", "INTEGER DEFAULT 0")
     add_column_if_missing(connection, "users", "is_verified", "INTEGER DEFAULT 0")
+    add_column_if_missing(connection, "users", "banner_url", "TEXT")
     add_column_if_missing(connection, "messages", "edited_at", "TEXT")
     add_column_if_missing(connection, "messages", "deleted", "INTEGER DEFAULT 0")
     add_column_if_missing(connection, "messages", "media_url", "TEXT")
@@ -881,16 +889,23 @@ def me(request: Request):
     connection = db()
 
     user = connection.execute("""
-        SELECT id, username, display_name, bio, avatar_url, created_at, last_seen, is_bot, is_verified
+        SELECT id, username, display_name, bio, avatar_url, banner_url, created_at, last_seen, is_bot, is_verified
         FROM users WHERE id = ?
     """, (user_id,)).fetchone()
 
-    connection.close()
-
     if not user:
+        connection.close()
         raise HTTPException(404, "Пользователь не найден")
 
-    return dict(user)
+    result = dict(user)
+    result["followers_count"] = connection.execute(
+        "SELECT COUNT(*) AS c FROM follows WHERE following_id = ?", (user_id,)
+    ).fetchone()["c"]
+    result["following_count"] = connection.execute(
+        "SELECT COUNT(*) AS c FROM follows WHERE follower_id = ?", (user_id,)
+    ).fetchone()["c"]
+    connection.close()
+    return result
 
 
 @app.delete("/api/account")
@@ -1006,28 +1021,45 @@ def get_user_profile(user_id: int, request: Request):
     connection = db()
 
     user = connection.execute("""
-        SELECT id, username, display_name, bio, avatar_url, created_at, last_seen, is_bot, is_verified
+        SELECT id, username, display_name, bio, avatar_url, banner_url, created_at, last_seen, is_bot, is_verified
         FROM users WHERE id = ?
     """, (user_id,)).fetchone()
 
-    connection.close()
-
     if not user:
+        connection.close()
         raise HTTPException(404, "Пользователь не найден")
 
     result = dict(user)
-
     result["is_online"] = user_id in connections and len(connections.get(user_id, set())) > 0
+
+    # счётчики подписок всегда
+    result["followers_count"] = connection.execute(
+        "SELECT COUNT(*) AS c FROM follows WHERE following_id = ?", (user_id,)
+    ).fetchone()["c"]
+    result["following_count"] = connection.execute(
+        "SELECT COUNT(*) AS c FROM follows WHERE follower_id = ?", (user_id,)
+    ).fetchone()["c"]
+    result["is_following"] = bool(connection.execute(
+        "SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?",
+        (current_user_id, user_id)
+    ).fetchone())
+    result["follows_me"] = bool(connection.execute(
+        "SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?",
+        (user_id, current_user_id)
+    ).fetchone())
 
     if user["is_bot"] or user["username"] == "lumi":
         result["created_at"] = None
         result["last_seen"] = None
         result["is_online"] = True
+        connection.close()
         return result
 
     if user_id == current_user_id:
+        connection.close()
         return result
 
+    connection.close()
     connection = db()
 
     # если ОН заблокировал МЕНЯ — скрываем статус и аватар
@@ -1506,43 +1538,81 @@ def create_post(data: PostRequest, request: Request):
 
 
 @app.post("/api/posts/media")
-async def create_media_post(request: Request, text: str = "", file: UploadFile = File(...)):
+async def create_media_post(
+    request: Request,
+    text: str = Form(""),
+    media_type: str = Form(""),
+    file: UploadFile = File(...),
+):
+    """Посты с фото/видео/ГС/кружком/файлом."""
     user_id = get_auth_user(request)
 
-    allowed = {
-        "image/jpeg": (".jpg", "image"),
-        "image/png": (".png", "image"),
-        "image/webp": (".webp", "image"),
-        "video/mp4": (".mp4", "video"),
-        "video/webm": (".webm", "video"),
-    }
+    ctype = (file.content_type or "").split(";")[0].strip().lower()
+    name = (file.filename or "upload.bin").lower()
+    ext = Path(name).suffix.lower()
+    hint = (media_type or "").strip().lower()
 
-    if file.content_type not in allowed:
-        raise HTTPException(400, "Формат файла не поддерживается")
+    # Определяем тип
+    resolved_type = None
+    extension = ext or ".bin"
 
-    extension, media_type = allowed[file.content_type]
+    if hint in ("voice", "audio"):
+        resolved_type = "voice"
+        if extension not in {".webm", ".ogg", ".mp3", ".m4a", ".wav", ".opus"}:
+            extension = ".webm"
+    elif hint in ("video_note", "circle", "round_video"):
+        resolved_type = "video_note"
+        if extension not in {".webm", ".mp4"}:
+            extension = ".webm"
+    elif hint == "file":
+        resolved_type = "file"
+    elif ctype.startswith("image/") or extension in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+        resolved_type = "image"
+        if extension not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+            extension = ".jpg"
+    elif ctype.startswith("video/") or extension in {".mp4", ".webm", ".mov"}:
+        # кружок часто приходит как video/webm без hint
+        if hint in ("video_note", "circle") or (extension == ".webm" and "circle" in name):
+            resolved_type = "video_note"
+        else:
+            resolved_type = "video"
+        if extension not in {".mp4", ".webm", ".mov"}:
+            extension = ".webm"
+    elif ctype.startswith("audio/") or extension in {".webm", ".ogg", ".mp3", ".m4a", ".wav", ".opus"}:
+        resolved_type = "voice"
+        if extension not in {".webm", ".ogg", ".mp3", ".m4a", ".wav", ".opus"}:
+            extension = ".webm"
+    else:
+        # любой другой файл
+        resolved_type = "file"
+        if not extension:
+            extension = ".bin"
+
+    # защита от слишком странных расширений
+    if len(extension) > 12:
+        extension = ".bin"
+
+    data_bytes = await file.read()
+    if not data_bytes:
+        raise HTTPException(400, "Пустой файл")
 
     filename = f"post_{user_id}_{secrets.token_hex(10)}{extension}"
     path = UPLOAD_DIR / filename
-
     with open(path, "wb") as output:
-        shutil.copyfileobj(file.file, output)
+        output.write(data_bytes)
 
     url = "/uploads/" + filename
 
     connection = db()
-
     cursor = connection.execute("""
         INSERT INTO posts (author_id, text, media_url, media_type, created_at)
         VALUES (?, ?, ?, ?, ?)
-    """, (user_id, text.strip(), url, media_type, now()))
-
+    """, (user_id, (text or "").strip(), url, resolved_type, now()))
     post_id = cursor.lastrowid
-
     connection.commit()
     connection.close()
 
-    return {"ok": True, "id": post_id, "media_url": url}
+    return {"ok": True, "id": post_id, "media_url": url, "media_type": resolved_type}
 
 
 @app.post("/api/posts/{post_id}/like")
@@ -3699,6 +3769,154 @@ async def respond_invite(invite_id: int, data: InviteActionRequest, request: Req
         await send_ws(user_id, {"type": "message", "message": reply})
 
     return {"ok": True, "status": status}
+
+
+
+# =========================================================
+# FOLLOWS / SUBSCRIPTIONS
+# =========================================================
+
+@app.post("/api/users/{target_id}/follow")
+def follow_user(target_id: int, request: Request):
+    user_id = get_auth_user(request)
+    if target_id == user_id:
+        raise HTTPException(400, "Нельзя подписаться на себя")
+
+    connection = db()
+    target = connection.execute("SELECT id FROM users WHERE id = ?", (target_id,)).fetchone()
+    if not target:
+        connection.close()
+        raise HTTPException(404, "Пользователь не найден")
+
+    connection.execute("""
+        INSERT OR IGNORE INTO follows (follower_id, following_id, created_at)
+        VALUES (?, ?, ?)
+    """, (user_id, target_id, now()))
+    connection.commit()
+
+    followers = connection.execute(
+        "SELECT COUNT(*) AS c FROM follows WHERE following_id = ?", (target_id,)
+    ).fetchone()["c"]
+    connection.close()
+    return {"ok": True, "is_following": True, "followers_count": followers}
+
+
+@app.delete("/api/users/{target_id}/follow")
+def unfollow_user(target_id: int, request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    connection.execute(
+        "DELETE FROM follows WHERE follower_id = ? AND following_id = ?",
+        (user_id, target_id)
+    )
+    connection.commit()
+    followers = connection.execute(
+        "SELECT COUNT(*) AS c FROM follows WHERE following_id = ?", (target_id,)
+    ).fetchone()["c"]
+    connection.close()
+    return {"ok": True, "is_following": False, "followers_count": followers}
+
+
+@app.post("/api/users/{target_id}/unfollow")
+def unfollow_user_post(target_id: int, request: Request):
+    return unfollow_user(target_id, request)
+
+
+@app.post("/api/follow/{target_id}")
+def follow_user_alt(target_id: int, request: Request):
+    return follow_user(target_id, request)
+
+
+@app.delete("/api/follow/{target_id}")
+def unfollow_user_alt(target_id: int, request: Request):
+    return unfollow_user(target_id, request)
+
+
+@app.get("/api/users/{target_id}/followers")
+def list_followers(target_id: int, request: Request):
+    get_auth_user(request)
+    connection = db()
+    rows = connection.execute("""
+        SELECT u.id, u.username, u.display_name, u.avatar_url, u.is_verified
+        FROM follows f
+        JOIN users u ON u.id = f.follower_id
+        WHERE f.following_id = ?
+        ORDER BY f.created_at DESC
+        LIMIT 200
+    """, (target_id,)).fetchall()
+    connection.close()
+    return [dict(r) for r in rows]
+
+
+@app.get("/api/users/{target_id}/following")
+def list_following(target_id: int, request: Request):
+    get_auth_user(request)
+    connection = db()
+    rows = connection.execute("""
+        SELECT u.id, u.username, u.display_name, u.avatar_url, u.is_verified
+        FROM follows f
+        JOIN users u ON u.id = f.following_id
+        WHERE f.follower_id = ?
+        ORDER BY f.created_at DESC
+        LIMIT 200
+    """, (target_id,)).fetchall()
+    connection.close()
+    return [dict(r) for r in rows]
+
+
+@app.get("/api/me/followers")
+def me_followers(request: Request):
+    user_id = get_auth_user(request)
+    return list_followers(user_id, request)
+
+
+@app.get("/api/me/following")
+def me_following(request: Request):
+    user_id = get_auth_user(request)
+    return list_following(user_id, request)
+
+
+# =========================================================
+# BANNER
+# =========================================================
+
+@app.post("/api/banner")
+async def upload_banner(request: Request, file: UploadFile = File(...)):
+    user_id = get_auth_user(request)
+    ctype = (file.content_type or "").split(";")[0].strip().lower()
+    ext = Path(file.filename or "b.jpg").suffix.lower()
+    if ctype not in {"image/jpeg", "image/png", "image/webp", "image/gif"} and ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+        raise HTTPException(400, "Только изображения")
+    if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+        ext = ".jpg"
+    data_bytes = await file.read()
+    if not data_bytes:
+        raise HTTPException(400, "Пустой файл")
+    filename = f"banner_{user_id}_{secrets.token_hex(8)}{ext}"
+    path = UPLOAD_DIR / filename
+    with open(path, "wb") as out:
+        out.write(data_bytes)
+    url = "/uploads/" + filename
+    connection = db()
+    connection.execute("UPDATE users SET banner_url = ? WHERE id = ?", (url, user_id))
+    connection.commit()
+    connection.close()
+    return {"ok": True, "banner_url": url}
+
+
+@app.post("/api/me/banner")
+async def upload_banner_me(request: Request, file: UploadFile = File(...)):
+    return await upload_banner(request, file)
+
+
+@app.delete("/api/banner")
+def delete_banner(request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    connection.execute("UPDATE users SET banner_url = NULL WHERE id = ?", (user_id,))
+    connection.commit()
+    connection.close()
+    return {"ok": True}
 
 
 # =========================================================
