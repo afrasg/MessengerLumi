@@ -4640,6 +4640,13 @@ body.theme-light .message-row.theirs .message-bubble {
             fill: #050505 !important;
         }
 
+        
+        .post-box .tools button.recording {
+            outline: 2px solid #e74c4c;
+            background: rgba(231,76,76,0.2) !important;
+            color: #ff8a8a !important;
+        }
+
         /* Profile banner — outer holds avatar overflow; wrap only clips banner image */
         .profile-card-with-banner {
             overflow: visible !important;
@@ -4894,7 +4901,13 @@ body.theme-light .message-row.theirs .message-bubble {
 
                                 <button class="primary-btn" onclick="publishPost()">Опубликовать</button>
 
-                                <label>Фото / видео <input type="file" id="mediaFile" accept="image/*,video/*" onchange="publishMediaPost()"></label>
+                                <label>Фото / видео <input type="file" id="mediaFile" accept="image/*,video/*" onchange="onPostMediaPicked()"></label>
+
+                                <label>Файл <input type="file" id="postFileAny" onchange="onPostFilePicked()"></label>
+
+                                <button type="button" id="postVoiceBtn" onclick="togglePostVoice()" title="Голосовое">🎤 ГС</button>
+
+                                <button type="button" id="postCircleBtn" onclick="togglePostCircle()" title="Видеосообщение">⏺ Кружок</button>
 
                             </div>
 
@@ -5017,6 +5030,16 @@ body.theme-light .message-row.theirs .message-bubble {
                             </div>
                             <div class="profile-banner-spacer"></div>
                             <h2><img width="24" height="24" src="https://img.icons8.ru/ios-filled/50/user.png" alt="user"> Профиль</h2>
+                            <div id="profileFollowStats" style="display:flex;gap:24px;margin:0 0 16px 0;padding:10px 0;border-bottom:1px solid #1a1a24">
+                                <div style="text-align:center;cursor:pointer" onclick="openFollowList('followers')">
+                                    <div id="profileFollowersNum" style="font-size:18px;font-weight:700;color:#fff">0</div>
+                                    <div style="font-size:12px;color:#8a8a9a">подписчиков</div>
+                                </div>
+                                <div style="text-align:center;cursor:pointer" onclick="openFollowList('following')">
+                                    <div id="profileFollowingNum" style="font-size:18px;font-weight:700;color:#fff">0</div>
+                                    <div style="font-size:12px;color:#8a8a9a">подписок</div>
+                                </div>
+                            </div>
                             <div class="field"><label>Username</label><input id="profileUsername" placeholder="Username"></div>
                             <div class="field"><label>Имя</label><input id="profileName" placeholder="Имя"></div>
                             <div class="field"><label>О себе</label><textarea id="profileBio" placeholder="О себе"></textarea></div>
@@ -10679,15 +10702,49 @@ body.theme-light .message-row.theirs .message-bubble {
             if (post.text) { var txt = document.createElement("div"); txt.className = "text"; txt.textContent = post.text; div.appendChild(txt); }
 
             if (post.media_url) {
-
-                var media = document.createElement(post.media_type === "video" ? "video" : "img");
-
-                media.className = "media"; media.src = mediaUrl(post.media_url);
-
-                if (post.media_type === "video") media.controls = true;
-
-                div.appendChild(media);
-
+                var mt = (post.media_type || "").toLowerCase();
+                var murl = mediaUrl(post.media_url);
+                var isAudio = (mt === "voice" || mt === "audio");
+                if (!isAudio && !mt && /\.(ogg|webm|mp3|wav|m4a)(\?|$)/i.test(String(post.media_url))) isAudio = true;
+                if (isAudio) {
+                    var aw = document.createElement("div");
+                    aw.style.cssText = "margin:8px 0";
+                    var au = document.createElement("audio");
+                    au.controls = true;
+                    au.src = murl;
+                    au.style.width = "100%";
+                    aw.appendChild(au);
+                    div.appendChild(aw);
+                } else if (mt === "video_note" || mt === "circle" || mt === "round_video" || post.is_video_note) {
+                    var vw = document.createElement("div");
+                    vw.style.cssText = "margin:8px 0;display:flex;justify-content:flex-start";
+                    var vv = document.createElement("video");
+                    vv.src = murl;
+                    vv.controls = true;
+                    vv.playsInline = true;
+                    vv.style.cssText = "width:220px;height:220px;border-radius:50%;object-fit:cover;background:#000";
+                    vw.appendChild(vv);
+                    div.appendChild(vw);
+                } else if (mt === "video") {
+                    var mediaV = document.createElement("video");
+                    mediaV.className = "media";
+                    mediaV.src = murl;
+                    mediaV.controls = true;
+                    div.appendChild(mediaV);
+                } else if (mt === "file" || mt === "document") {
+                    var fl = document.createElement("a");
+                    fl.href = murl;
+                    fl.target = "_blank";
+                    fl.rel = "noopener";
+                    fl.style.cssText = "display:inline-flex;align-items:center;gap:8px;padding:10px 14px;background:#1a1a24;border-radius:10px;color:#6eb5ff;text-decoration:none;margin:8px 0";
+                    fl.textContent = "📎 " + (post.file_name || post.media_name || "Файл");
+                    div.appendChild(fl);
+                } else {
+                    var media = document.createElement("img");
+                    media.className = "media";
+                    media.src = murl;
+                    div.appendChild(media);
+                }
             }
 
             var actions = document.createElement("div"); actions.className = "actions";
@@ -10988,52 +11045,194 @@ body.theme-light .message-row.theirs .message-bubble {
 
         }
 
-        async function publishPost() {
+        var pendingPostFile = null;
+        var postVoiceRecorder = null;
+        var postVoiceChunks = [];
+        var postVoiceRecording = false;
+        var postCircleRecorder = null;
+        var postCircleStream = null;
+        var postCircleChunks = [];
+        var postCircleRecording = false;
 
+        function clearPostMediaPreview() {
+            pendingPostFile = null;
+            var box = document.getElementById("postMediaPreview");
+            if (box) { box.classList.add("hidden"); box.innerHTML = ""; }
+            var mf = document.getElementById("mediaFile");
+            if (mf) mf.value = "";
+            var pf = document.getElementById("postFileAny");
+            if (pf) pf.value = "";
+        }
+
+        function showPostMediaPreview(file, kind) {
+            pendingPostFile = file;
+            var box = document.getElementById("postMediaPreview");
+            if (!box) return;
+            box.classList.remove("hidden");
+            var label = kind || (file.type || "file");
+            var extra = "";
+            if (file.type && file.type.indexOf("image/") === 0) {
+                extra = '<img src="'+URL.createObjectURL(file)+'" style="max-height:120px;border-radius:8px;margin-top:6px;display:block">';
+            } else if (file.type && file.type.indexOf("video/") === 0) {
+                extra = '<video src="'+URL.createObjectURL(file)+'" controls style="max-height:160px;border-radius:8px;margin-top:6px;display:block"></video>';
+            } else if (file.type && file.type.indexOf("audio/") === 0) {
+                extra = '<audio src="'+URL.createObjectURL(file)+'" controls style="width:100%;margin-top:6px"></audio>';
+            }
+            box.innerHTML = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
+                '<div style="flex:1;min-width:0;font-size:13px;color:#c0c0d0">' + escapeHtml(file.name || label) +
+                ' · ' + Math.max(1, Math.round((file.size||0)/1024)) + ' KB</div>' +
+                '<button type="button" class="secondary" style="padding:6px 12px;border-radius:8px;background:#e74c4c;border:none;color:#fff" onclick="clearPostMediaPreview()">Убрать</button></div>' + extra;
+        }
+
+        function onPostMediaPicked() {
             if (!requireAccount()) return;
+            var input = document.getElementById("mediaFile");
+            var file = input && input.files && input.files[0];
+            if (!file) return;
+            showPostMediaPreview(file, "media");
+        }
 
-            var text = document.getElementById("postText").value.trim();
-
-            if (!text) return;
-
-            var r = await req("/api/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: text }) });
-
-            if (!r.ok) { var d = await safeJson(r); alert(d.detail || "Ошибка"); return; }
-
-            document.getElementById("postText").value = "";
-
-            await loadFeed();
-
+        function onPostFilePicked() {
+            if (!requireAccount()) return;
+            var input = document.getElementById("postFileAny");
+            var file = input && input.files && input.files[0];
+            if (!file) return;
+            showPostMediaPreview(file, "file");
         }
 
         async function publishMediaPost() {
+            // legacy hook from file input — now preview first
+            onPostMediaPicked();
+        }
 
+        async function publishPost() {
             if (!requireAccount()) return;
-
-            var input = document.getElementById("mediaFile");
-
-            var file = input.files[0];
-
-            if (!file) return;
-
             var text = document.getElementById("postText").value.trim();
-
-            var form = new FormData();
-
-            form.append("text", text);
-
-            form.append("file", file);
-
-            var r = await req("/api/posts/media", { method: "POST", body: form });
-
+            if (pendingPostFile) {
+                await uploadPostMedia(pendingPostFile, text);
+                return;
+            }
+            if (!text) return;
+            var r = await req("/api/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: text }) });
             if (!r.ok) { var d = await safeJson(r); alert(d.detail || "Ошибка"); return; }
-
             document.getElementById("postText").value = "";
-
-            input.value = "";
-
             await loadFeed();
+        }
 
+        async function uploadPostMedia(file, text) {
+            if (!file) return;
+            var form = new FormData();
+            form.append("text", text || "");
+            form.append("file", file, file.name || "upload.bin");
+            // подсказки для бэкенда
+            if (file.isVoice) form.append("media_type", "voice");
+            else if (file.isCircle || file.isVideoNote) form.append("media_type", "video_note");
+            else if (file.type && file.type.indexOf("audio/") === 0) form.append("media_type", "voice");
+            else if (file.type && file.type.indexOf("video/") === 0) form.append("media_type", "video");
+            else if (file.type && file.type.indexOf("image/") === 0) form.append("media_type", "image");
+            else form.append("media_type", "file");
+
+            var endpoints = ["/api/posts/media", "/api/posts/upload", "/api/media/posts"];
+            var r = null, d = {};
+            for (var i = 0; i < endpoints.length; i++) {
+                try {
+                    var fd = new FormData();
+                    form.forEach(function(v, k){ fd.append(k, v); });
+                    r = await req(endpoints[i], { method: "POST", body: fd });
+                    d = await safeJson(r);
+                    if (r.ok) break;
+                    if (r.status === 404 || r.status === 405) continue;
+                    break;
+                } catch (e) {}
+            }
+            if (!r || !r.ok) { alert((d && (d.detail || d.message)) || t("error")); return; }
+            document.getElementById("postText").value = "";
+            clearPostMediaPreview();
+            await loadFeed();
+        }
+
+        async function togglePostVoice() {
+            if (!requireAccount()) return;
+            if (postVoiceRecording) {
+                stopPostVoice();
+                return;
+            }
+            if (postCircleRecording) { alert("Сначала остановите запись кружка"); return; }
+            try {
+                var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                postVoiceChunks = [];
+                var mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus"
+                    : (MediaRecorder.isTypeSupported("audio/ogg;codecs=opus") ? "audio/ogg;codecs=opus" : "audio/webm");
+                postVoiceRecorder = new MediaRecorder(stream, { mimeType: mime });
+                postVoiceRecorder.ondataavailable = function(e){ if (e.data && e.data.size) postVoiceChunks.push(e.data); };
+                postVoiceRecorder.onstop = function(){
+                    try { stream.getTracks().forEach(function(t){ t.stop(); }); } catch(e){}
+                    var blob = new Blob(postVoiceChunks, { type: mime.split(";")[0] });
+                    var ext = mime.indexOf("ogg") >= 0 ? "ogg" : "webm";
+                    var file = new File([blob], "voice." + ext, { type: mime.split(";")[0] });
+                    file.isVoice = true;
+                    showPostMediaPreview(file, "voice");
+                    postVoiceChunks = [];
+                    var btn = document.getElementById("postVoiceBtn");
+                    if (btn) { btn.textContent = "🎤 ГС"; btn.classList.remove("recording"); }
+                };
+                postVoiceRecorder.start(100);
+                postVoiceRecording = true;
+                var btn2 = document.getElementById("postVoiceBtn");
+                if (btn2) { btn2.textContent = "⏹ Стоп"; btn2.classList.add("recording"); }
+            } catch (e) {
+                alert(t("mic_err") || "Нет доступа к микрофону");
+            }
+        }
+
+        function stopPostVoice() {
+            if (!postVoiceRecording) return;
+            postVoiceRecording = false;
+            try { if (postVoiceRecorder && postVoiceRecorder.state !== "inactive") postVoiceRecorder.stop(); } catch(e){}
+        }
+
+        async function togglePostCircle() {
+            if (!requireAccount()) return;
+            if (postCircleRecording) {
+                stopPostCircle();
+                return;
+            }
+            if (postVoiceRecording) { alert("Сначала остановите запись ГС"); return; }
+            try {
+                postCircleStream = await navigator.mediaDevices.getUserMedia({
+                    audio: true,
+                    video: { facingMode: "user", width: { ideal: 480 }, height: { ideal: 480 } }
+                });
+                postCircleChunks = [];
+                var mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus") ? "video/webm;codecs=vp9,opus"
+                    : (MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus") ? "video/webm;codecs=vp8,opus" : "video/webm");
+                postCircleRecorder = new MediaRecorder(postCircleStream, { mimeType: mime });
+                postCircleRecorder.ondataavailable = function(e){ if (e.data && e.data.size) postCircleChunks.push(e.data); };
+                postCircleRecorder.onstop = function(){
+                    try { if (postCircleStream) postCircleStream.getTracks().forEach(function(t){ t.stop(); }); } catch(e){}
+                    postCircleStream = null;
+                    var blob = new Blob(postCircleChunks, { type: "video/webm" });
+                    var file = new File([blob], "circle.webm", { type: "video/webm" });
+                    file.isCircle = true;
+                    file.isVideoNote = true;
+                    showPostMediaPreview(file, "circle");
+                    postCircleChunks = [];
+                    var btn = document.getElementById("postCircleBtn");
+                    if (btn) { btn.textContent = "⏺ Кружок"; btn.classList.remove("recording"); }
+                };
+                postCircleRecorder.start(100);
+                postCircleRecording = true;
+                var btn2 = document.getElementById("postCircleBtn");
+                if (btn2) { btn2.textContent = "⏹ Стоп"; btn2.classList.add("recording"); }
+            } catch (e) {
+                alert("Нет доступа к камере/микрофону");
+            }
+        }
+
+        function stopPostCircle() {
+            if (!postCircleRecording) return;
+            postCircleRecording = false;
+            try { if (postCircleRecorder && postCircleRecorder.state !== "inactive") postCircleRecorder.stop(); } catch(e){}
         }
 
         async function sharePost(post) {
@@ -11117,6 +11316,21 @@ body.theme-light .message-row.theirs .message-bubble {
             document.getElementById("profileName").value = user.display_name || "";
 
             document.getElementById("profileBio").value = user.bio || "";
+            try {
+                var fc = pickFollowCounts(user);
+                var elF = document.getElementById("profileFollowersNum");
+                var elG = document.getElementById("profileFollowingNum");
+                if (elF) elF.textContent = String(fc.followers);
+                if (elG) elG.textContent = String(fc.following);
+                // если счётчики нули — попробуем /api/me ещё раз с follow meta
+                if ((!fc.followers && !fc.following) && currentUser) {
+                    fetchFollowMeta(currentUser.id).then(function(m){
+                        if (elF) elF.textContent = String(m.followers);
+                        if (elG) elG.textContent = String(m.following);
+                    }).catch(function(){});
+                }
+            } catch (e) {}
+
 
             var avatar = document.getElementById("bigAvatar");
             var avUrl = user.avatar_url || null;
@@ -12858,7 +13072,161 @@ body.theme-light .message-row.theirs .message-bubble {
 
 
 
+        
+        // ===== FOLLOWS / SUBSCRIPTIONS =====
+        function pickFollowCounts(u) {
+            u = u || {};
+            var followers = u.followers_count != null ? u.followers_count
+                : (u.followers != null && typeof u.followers === "number" ? u.followers
+                : (u.subscriber_count != null ? u.subscriber_count
+                : (u.subscribers_count != null ? u.subscribers_count : 0)));
+            var following = u.following_count != null ? u.following_count
+                : (u.following != null && typeof u.following === "number" ? u.following
+                : (u.subscriptions_count != null ? u.subscriptions_count
+                : (u.subs_count != null ? u.subs_count : 0)));
+            return { followers: Number(followers) || 0, following: Number(following) || 0 };
+        }
+        function pickFollowState(u) {
+            u = u || {};
+            var isFollowing = false;
+            if (u.is_following === true || u.subscribed === true || u.is_subscribed === true || u.i_follow === true || u.am_following === true) isFollowing = true;
+            if (u.is_following === false || u.subscribed === false || u.is_subscribed === false) isFollowing = false;
+            var followsMe = false;
+            if (u.follows_me === true || u.is_follower === true || u.followed_by === true || u.follows_you === true || u.he_follows === true) followsMe = true;
+            if (u.follows_me === false || u.is_follower === false) followsMe = false;
+            return { isFollowing: isFollowing, followsMe: followsMe };
+        }
+        async function fetchFollowMeta(userId) {
+            var meta = { followers: 0, following: 0, isFollowing: false, followsMe: false };
+            try {
+                var r = await req("/api/users/" + userId);
+                if (r.ok) {
+                    var u = await safeJson(r);
+                    if (u) {
+                        var c = pickFollowCounts(u);
+                        var s = pickFollowState(u);
+                        meta.followers = c.followers;
+                        meta.following = c.following;
+                        meta.isFollowing = s.isFollowing;
+                        meta.followsMe = s.followsMe;
+                    }
+                }
+            } catch (e) {}
+            if (!meta.followers && !meta.following) {
+                try {
+                    var r2 = await req("/api/users/" + userId + "/followers/count");
+                    if (r2.ok) {
+                        var d2 = await safeJson(r2);
+                        if (d2) {
+                            if (d2.count != null) meta.followers = Number(d2.count) || 0;
+                            if (d2.followers != null) meta.followers = Number(d2.followers) || 0;
+                            if (d2.following != null) meta.following = Number(d2.following) || 0;
+                        }
+                    }
+                } catch (e) {}
+            }
+            return meta;
+        }
+        async function toggleFollow(userId, btn) {
+            if (!requireAccount()) return;
+            userId = Number(userId);
+            if (!isFinite(userId)) return;
+            var following = btn && btn.dataset.following === "1";
+            if (btn) btn.disabled = true;
+            try {
+                var r;
+                if (following) {
+                    r = await req("/api/users/" + userId + "/follow", { method: "DELETE" });
+                    if (!r.ok && (r.status === 404 || r.status === 405)) {
+                        r = await req("/api/users/" + userId + "/unfollow", { method: "POST" });
+                    }
+                    if (!r.ok && (r.status === 404 || r.status === 405)) {
+                        r = await req("/api/follow/" + userId, { method: "DELETE" });
+                    }
+                } else {
+                    r = await req("/api/users/" + userId + "/follow", { method: "POST" });
+                    if (!r.ok && (r.status === 404 || r.status === 405)) {
+                        r = await req("/api/follow/" + userId, { method: "POST" });
+                    }
+                    if (!r.ok && (r.status === 404 || r.status === 405)) {
+                        r = await req("/api/users/" + userId + "/subscribe", { method: "POST" });
+                    }
+                }
+                var d = await safeJson(r);
+                if (!r.ok) {
+                    alert((d && (d.detail || d.message)) || t("error"));
+                    return;
+                }
+                var nowFollowing = !following;
+                if (d && (d.is_following === true || d.subscribed === true)) nowFollowing = true;
+                if (d && (d.is_following === false || d.subscribed === false)) nowFollowing = false;
+                if (btn) {
+                    btn.dataset.following = nowFollowing ? "1" : "0";
+                    var followsMe = btn.dataset.followsMe === "1";
+                    if (nowFollowing) {
+                        btn.textContent = "Отписаться";
+                        btn.className = "secondary";
+                        btn.style.cssText = "width:100%;padding:10px;border-radius:10px;margin-bottom:6px;background:#2a2a38;border:none;color:#fff";
+                    } else {
+                        btn.textContent = followsMe ? "Подписаться в ответ" : "Подписаться";
+                        btn.className = "primary";
+                        btn.style.cssText = "width:100%;padding:10px;border-radius:10px;margin-bottom:6px";
+                    }
+                }
+                var num = document.getElementById("modalFollowersNum");
+                if (num) {
+                    var n = parseInt(num.textContent, 10) || 0;
+                    n = nowFollowing ? n + 1 : Math.max(0, n - 1);
+                    if (d && d.followers_count != null) n = Number(d.followers_count) || n;
+                    num.textContent = String(n);
+                }
+            } catch (e) {
+                alert(t("error"));
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        }
+        async function openFollowList(kind) {
+            if (!currentUser) return;
+            var title = kind === "following" ? "Подписки" : "Подписчики";
+            var endpoints = kind === "following"
+                ? ["/api/users/" + currentUser.id + "/following", "/api/me/following", "/api/following"]
+                : ["/api/users/" + currentUser.id + "/followers", "/api/me/followers", "/api/followers"];
+            var list = null;
+            for (var i = 0; i < endpoints.length; i++) {
+                try {
+                    var r = await req(endpoints[i]);
+                    if (!r.ok) continue;
+                    var d = await safeJson(r);
+                    if (Array.isArray(d)) { list = d; break; }
+                    if (d && Array.isArray(d.users)) { list = d.users; break; }
+                    if (d && Array.isArray(d.items)) { list = d.items; break; }
+                    if (d && Array.isArray(d.followers)) { list = d.followers; break; }
+                    if (d && Array.isArray(d.following)) { list = d.following; break; }
+                } catch (e) {}
+            }
+            var html = "<h2>" + escapeHtml(title) + "</h2>";
+            if (!list || !list.length) {
+                html += '<div style="color:#8a8a9a;text-align:center;padding:16px">Пока пусто</div>';
+            } else {
+                html += '<div style="max-height:360px;overflow-y:auto;text-align:left">';
+                list.forEach(function(u) {
+                    var id = u.id != null ? u.id : u.user_id;
+                    var name = escapeHtml(u.display_name || u.username || ("user" + id));
+                    var un = escapeHtml(u.username || "");
+                    html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #2a2a38;cursor:pointer" onclick="closeModal();openUserProfile('+Number(id)+')">';
+                    html += '<img src="'+avatarSrc(u.avatar_url)+'" style="width:40px;height:40px;border-radius:50%;object-fit:cover;background:#2a2a38">';
+                    html += '<div style="flex:1;min-width:0"><div style="font-weight:600;color:#e8eaed">'+name+'</div>';
+                    html += '<div style="font-size:12px;color:#3390ec">@'+un+'</div></div></div>';
+                });
+                html += "</div>";
+            }
+            html += '<button class="secondary" style="width:100%;margin-top:10px;padding:10px;border-radius:10px;background:#2a2a38;border:none;color:#fff" onclick="closeModal()">Закрыть</button>';
+            openModal(html);
+        }
+
         // USER PROFILE
+
 
         
 
@@ -12936,7 +13304,16 @@ body.theme-light .message-row.theirs .message-bubble {
 
             html += '<div style="background:#1a1a24;border-radius:12px;padding:12px;text-align:left;margin:0 8px 12px"><div style="font-size:12px;color:#8a8a9a;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">'+escapeHtml(t("about_me")||"О себе")+'</div><div style="font-size:14px;color:'+(user.bio ? '#fff' : '#8a8a9a')+'">'+(user.bio ? escapeHtml(user.bio) : (t("no_bio")||"Нет описания"))+'</div></div>';
 
-            html += '<div style="background:#1a1a24;border-radius:12px;padding:12px;text-align:left;margin-bottom:16px">';
+            
+            var followCounts = pickFollowCounts(user);
+            var followState = pickFollowState(user);
+
+            html += '<div style="display:flex;gap:28px;justify-content:center;margin:0 8px 14px;padding:10px 0;border-top:1px solid #1a1a24;border-bottom:1px solid #1a1a24">';
+            html += '<div style="text-align:center"><div id="modalFollowersNum" style="font-size:18px;font-weight:700;color:#fff">'+followCounts.followers+'</div><div style="font-size:12px;color:#8a8a9a">подписчиков</div></div>';
+            html += '<div style="text-align:center"><div id="modalFollowingNum" style="font-size:18px;font-weight:700;color:#fff">'+followCounts.following+'</div><div style="font-size:12px;color:#8a8a9a">подписок</div></div>';
+            html += '</div>';
+
+            html += '<div style="background:#1a1a24;border-radius:12px;padding:12px;text-align:left;margin:0 8px 16px">';
 
             if (!isBot) {
 
@@ -12951,6 +13328,12 @@ body.theme-light .message-row.theirs .message-bubble {
             html += '</div>';
 
             if (!isMe) {
+                var fLabel = followState.isFollowing ? "Отписаться" : (followState.followsMe ? "Подписаться в ответ" : "Подписаться");
+                var fStyle = followState.isFollowing
+                    ? "width:100%;padding:10px;border-radius:10px;margin-bottom:6px;background:#2a2a38;border:none;color:#fff"
+                    : "width:100%;padding:10px;border-radius:10px;margin-bottom:6px";
+                var fCls = followState.isFollowing ? "secondary" : "primary";
+                html += '<button type="button" class="'+fCls+'" id="followBtn" data-following="'+(followState.isFollowing?"1":"0")+'" data-follows-me="'+(followState.followsMe?"1":"0")+'" style="'+fStyle+'" onclick="toggleFollow('+user.id+', this)">'+fLabel+'</button>';
 
                 html += '<button class="primary" style="width:100%;padding:10px;border-radius:10px;margin-bottom:6px" onclick="closeModal();openChat({id:'+user.id+',username:\''+escapeHtml(user.username)+'\',display_name:\''+escapeHtml(user.display_name||user.username)+'\',last_seen:\''+(user.last_seen||'')+'\',is_bot:'+(!!user.is_bot)+',is_verified:'+(!!user.is_verified)+'})">Написать</button>';
 
@@ -12960,7 +13343,7 @@ body.theme-light .message-row.theirs .message-bubble {
 
             }
 
-            html += '<div id="userProfilePosts" style="margin-top:12px;text-align:left"></div>';
+html += '<div id="userProfilePosts" style="margin-top:12px;text-align:left"></div>';
 
             html += '<button class="secondary" style="width:100%;padding:10px;border-radius:10px;background:#2a2a38;border:none;color:#fff;margin-top:8px" onclick="closeModal()">Закрыть</button></div>';
 
@@ -12969,6 +13352,37 @@ body.theme-light .message-row.theirs .message-bubble {
             var postsBox = document.getElementById("userProfilePosts");
 
             if (postsBox) loadUserPostsInto(postsBox, user.id);
+
+            // Актуализируем подписки / счётчики
+            if (user && user.id != null && !isMe) {
+                fetchFollowMeta(user.id).then(function(m){
+                    var n1 = document.getElementById("modalFollowersNum");
+                    var n2 = document.getElementById("modalFollowingNum");
+                    if (n1) n1.textContent = String(m.followers);
+                    if (n2) n2.textContent = String(m.following);
+                    var btn = document.getElementById("followBtn");
+                    if (btn) {
+                        btn.dataset.following = m.isFollowing ? "1" : "0";
+                        btn.dataset.followsMe = m.followsMe ? "1" : "0";
+                        if (m.isFollowing) {
+                            btn.textContent = "Отписаться";
+                            btn.className = "secondary";
+                            btn.style.cssText = "width:100%;padding:10px;border-radius:10px;margin-bottom:6px;background:#2a2a38;border:none;color:#fff";
+                        } else {
+                            btn.textContent = m.followsMe ? "Подписаться в ответ" : "Подписаться";
+                            btn.className = "primary";
+                            btn.style.cssText = "width:100%;padding:10px;border-radius:10px;margin-bottom:6px";
+                        }
+                    }
+                }).catch(function(){});
+            } else if (user && isMe) {
+                fetchFollowMeta(user.id).then(function(m){
+                    var n1 = document.getElementById("modalFollowersNum");
+                    var n2 = document.getElementById("modalFollowingNum");
+                    if (n1) n1.textContent = String(m.followers);
+                    if (n2) n2.textContent = String(m.following);
+                }).catch(function(){});
+            }
 
             // Если баннера не было в /api/users — догружаем отдельными эндпоинтами
             if (!bsrc && user && user.id != null) {
