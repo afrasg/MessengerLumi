@@ -4914,7 +4914,65 @@ body.theme-light .message-row.theirs .message-bubble {
         body.theme-light .tg-set-title { color: #111 !important; }
         body.theme-light .tg-set-sub { color: #6a6a7a !important; }
 
-</style>
+
+        /* ===== Custom theme: hard overrides for chat (must be last) ===== */
+        body.theme-custom .message-row.mine .message-bubble {
+            background: var(--ct-bubble-mine, var(--m-blue, #3390ec)) !important;
+            color: var(--ct-bubble-mine-text, #fff) !important;
+        }
+        body.theme-custom .message-row.theirs .message-bubble {
+            background: var(--ct-bubble-theirs, #1a1a24) !important;
+            color: var(--ct-bubble-theirs-text, #fff) !important;
+        }
+        body.theme-custom .message-row.mine .message-bubble .meta,
+        body.theme-custom .message-row.mine .message-bubble .meta .status {
+            color: var(--ct-bubble-mine-text, #fff) !important;
+            opacity: 0.75;
+        }
+        body.theme-custom .message-row.theirs .message-bubble .meta,
+        body.theme-custom .message-row.theirs .message-bubble .meta .status {
+            color: var(--ct-bubble-theirs-text, #fff) !important;
+            opacity: 0.75;
+        }
+        body.theme-custom .messages,
+        body.theme-custom #messages,
+        body.theme-custom .chat-messages,
+        body.theme-custom .chat-container {
+            background: var(--ct-bg, #0a0a0f) !important;
+        }
+        body.theme-custom .composer,
+        body.theme-custom .chat-composer,
+        body.theme-custom .message-input-bar {
+            background: var(--ct-composer, #0f0f17) !important;
+            border-color: var(--ct-border, #1a1a24) !important;
+        }
+        body.theme-custom .composer input,
+        body.theme-custom .composer textarea,
+        body.theme-custom #messageInput,
+        body.theme-custom .chat-input {
+            background: var(--ct-input, #1a1a24) !important;
+            color: var(--ct-text, #fff) !important;
+        }
+        body.theme-custom .composer .send-btn,
+        body.theme-custom .send-btn,
+        body.theme-custom button.primary {
+            background: var(--ct-accent, #3390ec) !important;
+        }
+        body.theme-custom .chat-header,
+        body.theme-custom #chatHeader {
+            background: var(--ct-sidebar, #0f0f17) !important;
+            border-color: var(--ct-border, #1a1a24) !important;
+        }
+        body.theme-custom .chat-header .name,
+        body.theme-custom #chatName {
+            color: var(--ct-text, #fff) !important;
+        }
+        body.theme-custom .chat-header .status,
+        body.theme-custom #chatStatus {
+            color: var(--ct-muted, #8a8a9a) !important;
+        }
+
+    </style>
 
 </head>
 
@@ -7610,7 +7668,7 @@ body.theme-light .message-row.theirs .message-bubble {
 
             document.getElementById("app").classList.remove("hidden");
 
-            applyTheme(currentUser.theme);
+            applyTheme(resolvePreferredTheme(currentUser.theme), { force: true });
 
             applyLanguage(currentUser.language);
 
@@ -7928,7 +7986,7 @@ body.theme-light .message-row.theirs .message-bubble {
 
             await loadDialogs();
 
-            applyTheme(currentUser.theme || "dark");
+            applyTheme(resolvePreferredTheme(currentUser.theme || "dark"), { force: true });
 
             // language may come from settings; try apply from user or default
 
@@ -11556,7 +11614,7 @@ body.theme-light .message-row.theirs .message-bubble {
 
             if (saveProf) saveProf.style.display = isGuest ? "none" : "";
 
-            if (user.theme) applyTheme(user.theme);
+            applyTheme(resolvePreferredTheme(user.theme || getStoredTheme() || "dark"), { force: true });
 
         
 
@@ -12229,7 +12287,19 @@ body.theme-light .message-row.theirs .message-bubble {
 
             document.getElementById("cameraOnJoin").checked = Boolean(data.camera_on_join);
 
-            applyTheme(data.theme || "dark");
+            var resolved = resolvePreferredTheme(data.theme || "dark");
+            var themeSel2 = document.getElementById("theme");
+            if (themeSel2) {
+                if (String(resolved).indexOf("custom") === 0) {
+                    themeSel2.value = "custom";
+                    var panel2 = document.getElementById("customThemesPanel");
+                    if (panel2) panel2.classList.remove("hidden");
+                    try { renderCustomThemesList(); } catch (e) {}
+                } else {
+                    themeSel2.value = resolved;
+                }
+            }
+            applyTheme(resolved, { force: true });
 
             applyLanguage(data.language || "ru");
 
@@ -12240,7 +12310,7 @@ body.theme-light .message-row.theirs .message-bubble {
             var themeVal = document.getElementById("theme").value;
             if (themeVal === "custom") {
                 try {
-                    var aid = localStorage.getItem("lumi_active_custom_theme");
+                    var aid = localStorage.getItem(activeThemeKey());
                     if (aid) themeVal = "custom:" + aid;
                 } catch (e) {}
             }
@@ -12264,7 +12334,7 @@ body.theme-light .message-row.theirs .message-bubble {
 
             };
 
-            applyTheme(data.theme);
+            applyTheme(data.theme, { force: true });
 
             applyLanguage(data.language);
 
@@ -12337,32 +12407,100 @@ body.theme-light .message-row.theirs .message-bubble {
             if (typeof showToast === "function") showToast("Баннер", "Удалён");
         }
 
-        function applyTheme(theme) {
+        function getStoredTheme() {
+            try {
+                var t = localStorage.getItem(themePrefKey());
+                if (t) return t;
+            } catch (e) {}
+            return null;
+        }
+        function resolvePreferredTheme(serverTheme) {
+            // Приоритет: локально сохранённая своя тема (если ещё существует) > сервер > dark
+            var local = getStoredTheme();
+            if (local && String(local).indexOf("custom:") === 0) {
+                var id = String(local).slice(7);
+                if (id && getCustomThemeById(id)) return "custom:" + id;
+                var list = loadCustomThemes();
+                if (list.length) return "custom:" + list[0].id;
+            }
+            if (local && (local === "dark" || local === "light" || local === "blue")) {
+                // если сервер прислал custom — он важнее только когда локально нет явного выбора
+                if (serverTheme && String(serverTheme).indexOf("custom") === 0) {
+                    var sid = String(serverTheme).indexOf("custom:") === 0 ? String(serverTheme).slice(7) : null;
+                    if (sid && getCustomThemeById(sid)) return "custom:" + sid;
+                }
+                return local;
+            }
+            if (serverTheme && String(serverTheme).indexOf("custom") === 0) {
+                var sid2 = String(serverTheme).indexOf("custom:") === 0 ? String(serverTheme).slice(7) : null;
+                if (sid2 && getCustomThemeById(sid2)) return "custom:" + sid2;
+                try {
+                    var aid = localStorage.getItem(activeThemeKey());
+                    if (aid && getCustomThemeById(aid)) return "custom:" + aid;
+                } catch (e) {}
+                var list2 = loadCustomThemes();
+                if (list2.length) return "custom:" + list2[0].id;
+            }
+            if (serverTheme === "dark" || serverTheme === "light" || serverTheme === "blue") return serverTheme;
+            if (local) return local;
+            return "dark";
+        }
+        function applyTheme(theme, opts) {
+            opts = opts || {};
             var keep = [];
             if (document.body.classList.contains("mobile-main-open")) keep.push("mobile-main-open");
             if (document.body.classList.contains("mobile-chat-open")) keep.push("mobile-chat-open");
+
+            // Не затираем свою тему «пустым» вызовом / старым server value без force
+            if (!opts.force) {
+                var preferred = null;
+                try {
+                    var st = localStorage.getItem(themePrefKey());
+                    if (st && String(st).indexOf("custom:") === 0) {
+                        var pid = String(st).slice(7);
+                        if (pid && getCustomThemeById(pid)) preferred = "custom:" + pid;
+                    }
+                } catch (e) {}
+                if (preferred && (!theme || (String(theme).indexOf("custom") !== 0 && theme !== preferred))) {
+                    // внешний applyTheme("light") не должен сбивать активную свою тему
+                    // кроме явного выбора пользователя (opts.force = true)
+                    theme = preferred;
+                }
+            }
 
             // custom:xxx or custom
             if (theme && String(theme).indexOf("custom") === 0) {
                 var id = null;
                 if (String(theme).indexOf("custom:") === 0) id = String(theme).slice(7);
                 else {
-                    try { id = localStorage.getItem("lumi_active_custom_theme"); } catch (e) {}
+                    try { id = localStorage.getItem(activeThemeKey()); } catch (e) {}
                 }
                 var ct = id ? getCustomThemeById(id) : null;
                 if (!ct) {
                     var list = loadCustomThemes();
                     ct = list[0] || null;
                 }
+                if (!ct) {
+                    // своей темы нет — откат на dark, но только force
+                    clearCustomThemeVars();
+                    document.body.className = "theme-dark" + (keep.length ? " " + keep.join(" ") : "");
+                    return;
+                }
                 document.body.className = "theme-custom" + (keep.length ? " " + keep.join(" ") : "");
-                if (ct) applyCustomThemeVars(ct);
-                try { localStorage.setItem("lumi_theme", "custom:" + (ct && ct.id ? ct.id : "")); } catch (e) {}
+                applyCustomThemeVars(ct);
+                try {
+                    localStorage.setItem(themePrefKey(), "custom:" + ct.id);
+                    localStorage.setItem(activeThemeKey(), ct.id);
+                } catch (e) {}
+                try { if (typeof currentUser === "object" && currentUser) currentUser.theme = "custom:" + ct.id; } catch (e) {}
                 return;
             }
 
             clearCustomThemeVars();
-            document.body.className = "theme-" + (theme || "dark") + (keep.length ? " " + keep.join(" ") : "");
-            try { localStorage.setItem("lumi_theme", theme || "dark"); } catch (e) {}
+            var base = (theme === "light" || theme === "blue" || theme === "dark") ? theme : "dark";
+            document.body.className = "theme-" + base + (keep.length ? " " + keep.join(" ") : "");
+            try { localStorage.setItem(themePrefKey(), base); } catch (e) {}
+            try { if (typeof currentUser === "object" && currentUser) currentUser.theme = base; } catch (e) {}
         }
 
         // ===== CUSTOM THEMES =====
@@ -12385,15 +12523,24 @@ body.theme-light .message-row.theirs .message-bubble {
             gradTo: "#3390ec"
         };
 
+        function themeStorageUid() {
+            try {
+                if (typeof currentUser === "object" && currentUser && currentUser.id != null) return String(currentUser.id);
+            } catch (e) {}
+            return "guest";
+        }
+        function themesKey() { return "lumi_custom_themes_" + themeStorageUid(); }
+        function activeThemeKey() { return "lumi_active_custom_theme_" + themeStorageUid(); }
+        function themePrefKey() { return "lumi_theme_" + themeStorageUid(); }
         function loadCustomThemes() {
             try {
-                var raw = localStorage.getItem("lumi_custom_themes");
+                var raw = localStorage.getItem(themesKey());
                 var arr = raw ? JSON.parse(raw) : [];
                 return Array.isArray(arr) ? arr : [];
             } catch (e) { return []; }
         }
         function saveCustomThemes(list) {
-            try { localStorage.setItem("lumi_custom_themes", JSON.stringify(list || [])); } catch (e) {}
+            try { localStorage.setItem(themesKey(), JSON.stringify(list || [])); } catch (e) {}
         }
         function getCustomThemeById(id) {
             var list = loadCustomThemes();
@@ -12406,6 +12553,8 @@ body.theme-light .message-row.theirs .message-bubble {
         function applyCustomThemeVars(ct) {
             if (!ct) return;
             var root = document.body;
+            var html = document.documentElement;
+            function setVar(el, k, v) { if (v) el.style.setProperty(k, v); }
             var map = {
                 "--ct-accent": ct.accent,
                 "--ct-bubble-mine": ct.bubbleMine,
@@ -12424,15 +12573,42 @@ body.theme-light .message-row.theirs .message-bubble {
                 "--ct-grad-to": ct.gradTo
             };
             Object.keys(map).forEach(function(k) {
-                if (map[k]) root.style.setProperty(k, map[k]);
+                setVar(root, k, map[k]);
+                setVar(html, k, map[k]);
             });
-            try { localStorage.setItem("lumi_active_custom_theme", ct.id); } catch (e) {}
+            // Переменные, которыми реально красится чат / оболочка
+            var bridge = {
+                "--m-blue": ct.bubbleMine || ct.accent,
+                "--m-blue-hover": ct.accent,
+                "--tg-blue": ct.accent,
+                "--tg-bg": ct.bg,
+                "--tg-panel": ct.sidebar,
+                "--tg-panel-2": ct.card,
+                "--tg-input": ct.input,
+                "--tg-text": ct.text,
+                "--tg-muted": ct.muted,
+                "--tg-border": ct.border,
+                "--tg-card": ct.card,
+                "--tg-hover": ct.input
+            };
+            Object.keys(bridge).forEach(function(k) {
+                setVar(root, k, bridge[k]);
+                setVar(html, k, bridge[k]);
+            });
+            try { localStorage.setItem(activeThemeKey(), ct.id); } catch (e) {}
         }
         function clearCustomThemeVars() {
-            var root = document.body;
-            ["--ct-accent","--ct-bubble-mine","--ct-bubble-mine-text","--ct-bubble-theirs","--ct-bubble-theirs-text",
-             "--ct-bg","--ct-sidebar","--ct-card","--ct-text","--ct-muted","--ct-border","--ct-input","--ct-composer",
-             "--ct-grad-from","--ct-grad-to"].forEach(function(k){ root.style.removeProperty(k); });
+            var keys = [
+                "--ct-accent","--ct-bubble-mine","--ct-bubble-mine-text","--ct-bubble-theirs","--ct-bubble-theirs-text",
+                "--ct-bg","--ct-sidebar","--ct-card","--ct-text","--ct-muted","--ct-border","--ct-input","--ct-composer",
+                "--ct-grad-from","--ct-grad-to",
+                "--m-blue","--m-blue-hover","--tg-blue","--tg-bg","--tg-panel","--tg-panel-2","--tg-input",
+                "--tg-text","--tg-muted","--tg-border","--tg-card","--tg-hover"
+            ];
+            keys.forEach(function(k){
+                document.body.style.removeProperty(k);
+                document.documentElement.style.removeProperty(k);
+            });
         }
         function onThemeSelectChange() {
             var sel = document.getElementById("theme");
@@ -12443,15 +12619,15 @@ body.theme-light .message-row.theirs .message-bubble {
             if (v === "custom") {
                 renderCustomThemesList();
                 var active = null;
-                try { active = localStorage.getItem("lumi_active_custom_theme"); } catch (e) {}
-                if (active && getCustomThemeById(active)) applyTheme("custom:" + active);
+                try { active = localStorage.getItem(activeThemeKey()); } catch (e) {}
+                if (active && getCustomThemeById(active)) applyTheme("custom:" + active, { force: true });
                 else {
                     var list = loadCustomThemes();
-                    if (list.length) applyTheme("custom:" + list[0].id);
-                    else applyTheme("dark"); // пока нет своих
+                    if (list.length) applyTheme("custom:" + list[0].id, { force: true });
+                    else applyTheme("dark", { force: true });
                 }
             } else {
-                applyTheme(v);
+                applyTheme(v, { force: true });
             }
             saveSettings();
         }
@@ -12460,7 +12636,7 @@ body.theme-light .message-row.theirs .message-bubble {
             if (!box) return;
             var list = loadCustomThemes();
             var active = null;
-            try { active = localStorage.getItem("lumi_active_custom_theme"); } catch (e) {}
+            try { active = localStorage.getItem(activeThemeKey()); } catch (e) {}
             if (!list.length) {
                 box.innerHTML = '<div style="font-size:13px;color:#8a8a9a;padding:8px 0">Пока нет своих тем. Создайте первую!</div>';
                 return;
@@ -12503,8 +12679,8 @@ body.theme-light .message-row.theirs .message-bubble {
                     var next = loadCustomThemes().filter(function(x){ return String(x.id) !== String(ct.id); });
                     saveCustomThemes(next);
                     try {
-                        if (localStorage.getItem("lumi_active_custom_theme") === String(ct.id)) {
-                            localStorage.removeItem("lumi_active_custom_theme");
+                        if (localStorage.getItem(activeThemeKey()) === String(ct.id)) {
+                            localStorage.removeItem(activeThemeKey());
                         }
                     } catch (ex) {}
                     renderCustomThemesList();
@@ -12527,7 +12703,7 @@ body.theme-light .message-row.theirs .message-bubble {
             if (sel) sel.value = "custom";
             var panel = document.getElementById("customThemesPanel");
             if (panel) panel.classList.remove("hidden");
-            applyTheme("custom:" + id);
+            applyTheme("custom:" + id, { force: true });
             renderCustomThemesList();
             try { saveSettings(); } catch (e) {}
         }
