@@ -386,6 +386,7 @@ def init_db():
     add_column_if_missing(connection, "users", "is_bot", "INTEGER DEFAULT 0")
     add_column_if_missing(connection, "users", "is_verified", "INTEGER DEFAULT 0")
     add_column_if_missing(connection, "users", "banner_url", "TEXT")
+    add_column_if_missing(connection, "users", "is_online", "INTEGER DEFAULT 0")
     add_column_if_missing(connection, "messages", "edited_at", "TEXT")
     add_column_if_missing(connection, "messages", "deleted", "INTEGER DEFAULT 0")
     add_column_if_missing(connection, "messages", "media_url", "TEXT")
@@ -602,36 +603,83 @@ def clear_deleted_for_me(connection, user_a, user_b):
     """, (user_a, user_b, user_b, user_a))
 
 
-def user_is_online(user_id, last_seen=None):
-    """Онлайн, если есть живой WS или last_seen свежее 90 секунд."""
+def parse_last_seen_dt(last_seen):
+    """Парсит last_seen в naive UTC datetime."""
+    if last_seen is None:
+        return None
+    try:
+        if isinstance(last_seen, (int, float)):
+            ts = float(last_seen)
+            if ts > 1e12:
+                ts /= 1000.0
+            return datetime.utcfromtimestamp(ts)
+        s = str(last_seen).strip().replace(" ", "T")
+        if s.endswith("Z"):
+            s = s[:-1] + "+00:00"
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is not None:
+            # в UTC naive
+            from datetime import timezone
+            dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+        return dt
+    except Exception:
+        return None
+
+
+def user_is_online(user_id, last_seen=None, db_flag=None):
+    """
+    Онлайн если:
+    1) есть живой WS в этом процессе, или
+    2) в БД is_online=1, или
+    3) last_seen свежее 3 минут (фоллбек между воркерами/девайсами).
+    """
     try:
         if user_id in connections and len(connections.get(user_id, set())) > 0:
             return True
     except Exception:
         pass
-    if last_seen:
+
+    if db_flag is None:
         try:
-            ls = last_seen
-            if isinstance(ls, str):
-                s = ls.strip().replace(" ", "T")
-                if s.endswith("Z"):
-                    from datetime import timezone
-                    dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
-                else:
-                    dt = datetime.fromisoformat(s)
-                    if dt.tzinfo is None:
-                        dt = dt.replace(tzinfo=None)
-                        # naive UTC
-                        delta = datetime.utcnow() - dt
-                        return delta.total_seconds() < 90
-                if dt.tzinfo is not None:
-                    delta = datetime.now(dt.tzinfo) - dt
-                else:
-                    delta = datetime.utcnow() - dt
-                return delta.total_seconds() < 90
+            connection = db()
+            row = connection.execute("SELECT is_online, last_seen FROM users WHERE id = ?", (user_id,)).fetchone()
+            connection.close()
+            if row:
+                db_flag = row["is_online"]
+                if last_seen is None:
+                    last_seen = row["last_seen"]
+        except Exception:
+            pass
+
+    try:
+        if db_flag is not None and int(db_flag) == 1:
+            return True
+    except Exception:
+        pass
+
+    dt = parse_last_seen_dt(last_seen)
+    if dt is not None:
+        try:
+            delta = (datetime.utcnow() - dt).total_seconds()
+            if 0 <= delta < 180:  # 3 минуты
+                return True
         except Exception:
             pass
     return False
+
+
+
+def set_user_online_db(user_id, online: bool):
+    try:
+        connection = db()
+        connection.execute(
+            "UPDATE users SET is_online = ?, last_seen = ? WHERE id = ?",
+            (1 if online else 0, now(), user_id)
+        )
+        connection.commit()
+        connection.close()
+    except Exception:
+        pass
 
 
 def user_public(connection, user_id):
@@ -935,7 +983,7 @@ def me(request: Request):
     connection = db()
 
     user = connection.execute("""
-        SELECT id, username, display_name, bio, avatar_url, banner_url, created_at, last_seen, is_bot, is_verified
+        SELECT id, username, display_name, bio, avatar_url, banner_url, created_at, last_seen, is_bot, is_verified, is_online
         FROM users WHERE id = ?
     """, (user_id,)).fetchone()
 
@@ -944,6 +992,7 @@ def me(request: Request):
         raise HTTPException(404, "Пользователь не найден")
 
     result = dict(user)
+    result["is_online"] = user_is_online(user_id, result.get("last_seen"), db_flag=result.get("is_online"))
     result["followers_count"] = connection.execute(
         "SELECT COUNT(*) AS c FROM follows WHERE following_id = ?", (user_id,)
     ).fetchone()["c"]
@@ -1068,7 +1117,7 @@ def get_user_profile(user_id: int, request: Request):
     connection = db()
 
     user = connection.execute("""
-        SELECT id, username, display_name, bio, avatar_url, banner_url, created_at, last_seen, is_bot, is_verified
+        SELECT id, username, display_name, bio, avatar_url, banner_url, created_at, last_seen, is_bot, is_verified, is_online
         FROM users WHERE id = ?
     """, (user_id,)).fetchone()
 
@@ -1077,7 +1126,8 @@ def get_user_profile(user_id: int, request: Request):
         raise HTTPException(404, "Пользователь не найден")
 
     result = dict(user)
-    result["is_online"] = user_is_online(user_id, result.get("last_seen"))
+    db_flag = result.get("is_online")
+    result["is_online"] = user_is_online(user_id, result.get("last_seen"), db_flag=db_flag)
 
     # счётчики подписок всегда
     result["followers_count"] = connection.execute(
@@ -4157,7 +4207,7 @@ def get_dialogs(request: Request):
         peer_id = row["peer_id"]
 
         user = connection.execute("""
-            SELECT id, username, display_name, avatar_url, is_bot, is_verified, last_seen
+            SELECT id, username, display_name, avatar_url, is_bot, is_verified, last_seen, is_online
             FROM users WHERE id = ?
         """, (peer_id,)).fetchone()
 
@@ -4183,7 +4233,7 @@ def get_dialogs(request: Request):
         item["alias"] = alias["alias"] if alias else None
         item["last_message"] = dict(last) if last else None
         item["unread"] = unread
-        item["is_online"] = user_is_online(peer_id, user["last_seen"] if user else None)
+        item["is_online"] = user_is_online(peer_id, user["last_seen"] if user else None, db_flag=(user["is_online"] if user and "is_online" in user.keys() else None))
 
         result.append(item)
 
@@ -4250,7 +4300,20 @@ async def set_presence(request: Request):
             await broadcast_presence(user_id, False)
 
     connection = db()
-    connection.execute("UPDATE users SET last_seen = ? WHERE id = ?", (now(), user_id))
+    if online:
+        connection.execute(
+            "UPDATE users SET is_online = 1, last_seen = ? WHERE id = ?",
+            (now(), user_id)
+        )
+    else:
+        # offline только если больше нет живых WS
+        if live_ws <= 1:
+            connection.execute(
+                "UPDATE users SET is_online = 0, last_seen = ? WHERE id = ?",
+                (now(), user_id)
+            )
+        else:
+            connection.execute("UPDATE users SET last_seen = ? WHERE id = ?", (now(), user_id))
     connection.commit()
     connection.close()
 
@@ -4306,10 +4369,7 @@ async def websocket_endpoint(websocket: WebSocket):
         pass
 
     try:
-        connection = db()
-        connection.execute("UPDATE users SET last_seen = ? WHERE id = ?", (now(), user_id))
-        connection.commit()
-        connection.close()
+        set_user_online_db(user_id, True)
     except Exception:
         pass
 
@@ -4319,10 +4379,16 @@ async def websocket_endpoint(websocket: WebSocket):
             msg_type = data.get("type")
 
             if msg_type == "ping":
-                connection = db()
-                connection.execute("UPDATE users SET last_seen = ? WHERE id = ?", (now(), user_id))
-                connection.commit()
-                connection.close()
+                try:
+                    connection = db()
+                    connection.execute(
+                        "UPDATE users SET is_online = 1, last_seen = ? WHERE id = ?",
+                        (now(), user_id)
+                    )
+                    connection.commit()
+                    connection.close()
+                except Exception:
+                    pass
                 await websocket.send_json({"type": "pong"})
 
             elif msg_type == "typing":
@@ -4350,11 +4416,9 @@ async def websocket_endpoint(websocket: WebSocket):
                     })
 
             elif msg_type == "presence":
-                connection = db()
-                connection.execute("UPDATE users SET last_seen = ? WHERE id = ?", (now(), user_id))
-                connection.commit()
-                connection.close()
-                await broadcast_presence(user_id, bool(data.get("online", True)))
+                on = bool(data.get("online", True))
+                set_user_online_db(user_id, on)
+                await broadcast_presence(user_id, on)
 
     except WebSocketDisconnect:
         pass
@@ -4364,16 +4428,12 @@ async def websocket_endpoint(websocket: WebSocket):
         connections[user_id].discard(websocket)
         if not connections[user_id]:
             connections.pop(user_id, None)
-            # сначала broadcast offline (мгновенно у клиентов), потом last_seen
             try:
                 await broadcast_presence(user_id, False)
             except Exception:
                 pass
             try:
-                connection = db()
-                connection.execute("UPDATE users SET last_seen = ? WHERE id = ?", (now(), user_id))
-                connection.commit()
-                connection.close()
+                set_user_online_db(user_id, False)
             except Exception:
                 pass
 
