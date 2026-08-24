@@ -630,8 +630,9 @@ def user_is_online(user_id, last_seen=None, db_flag=None):
     """
     Онлайн если:
     1) есть живой WS в этом процессе, или
-    2) в БД is_online=1, или
-    3) last_seen свежее 3 минут (фоллбек между воркерами/девайсами).
+    2) в БД is_online=1.
+    Явный is_online=0 всегда оффлайн (last_seen НЕ перебивает — иначе мигание).
+    last_seen-фоллбек только если флага в БД ещё нет (старые строки).
     """
     try:
         if user_id in connections and len(connections.get(user_id, set())) > 0:
@@ -651,17 +652,19 @@ def user_is_online(user_id, last_seen=None, db_flag=None):
         except Exception:
             pass
 
-    try:
-        if db_flag is not None and int(db_flag) == 1:
-            return True
-    except Exception:
-        pass
+    # явный флаг из БД — главный источник истины
+    if db_flag is not None:
+        try:
+            return int(db_flag) == 1
+        except Exception:
+            pass
 
+    # фоллбек только когда колонка ещё NULL (миграция)
     dt = parse_last_seen_dt(last_seen)
     if dt is not None:
         try:
             delta = (datetime.utcnow() - dt).total_seconds()
-            if 0 <= delta < 180:  # 3 минуты
+            if 0 <= delta < 120:
                 return True
         except Exception:
             pass
