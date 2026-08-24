@@ -363,6 +363,20 @@ def init_db():
             created_at TEXT NOT NULL,
             UNIQUE(follower_id, following_id)
         );
+
+        CREATE TABLE IF NOT EXISTS post_views (
+            post_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE(post_id, user_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS channel_message_views (
+            message_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE(message_id, user_id)
+        );
     """)
 
     # Добавляем недостающие колонки
@@ -586,6 +600,38 @@ def clear_deleted_for_me(connection, user_a, user_b):
         UPDATE chat_settings SET deleted_for_me = 0
         WHERE (user_id = ? AND peer_id = ?) OR (user_id = ? AND peer_id = ?)
     """, (user_a, user_b, user_b, user_a))
+
+
+def user_is_online(user_id, last_seen=None):
+    """Онлайн, если есть живой WS или last_seen свежее 90 секунд."""
+    try:
+        if user_id in connections and len(connections.get(user_id, set())) > 0:
+            return True
+    except Exception:
+        pass
+    if last_seen:
+        try:
+            ls = last_seen
+            if isinstance(ls, str):
+                s = ls.strip().replace(" ", "T")
+                if s.endswith("Z"):
+                    from datetime import timezone
+                    dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+                else:
+                    dt = datetime.fromisoformat(s)
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=None)
+                        # naive UTC
+                        delta = datetime.utcnow() - dt
+                        return delta.total_seconds() < 90
+                if dt.tzinfo is not None:
+                    delta = datetime.now(dt.tzinfo) - dt
+                else:
+                    delta = datetime.utcnow() - dt
+                return delta.total_seconds() < 90
+        except Exception:
+            pass
+    return False
 
 
 def user_public(connection, user_id):
@@ -904,6 +950,7 @@ def me(request: Request):
     result["following_count"] = connection.execute(
         "SELECT COUNT(*) AS c FROM follows WHERE follower_id = ?", (user_id,)
     ).fetchone()["c"]
+    result["is_online"] = user_is_online(user_id, result.get("last_seen"))
     connection.close()
     return result
 
@@ -1030,7 +1077,7 @@ def get_user_profile(user_id: int, request: Request):
         raise HTTPException(404, "Пользователь не найден")
 
     result = dict(user)
-    result["is_online"] = user_id in connections and len(connections.get(user_id, set())) > 0
+    result["is_online"] = user_is_online(user_id, result.get("last_seen"))
 
     # счётчики подписок всегда
     result["followers_count"] = connection.execute(
@@ -1103,7 +1150,7 @@ def get_user_profile(user_id: int, request: Request):
         result["last_seen"] = None
 
     result["created_at"] = None
-    result["is_online"] = user_id in connections and len(connections.get(user_id, set())) > 0
+    result["is_online"] = user_is_online(user_id, result.get("last_seen"))
 
     return result
 
@@ -1494,6 +1541,7 @@ def feed(request: Request):
             (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) AS likes_count,
             (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count,
             (SELECT COUNT(*) FROM posts WHERE repost_of = p.id) AS reposts_count,
+            (SELECT COUNT(*) FROM post_views WHERE post_id = p.id) AS views_count,
             EXISTS(SELECT 1 FROM post_likes WHERE post_id = p.id AND user_id = ?) AS liked
         FROM posts p
         JOIN users u ON u.id = p.author_id
@@ -1615,6 +1663,77 @@ async def create_media_post(
     return {"ok": True, "id": post_id, "media_url": url, "media_type": resolved_type}
 
 
+
+@app.post("/api/posts/{post_id}/view")
+def view_post(post_id: int, request: Request):
+    """Уникальный просмотр поста. Свой пост не считается. Повторно — не увеличивается."""
+    user_id = get_auth_user(request)
+    connection = db()
+    post = connection.execute("SELECT id, author_id FROM posts WHERE id = ?", (post_id,)).fetchone()
+    if not post:
+        connection.close()
+        raise HTTPException(404, "Пост не найден")
+    if post["author_id"] == user_id:
+        # свой пост — не считаем
+        cnt = connection.execute("SELECT COUNT(*) AS c FROM post_views WHERE post_id = ?", (post_id,)).fetchone()["c"]
+        connection.close()
+        return {"ok": True, "views_count": cnt, "counted": False}
+    try:
+        connection.execute(
+            "INSERT OR IGNORE INTO post_views (post_id, user_id, created_at) VALUES (?, ?, ?)",
+            (post_id, user_id, now())
+        )
+        connection.commit()
+    except Exception:
+        pass
+    cnt = connection.execute("SELECT COUNT(*) AS c FROM post_views WHERE post_id = ?", (post_id,)).fetchone()["c"]
+    connection.close()
+    return {"ok": True, "views_count": cnt, "counted": True}
+
+
+@app.post("/api/channel-messages/{message_id}/view")
+def view_channel_message(message_id: int, request: Request):
+    """Уникальный просмотр сообщения канала. Своё не считается."""
+    user_id = get_auth_user(request)
+    connection = db()
+    msg = connection.execute(
+        "SELECT id, sender_id, channel_id FROM channel_messages WHERE id = ?", (message_id,)
+    ).fetchone()
+    if not msg:
+        connection.close()
+        raise HTTPException(404, "Сообщение не найдено")
+    # подписчик канала?
+    sub = connection.execute(
+        "SELECT 1 FROM channel_subscribers WHERE channel_id = ? AND user_id = ?",
+        (msg["channel_id"], user_id)
+    ).fetchone()
+    owner = connection.execute(
+        "SELECT owner_id FROM channels WHERE id = ?", (msg["channel_id"],)
+    ).fetchone()
+    if not sub and (not owner or owner["owner_id"] != user_id):
+        connection.close()
+        raise HTTPException(403, "Нет доступа")
+    if msg["sender_id"] == user_id:
+        cnt = connection.execute(
+            "SELECT COUNT(*) AS c FROM channel_message_views WHERE message_id = ?", (message_id,)
+        ).fetchone()["c"]
+        connection.close()
+        return {"ok": True, "views_count": cnt, "counted": False}
+    try:
+        connection.execute(
+            "INSERT OR IGNORE INTO channel_message_views (message_id, user_id, created_at) VALUES (?, ?, ?)",
+            (message_id, user_id, now())
+        )
+        connection.commit()
+    except Exception:
+        pass
+    cnt = connection.execute(
+        "SELECT COUNT(*) AS c FROM channel_message_views WHERE message_id = ?", (message_id,)
+    ).fetchone()["c"]
+    connection.close()
+    return {"ok": True, "views_count": cnt, "counted": True}
+
+
 @app.post("/api/posts/{post_id}/like")
 def like_post(post_id: int, request: Request):
     user_id = get_auth_user(request)
@@ -1686,6 +1805,7 @@ def user_posts(user_id: int, request: Request):
                (SELECT COUNT(*) FROM likes WHERE post_id = p.id) AS likes_count,
                (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count,
                (SELECT COUNT(*) FROM posts WHERE repost_of = COALESCE(p.repost_of, p.id)) AS reposts_count,
+               (SELECT COUNT(*) FROM post_views WHERE post_id = COALESCE(p.repost_of, p.id)) AS views_count,
                op.username AS origin_username, op.display_name AS origin_display_name
         FROM posts p
         JOIN users u ON u.id = p.author_id
@@ -2444,7 +2564,8 @@ def get_channel_messages(channel_id: int, request: Request):
             m.id, m.channel_id, m.sender_id,
             CASE WHEN m.deleted = 1 THEN '' ELSE m.text END AS text,
             m.created_at, m.deleted,
-            u.username, u.display_name AS sender_name
+            u.username, u.display_name AS sender_name,
+            (SELECT COUNT(*) FROM channel_message_views WHERE message_id = m.id) AS views_count
         FROM channel_messages m
         JOIN users u ON u.id = m.sender_id
         WHERE m.channel_id = ?
@@ -4062,7 +4183,7 @@ def get_dialogs(request: Request):
         item["alias"] = alias["alias"] if alias else None
         item["last_message"] = dict(last) if last else None
         item["unread"] = unread
-        item["is_online"] = peer_id in connections and len(connections.get(peer_id, set())) > 0
+        item["is_online"] = user_is_online(peer_id, user["last_seen"] if user else None)
 
         result.append(item)
 
