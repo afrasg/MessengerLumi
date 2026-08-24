@@ -6646,16 +6646,30 @@ body.theme-light .message-row.theirs .message-bubble {
             }
 
             var uid = user && (user.id != null ? user.id : user.user_id);
-            if (uid != null && presenceMap[Number(uid)]) {
-                var p = presenceMap[Number(uid)];
-                // sticky offline: не считаем онлайн, пока окно активно
+            if (uid != null) {
                 if (presenceStickyOffline[uid] && Date.now() < presenceStickyOffline[uid]) return false;
-                if (p.online === false) return false;
-                if (p.online === true) return true;
+                if (presenceMap[Number(uid)]) {
+                    var p = presenceMap[Number(uid)];
+                    if (p.online === false) return false;
+                    if (p.online === true) return true;
+                }
             }
 
             if (user) {
                 if (user.is_online === true || user.online === true || user.status === "online") return true;
+            }
+
+            // Фоллбек: свежий last_seen (до ~90с) = скорее онлайн
+            // (другие устройства / воркеры, где WS-словарь пуст)
+            var ms = parseLastSeenMs(ls);
+            if (!ms && user && user.id != null && presenceMap[Number(user.id)] && presenceMap[Number(user.id)].lastSeen) {
+                ms = presenceMap[Number(user.id)].lastSeen;
+            }
+            if (ms && (Date.now() - ms) < 90000 && (Date.now() - ms) >= 0) {
+                // только если нет явного offline в presence
+                if (!(uid != null && presenceMap[Number(uid)] && presenceMap[Number(uid)].online === false)) {
+                    return true;
+                }
             }
 
             return false;
@@ -9005,24 +9019,27 @@ body.theme-light .message-row.theirs .message-bubble {
             (function initStatus() {
                 var el = document.getElementById("chatStatus");
                 var uid = user && user.id != null ? Number(user.id) : null;
-                var knownOnline = false;
+                // Не форсим «в сети» из кэша presence — это даёт вспышку при перезаходе.
+                // Показываем last_seen / offline, пока API не подтвердит online.
+                if (user && (user.is_online === false || user.online === false)) {
+                    if (uid != null) markPresence(uid, false, user.last_seen, "open");
+                }
+                // если в presence уже точный online с WS — можно показать сразу
+                var wsOnline = false;
                 if (uid != null && presenceMap[uid] && presenceMap[uid].online === true
                     && !(presenceStickyOffline[uid] && Date.now() < presenceStickyOffline[uid])) {
-                    knownOnline = true;
+                    // только если lastSeen у presence свежий (< 2 мин) — иначе кэш устарел
+                    var pls = presenceMap[uid].lastSeen;
+                    if (pls && (Date.now() - pls) < 120000) wsOnline = true;
                 }
-                if (user && (user.is_online === true || user.online === true)) knownOnline = true;
-                if (user && (user.is_online === false || user.online === false)) knownOnline = false;
-
-                if (knownOnline) {
-                    if (uid != null) markPresence(uid, true, user.last_seen, "open");
-                    if (el) { el.textContent = "в сети"; el.className = "status online"; }
-                } else if (user && (user.is_online === false || user.online === false) && user.last_seen) {
-                    if (uid != null) markPresence(uid, false, user.last_seen, "open");
+                if (wsOnline || (user && (user.is_online === true || user.online === true))) {
                     updateChatStatus(user);
                 } else if (el) {
-                    // неизвестно — пусто, не «только что»
-                    el.textContent = "";
-                    el.className = "status";
+                    // offline / неизвестно: сразу last_seen, без «в сети»
+                    var tmp = Object.assign({}, user || {}, { is_online: false, online: false });
+                    var txt = formatLastSeen(user && user.last_seen, tmp);
+                    el.textContent = txt || "";
+                    el.className = "status offline";
                 }
             })();
 
@@ -11185,8 +11202,49 @@ body.theme-light .message-row.theirs .message-bubble {
 
             div.appendChild(commentsBox);
 
+            var viewsWrap = document.createElement("div");
+            viewsWrap.className = "post-views";
+            var vCount = post.views_count != null ? post.views_count : (post.views || 0);
+            viewsWrap.innerHTML = '<span class="post-views-label">Просмотров:</span> <span class="post-views-num">' + vCount + '</span>';
+            div.appendChild(viewsWrap);
+
             container.appendChild(div);
 
+            try { trackPostView(post.id, viewsWrap); } catch (e) {}
+
+        }
+
+        var __viewedPosts = {};
+        var __viewedChannelMsgs = {};
+
+        async function trackPostView(postId, viewsEl) {
+            if (!postId || !currentUser) return;
+            if (__viewedPosts[postId]) return;
+            __viewedPosts[postId] = true;
+            try {
+                var r = await req("/api/posts/" + postId + "/view", { method: "POST" });
+                if (!r.ok) return;
+                var d = await safeJson(r);
+                if (d && d.views_count != null && viewsEl) {
+                    var num = viewsEl.querySelector(".post-views-num");
+                    if (num) num.textContent = String(d.views_count);
+                }
+            } catch (e) {}
+        }
+
+        async function trackChannelMessageView(messageId, viewsEl) {
+            if (!messageId || !currentUser) return;
+            if (__viewedChannelMsgs[messageId]) return;
+            __viewedChannelMsgs[messageId] = true;
+            try {
+                var r = await req("/api/channel-messages/" + messageId + "/view", { method: "POST" });
+                if (!r.ok) return;
+                var d = await safeJson(r);
+                if (d && d.views_count != null && viewsEl) {
+                    var num = viewsEl.querySelector(".msg-views-num");
+                    if (num) num.textContent = String(d.views_count);
+                }
+            } catch (e) {}
         }
 
         async function toggleComments(postId, article, btn) {
@@ -13381,6 +13439,16 @@ body.theme-light .message-row.theirs .message-bubble {
                 meta.appendChild(time);
 
                 bubble.appendChild(meta);
+
+                // просмотры сообщений канала
+                if (selectedChannelId && msg.id) {
+                    var mv = document.createElement("div");
+                    mv.className = "msg-views";
+                    var vc = msg.views_count != null ? msg.views_count : 0;
+                    mv.innerHTML = '<span>Просмотров:</span> <span class="msg-views-num">' + vc + '</span>';
+                    bubble.appendChild(mv);
+                    try { trackChannelMessageView(msg.id, mv); } catch (e) {}
+                }
 
                 row.appendChild(bubble);
 
