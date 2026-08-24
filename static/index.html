@@ -6641,48 +6641,30 @@ body.theme-light .message-row.theirs .message-bubble {
             if (user && user.blocked_me) return false;
 
             var uid = user && (user.id != null ? user.id : user.user_id);
-            if (uid != null) {
-                uid = Number(uid);
-                // sticky offline после явного выхода
-                if (presenceStickyOffline[uid] && Date.now() < presenceStickyOffline[uid]) return false;
-            }
+            if (uid != null) uid = Number(uid);
 
-            // Явный online с сервера / объекта пользователя
-            if (user) {
-                if (user.is_online === true || user.online === true || user.status === "online") return true;
-            }
-
-            // presenceMap из WS
-            if (uid != null && presenceMap[uid]) {
-                var p = presenceMap[uid];
-                if (p.online === true) return true;
-                // явный offline только если не конфликтует с is_online с сервера
-                if (p.online === false && !(user && (user.is_online === true || user.online === true))) {
-                    // но свежий last_seen всё равно online
-                }
-            }
-
-            // Явный offline с сервера — только если last_seen не свежий
-            if (user && (user.is_online === false || user.online === false || user.status === "offline")) {
-                var msOff = parseLastSeenMs(ls);
-                if (msOff && (Date.now() - msOff) < 180000) {
-                    // last_seen свежий — скорее online (другое устройство)
-                    return true;
-                }
-                if (uid != null && presenceMap[uid] && presenceMap[uid].online === true) return true;
+            // sticky offline после явного выхода — не перебивать
+            if (uid != null && presenceStickyOffline[uid] && Date.now() < presenceStickyOffline[uid]) {
                 return false;
             }
 
-            // Фоллбек: last_seen до 3 минут
-            var ms = parseLastSeenMs(ls);
-            if (!ms && uid != null && presenceMap[uid] && presenceMap[uid].lastSeen) {
-                ms = presenceMap[uid].lastSeen;
-            }
-            if (ms && (Date.now() - ms) >= 0 && (Date.now() - ms) < 180000) {
-                return true;
+            // 1) Явный офлайн с сервера / объекта — ВСЕГДА оффлайн
+            if (user) {
+                var flag = user.is_online != null ? user.is_online : user.online;
+                if (flag === false || flag === 0 || flag === "0" || user.status === "offline") {
+                    return false;
+                }
+                if (flag === true || flag === 1 || flag === "1" || user.status === "online") {
+                    return true;
+                }
             }
 
-            if (uid != null && presenceMap[uid] && presenceMap[uid].online === true) return true;
+            // 2) presenceMap (WS) — только явные true/false
+            if (uid != null && presenceMap[uid]) {
+                var p = presenceMap[uid];
+                if (p.online === false) return false;
+                if (p.online === true) return true;
+            }
 
             return false;
 
@@ -7299,7 +7281,7 @@ body.theme-light .message-row.theirs .message-bubble {
 
                 // не успел "воскресить" онлайн после реального мгновенного офлайна
 
-                presenceStickyOffline[id] = Date.now() + 45000;
+                presenceStickyOffline[id] = Date.now() + 20000;
 
             } else if (online === true) {
 
@@ -9127,7 +9109,13 @@ body.theme-light .message-row.theirs .message-bubble {
                         var raw = u.is_online != null ? u.is_online : u.online;
                         var on = (raw === true || raw === 1 || raw === "1") ? true
                             : (raw === false || raw === 0 || raw === "0") ? false
-                            : isUserOnline(u.last_seen, u);
+                            : false;
+                        // не дёргаем presence если уже такое же
+                        var prev = presenceMap[Number(pid)];
+                        if (prev && prev.online === on) {
+                            if (u.last_seen) presenceMap[Number(pid)].lastSeen = parseLastSeenMs(u.last_seen) || prev.lastSeen;
+                            return;
+                        }
                         markPresence(pid, on, u.last_seen, "api");
                         if (currentChatPeer && Number(currentChatPeer.id) === Number(pid)) {
                             currentChatPeer.is_online = on;
@@ -9136,7 +9124,7 @@ body.theme-light .message-row.theirs .message-bubble {
                             updateChatStatus(currentChatPeer);
                         }
                     } catch (e) {}
-                }, 8000);
+                }, 15000);
             } catch (e) {}
 
             var actions = document.getElementById("chatActions");
@@ -9354,6 +9342,9 @@ body.theme-light .message-row.theirs .message-bubble {
 
 
 
+        var __statusDebounce = {};
+        var __statusLastStable = {}; // peerId -> {text, className, online, at}
+
         function updateChatStatus(user) {
 
             var el = document.getElementById("chatStatus");
@@ -9363,8 +9354,6 @@ body.theme-light .message-row.theirs .message-bubble {
             if (!user) { el.textContent = ""; el.className = "status"; return; }
 
             if (user.is_bot || user.username === "lumi") { el.textContent = t("bot") || "Бот"; el.className = "status"; return; }
-
-            // "Это вы" только если явно свой чат (избранное / заметки)
 
             if (currentUser && user.id != null && Number(user.id) === Number(currentUser.id)) {
 
@@ -9382,13 +9371,25 @@ body.theme-light .message-row.theirs .message-bubble {
 
             var nextClass = "status " + (online ? "online" : "offline");
 
-            // не трогаем DOM, если строка та же — убирает мигание при poll
             if (el.textContent === nextText && el.className === nextClass) return;
 
+            var peerId = user.id != null ? Number(user.id) : null;
+
+            // Анти-мигание: не даём online↔offline чаще чем раз в 4 сек
+            if (peerId != null && __statusLastStable[peerId]) {
+                var prev = __statusLastStable[peerId];
+                var prevOnline = prev.online;
+                if (prevOnline !== online && (Date.now() - prev.at) < 4000) {
+                    // игнор короткого дребезга
+                    return;
+                }
+            }
+
             el.textContent = nextText;
-
             el.className = nextClass;
-
+            if (peerId != null) {
+                __statusLastStable[peerId] = { text: nextText, className: nextClass, online: online, at: Date.now() };
+            }
         }
 
         function setTypingStatus() {
@@ -14376,15 +14377,18 @@ html += '<div id="userProfilePosts" style="margin-top:12px;text-align:left"></di
                         if (!u2) return;
                         if (u2.is_online === 1 || u2.is_online === "1") u2.is_online = true;
                         if (u2.is_online === 0 || u2.is_online === "0") u2.is_online = false;
-                        markPresence(uid, u2.is_online === true, u2.last_seen, "api");
+                        markPresence(uid, !!u2.is_online, u2.last_seen, "api");
                         var online2 = isUserOnline(u2.last_seen, u2);
                         var stEl = document.getElementById("profileStatusText");
                         if (stEl) {
-                            stEl.textContent = online2 ? "в сети" : formatLastSeen(u2.last_seen, u2);
-                            stEl.style.color = online2 ? "#2ecc71" : "#8a8a9a";
+                            var next = online2 ? "в сети" : formatLastSeen(u2.last_seen, u2);
+                            if (stEl.textContent !== next) {
+                                stEl.textContent = next;
+                                stEl.style.color = online2 ? "#2ecc71" : "#8a8a9a";
+                            }
                         }
                     } catch (e) {}
-                }, 1500);
+                }, 2000);
             })(user.id);
 
             // Актуализируем подписки / счётчики
