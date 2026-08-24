@@ -6640,37 +6640,49 @@ body.theme-light .message-row.theirs .message-bubble {
 
             if (user && user.blocked_me) return false;
 
-            // Явный офлайн важнее всего — иначе после выхода снова "в сети".
-            if (user) {
-                if (user.is_online === false || user.online === false || user.status === "offline") return false;
-            }
-
             var uid = user && (user.id != null ? user.id : user.user_id);
             if (uid != null) {
+                uid = Number(uid);
+                // sticky offline после явного выхода
                 if (presenceStickyOffline[uid] && Date.now() < presenceStickyOffline[uid]) return false;
-                if (presenceMap[Number(uid)]) {
-                    var p = presenceMap[Number(uid)];
-                    if (p.online === false) return false;
-                    if (p.online === true) return true;
-                }
             }
 
+            // Явный online с сервера / объекта пользователя
             if (user) {
                 if (user.is_online === true || user.online === true || user.status === "online") return true;
             }
 
-            // Фоллбек: свежий last_seen (до ~90с) = скорее онлайн
-            // (другие устройства / воркеры, где WS-словарь пуст)
-            var ms = parseLastSeenMs(ls);
-            if (!ms && user && user.id != null && presenceMap[Number(user.id)] && presenceMap[Number(user.id)].lastSeen) {
-                ms = presenceMap[Number(user.id)].lastSeen;
-            }
-            if (ms && (Date.now() - ms) < 90000 && (Date.now() - ms) >= 0) {
-                // только если нет явного offline в presence
-                if (!(uid != null && presenceMap[Number(uid)] && presenceMap[Number(uid)].online === false)) {
-                    return true;
+            // presenceMap из WS
+            if (uid != null && presenceMap[uid]) {
+                var p = presenceMap[uid];
+                if (p.online === true) return true;
+                // явный offline только если не конфликтует с is_online с сервера
+                if (p.online === false && !(user && (user.is_online === true || user.online === true))) {
+                    // но свежий last_seen всё равно online
                 }
             }
+
+            // Явный offline с сервера — только если last_seen не свежий
+            if (user && (user.is_online === false || user.online === false || user.status === "offline")) {
+                var msOff = parseLastSeenMs(ls);
+                if (msOff && (Date.now() - msOff) < 180000) {
+                    // last_seen свежий — скорее online (другое устройство)
+                    return true;
+                }
+                if (uid != null && presenceMap[uid] && presenceMap[uid].online === true) return true;
+                return false;
+            }
+
+            // Фоллбек: last_seen до 3 минут
+            var ms = parseLastSeenMs(ls);
+            if (!ms && uid != null && presenceMap[uid] && presenceMap[uid].lastSeen) {
+                ms = presenceMap[uid].lastSeen;
+            }
+            if (ms && (Date.now() - ms) >= 0 && (Date.now() - ms) < 180000) {
+                return true;
+            }
+
+            if (uid != null && presenceMap[uid] && presenceMap[uid].online === true) return true;
 
             return false;
 
@@ -7291,9 +7303,10 @@ body.theme-light .message-row.theirs .message-bubble {
 
             } else if (online === true) {
 
+                // API/WS online с другого устройства важнее локального sticky offline
+                // sticky блокирует только ложные poll-online (source open), не api/ws
                 if (presenceStickyOffline[id] && Date.now() < presenceStickyOffline[id]
-
-                    && source !== "ws") {
+                    && source !== "ws" && source !== "api") {
 
                     if (lastSeen) {
 
@@ -8181,6 +8194,17 @@ body.theme-light .message-row.theirs .message-bubble {
 
                     } catch (e) {}
 
+                    try {
+                        if (window.__lumiPingTimer) clearInterval(window.__lumiPingTimer);
+                        window.__lumiPingTimer = setInterval(function() {
+                            try {
+                                if (ws && ws.readyState === 1) {
+                                    ws.send(JSON.stringify({ type: "ping" }));
+                                }
+                            } catch (e) {}
+                        }, 15000);
+                    } catch (e) {}
+
                 };
 
                 ws.onmessage = async function(e) {
@@ -8391,6 +8415,16 @@ body.theme-light .message-row.theirs .message-bubble {
                             updateChatStatus(currentChatPeer);
 
                         }
+                        // обновить статус в открытой карточке профиля
+                        try {
+                            var pst = document.getElementById("profileStatusText");
+                            if (pst && uid != null) {
+                                var uobj = { id: uid, is_online: onlineFlag, last_seen: data.last_seen };
+                                var on2 = isUserOnline(data.last_seen, uobj);
+                                pst.textContent = on2 ? "в сети" : formatLastSeen(data.last_seen, uobj);
+                                pst.style.color = on2 ? "#2ecc71" : "#8a8a9a";
+                            }
+                        } catch (e) {}
 
                         return;
 
@@ -9077,6 +9111,33 @@ body.theme-light .message-row.theirs .message-bubble {
                     try { updateChatStatus(currentChatPeer || user); } catch (ex) {}
                 }
             })(user.id);
+
+            // Пока чат открыт — периодически подтягиваем статус пира
+            try {
+                if (window.__chatStatusPoll) clearInterval(window.__chatStatusPoll);
+                window.__chatStatusPoll = setInterval(async function() {
+                    try {
+                        if (!selectedUserId) return;
+                        var pid = selectedUserId;
+                        var r = await req("/api/users/" + pid);
+                        if (!r.ok) return;
+                        if (Number(selectedUserId) !== Number(pid)) return;
+                        var u = await safeJson(r);
+                        if (!u) return;
+                        var raw = u.is_online != null ? u.is_online : u.online;
+                        var on = (raw === true || raw === 1 || raw === "1") ? true
+                            : (raw === false || raw === 0 || raw === "0") ? false
+                            : isUserOnline(u.last_seen, u);
+                        markPresence(pid, on, u.last_seen, "api");
+                        if (currentChatPeer && Number(currentChatPeer.id) === Number(pid)) {
+                            currentChatPeer.is_online = on;
+                            currentChatPeer.online = on;
+                            currentChatPeer.last_seen = u.last_seen;
+                            updateChatStatus(currentChatPeer);
+                        }
+                    } catch (e) {}
+                }, 8000);
+            } catch (e) {}
 
             var actions = document.getElementById("chatActions");
 
@@ -14210,10 +14271,14 @@ body.theme-light .message-row.theirs .message-bubble {
 
             var isBot = user.is_bot || user.username === "lumi";
 
+            // нормализуем флаги с API
+            if (user.is_online === 1 || user.is_online === "1") user.is_online = true;
+            if (user.is_online === 0 || user.is_online === "0") user.is_online = false;
+            if (user.is_online === true) markPresence(user.id, true, user.last_seen, "api");
+            else if (user.is_online === false) markPresence(user.id, false, user.last_seen, "api");
+
             var online = isUserOnline(user.last_seen, user);
-
             var statusColor = online ? "#2ecc71" : "#8a8a9a";
-
             var statusText = formatLastSeen(user.last_seen, user);
 
             var html = '<div style="text-align:center;padding:0;margin:0 -8px">';
@@ -14265,7 +14330,7 @@ body.theme-light .message-row.theirs .message-bubble {
 
             if (!isBot) {
 
-                html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0"><span style="color:#8a8a9a">'+escapeHtml(t("status")||"Статус")+'</span><span style="color:'+statusColor+';font-weight:600">'+escapeHtml(statusText)+'</span></div>';
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0"><span style="color:#8a8a9a">'+escapeHtml(t("status")||"Статус")+'</span><span id="profileStatusText" style="color:'+statusColor+';font-weight:600">'+escapeHtml(statusText)+'</span></div>';
 
             } else {
 
@@ -14300,6 +14365,27 @@ html += '<div id="userProfilePosts" style="margin-top:12px;text-align:left"></di
             var postsBox = document.getElementById("userProfilePosts");
 
             if (postsBox) loadUserPostsInto(postsBox, user.id);
+
+            // Перепроверка статуса через 1.5с (на случай устаревшего last_seen)
+            (function(uid){
+                setTimeout(async function(){
+                    try {
+                        var r2 = await req("/api/users/" + uid);
+                        if (!r2.ok) return;
+                        var u2 = await safeJson(r2);
+                        if (!u2) return;
+                        if (u2.is_online === 1 || u2.is_online === "1") u2.is_online = true;
+                        if (u2.is_online === 0 || u2.is_online === "0") u2.is_online = false;
+                        markPresence(uid, u2.is_online === true, u2.last_seen, "api");
+                        var online2 = isUserOnline(u2.last_seen, u2);
+                        var stEl = document.getElementById("profileStatusText");
+                        if (stEl) {
+                            stEl.textContent = online2 ? "в сети" : formatLastSeen(u2.last_seen, u2);
+                            stEl.style.color = online2 ? "#2ecc71" : "#8a8a9a";
+                        }
+                    } catch (e) {}
+                }, 1500);
+            })(user.id);
 
             // Актуализируем подписки / счётчики
             if (user && user.id != null && !isMe) {
