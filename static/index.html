@@ -7281,14 +7281,14 @@ body.theme-light .message-row.theirs .message-bubble {
 
                 // не успел "воскресить" онлайн после реального мгновенного офлайна
 
-                presenceStickyOffline[id] = Date.now() + 20000;
+                presenceStickyOffline[id] = Date.now() + 60000;
 
             } else if (online === true) {
 
-                // API/WS online с другого устройства важнее локального sticky offline
-                // sticky блокирует только ложные poll-online (source open), не api/ws
+                // Пока действует sticky offline — принимать online ТОЛЬКО с реального WS.
+                // Poll/API иногда отдают ложный online → мигание "в сети".
                 if (presenceStickyOffline[id] && Date.now() < presenceStickyOffline[id]
-                    && source !== "ws" && source !== "api") {
+                    && source !== "ws") {
 
                     if (lastSeen) {
 
@@ -8403,8 +8403,24 @@ body.theme-light .message-row.theirs .message-bubble {
                             if (pst && uid != null) {
                                 var uobj = { id: uid, is_online: onlineFlag, last_seen: data.last_seen };
                                 var on2 = isUserOnline(data.last_seen, uobj);
-                                pst.textContent = on2 ? "в сети" : formatLastSeen(data.last_seen, uobj);
-                                pst.style.color = on2 ? "#2ecc71" : "#8a8a9a";
+                                if (!on2) {
+                                    // offline сразу
+                                    var offTxt = formatLastSeen(data.last_seen, uobj);
+                                    if (pst.textContent !== offTxt) {
+                                        pst.textContent = offTxt;
+                                        pst.style.color = "#8a8a9a";
+                                    }
+                                } else if (pst.textContent !== "в сети") {
+                                    // online — небольшая задержка против ложного всплеска
+                                    var uidN = Number(uid);
+                                    setTimeout(function() {
+                                        try {
+                                            if (!isUserOnline(data.last_seen, uobj)) return;
+                                            var el = document.getElementById("profileStatusText");
+                                            if (el) { el.textContent = "в сети"; el.style.color = "#2ecc71"; }
+                                        } catch (e) {}
+                                    }, 2000);
+                                }
                             }
                         } catch (e) {}
 
@@ -9342,8 +9358,8 @@ body.theme-light .message-row.theirs .message-bubble {
 
 
 
-        var __statusDebounce = {};
         var __statusLastStable = {}; // peerId -> {text, className, online, at}
+        var __statusPendingOnline = {}; // peerId -> firstSeenAt (кандидат в online)
 
         function updateChatStatus(user) {
 
@@ -9366,23 +9382,41 @@ body.theme-light .message-row.theirs .message-bubble {
             }
 
             var online = isUserOnline(user.last_seen, user);
-
-            var nextText = online ? "в сети" : formatLastSeen(user.last_seen, user);
-
-            var nextClass = "status " + (online ? "online" : "offline");
-
-            if (el.textContent === nextText && el.className === nextClass) return;
-
             var peerId = user.id != null ? Number(user.id) : null;
 
-            // Анти-мигание: не даём online↔offline чаще чем раз в 4 сек
-            if (peerId != null && __statusLastStable[peerId]) {
+            // Гистерезис: в ONLINE только после 2.5с стабильного сигнала.
+            // В OFFLINE — сразу (ложный "в сети" раздражает сильнее).
+            if (peerId != null) {
                 var prev = __statusLastStable[peerId];
-                var prevOnline = prev.online;
-                if (prevOnline !== online && (Date.now() - prev.at) < 4000) {
-                    // игнор короткого дребезга
-                    return;
+                if (online) {
+                    if (prev && prev.online === true) {
+                        // уже показываем online — ок
+                    } else {
+                        // кандидат online
+                        if (!__statusPendingOnline[peerId]) {
+                            __statusPendingOnline[peerId] = Date.now();
+                            return; // ещё не подтверждаем
+                        }
+                        if (Date.now() - __statusPendingOnline[peerId] < 2500) {
+                            return; // ждём стабильности
+                        }
+                        // подтверждён
+                        delete __statusPendingOnline[peerId];
+                    }
+                } else {
+                    // offline — сбрасываем кандидата и применяем сразу
+                    delete __statusPendingOnline[peerId];
                 }
+            }
+
+            var nextText = online ? "в сети" : formatLastSeen(user.last_seen, user);
+            var nextClass = "status " + (online ? "online" : "offline");
+
+            if (el.textContent === nextText && el.className === nextClass) {
+                if (peerId != null) {
+                    __statusLastStable[peerId] = { text: nextText, className: nextClass, online: online, at: Date.now() };
+                }
+                return;
             }
 
             el.textContent = nextText;
