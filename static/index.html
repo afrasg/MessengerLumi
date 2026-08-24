@@ -8385,6 +8385,9 @@ body.theme-light .message-row.theirs .message-bubble {
                         // это реальный мгновенный push от сервера (connect/disconnect) — источник "ws"
 
                         markPresence(uid, onlineFlag, data.last_seen || null, "ws");
+                        if (onlineFlag === true || onlineFlag === 1) {
+                            try { delete __statusPendingOnline[Number(uid)]; } catch (e) {}
+                        }
 
                         if (selectedUserId && Number(uid) === Number(selectedUserId) && currentChatPeer) {
 
@@ -8411,15 +8414,8 @@ body.theme-light .message-row.theirs .message-bubble {
                                         pst.style.color = "#8a8a9a";
                                     }
                                 } else if (pst.textContent !== "в сети") {
-                                    // online — небольшая задержка против ложного всплеска
-                                    var uidN = Number(uid);
-                                    setTimeout(function() {
-                                        try {
-                                            if (!isUserOnline(data.last_seen, uobj)) return;
-                                            var el = document.getElementById("profileStatusText");
-                                            if (el) { el.textContent = "в сети"; el.style.color = "#2ecc71"; }
-                                        } catch (e) {}
-                                    }, 2000);
+                                    pst.textContent = "в сети";
+                                    pst.style.color = "#2ecc71";
                                 }
                             }
                         } catch (e) {}
@@ -9051,27 +9047,53 @@ body.theme-light .message-row.theirs .message-bubble {
             (function initStatus() {
                 var el = document.getElementById("chatStatus");
                 var uid = user && user.id != null ? Number(user.id) : null;
-                // Не форсим «в сети» из кэша presence — это даёт вспышку при перезаходе.
-                // Показываем last_seen / offline, пока API не подтвердит online.
-                if (user && (user.is_online === false || user.online === false)) {
-                    if (uid != null) markPresence(uid, false, user.last_seen, "open");
-                }
-                // если в presence уже точный online с WS — можно показать сразу
+
+                var flag = user && (user.is_online != null ? user.is_online : user.online);
+                var explicitOn = (flag === true || flag === 1 || flag === "1");
+                var explicitOff = (flag === false || flag === 0 || flag === "0");
+
                 var wsOnline = false;
                 if (uid != null && presenceMap[uid] && presenceMap[uid].online === true
                     && !(presenceStickyOffline[uid] && Date.now() < presenceStickyOffline[uid])) {
-                    // только если lastSeen у presence свежий (< 2 мин) — иначе кэш устарел
-                    var pls = presenceMap[uid].lastSeen;
-                    if (pls && (Date.now() - pls) < 120000) wsOnline = true;
+                    wsOnline = true;
                 }
-                if (wsOnline || (user && (user.is_online === true || user.online === true))) {
-                    updateChatStatus(user);
-                } else if (el) {
-                    // offline / неизвестно: сразу last_seen, без «в сети»
-                    var tmp = Object.assign({}, user || {}, { is_online: false, online: false });
-                    var txt = formatLastSeen(user && user.last_seen, tmp);
-                    el.textContent = txt || "";
-                    el.className = "status offline";
+
+                if (wsOnline || explicitOn) {
+                    if (uid != null) markPresence(uid, true, user.last_seen, "open");
+                    var uOn = Object.assign({}, user || {}, { is_online: true, online: true });
+                    // сброс pending — показать сразу
+                    if (uid != null) delete __statusPendingOnline[uid];
+                    updateChatStatus(uOn);
+                    return;
+                }
+
+                // Берём самый свежий last_seen: presenceMap vs user (из списка чатов часто протухший)
+                var ls = user && user.last_seen;
+                if (uid != null && presenceMap[uid] && presenceMap[uid].lastSeen) {
+                    var pMs = presenceMap[uid].lastSeen;
+                    var uMs = parseLastSeenMs(ls);
+                    if (!uMs || pMs > uMs) {
+                        ls = new Date(pMs).toISOString();
+                    }
+                }
+
+                if (explicitOff && uid != null) {
+                    markPresence(uid, false, ls, "open");
+                }
+
+                if (el) {
+                    var tmp = Object.assign({}, user || {}, { is_online: false, online: false, last_seen: ls });
+                    var txt = formatLastSeen(ls, tmp);
+                    // не показываем совсем уж древний кэш из списка, если presence свежее не было —
+                    // пустая строка до ответа API лучше, чем «час назад» на 1 сек
+                    var ms = parseLastSeenMs(ls);
+                    if (ms && (Date.now() - ms) > 30 * 60 * 1000 && !presenceMap[uid]) {
+                        el.textContent = "";
+                        el.className = "status";
+                    } else {
+                        el.textContent = txt || "";
+                        el.className = "status offline";
+                    }
                 }
             })();
 
@@ -9093,6 +9115,9 @@ body.theme-light .message-row.theirs .message-bubble {
                         : (u.is_online === false || u.online === false) ? false
                         : null;
                     markPresence(peerId, onlineFlag, u.last_seen, "api");
+                    if (onlineFlag === true) {
+                        try { delete __statusPendingOnline[Number(peerId)]; } catch (e) {}
+                    }
 
                     if (currentChatPeer) {
                         currentChatPeer = Object.assign(currentChatPeer, {
@@ -9384,27 +9409,30 @@ body.theme-light .message-row.theirs .message-bubble {
             var online = isUserOnline(user.last_seen, user);
             var peerId = user.id != null ? Number(user.id) : null;
 
-            // Гистерезис: в ONLINE только после 2.5с стабильного сигнала.
-            // В OFFLINE — сразу (ложный "в сети" раздражает сильнее).
+            // Подтверждённый online (API is_online / живой WS) — сразу.
+            // Слабый/сомнительный online — короткая задержка против ложных вспышек.
+            var confirmedOnline = false;
+            if (online && user) {
+                var f = user.is_online != null ? user.is_online : user.online;
+                if (f === true || f === 1 || f === "1") confirmedOnline = true;
+            }
+            if (online && peerId != null && presenceMap[peerId] && presenceMap[peerId].online === true) {
+                if (!(presenceStickyOffline[peerId] && Date.now() < presenceStickyOffline[peerId])) {
+                    confirmedOnline = true;
+                }
+            }
+
             if (peerId != null) {
-                var prev = __statusLastStable[peerId];
                 if (online) {
-                    if (prev && prev.online === true) {
-                        // уже показываем online — ок
-                    } else {
-                        // кандидат online
+                    if (!confirmedOnline) {
                         if (!__statusPendingOnline[peerId]) {
                             __statusPendingOnline[peerId] = Date.now();
-                            return; // ещё не подтверждаем
+                            return;
                         }
-                        if (Date.now() - __statusPendingOnline[peerId] < 2500) {
-                            return; // ждём стабильности
-                        }
-                        // подтверждён
-                        delete __statusPendingOnline[peerId];
+                        if (Date.now() - __statusPendingOnline[peerId] < 1500) return;
                     }
+                    delete __statusPendingOnline[peerId];
                 } else {
-                    // offline — сбрасываем кандидата и применяем сразу
                     delete __statusPendingOnline[peerId];
                 }
             }
