@@ -8205,35 +8205,36 @@ body.theme-light .message-row.theirs .message-bubble {
 
                         if (data.message.receiver_id) delete hiddenDialogs[Number(data.message.receiver_id)];
 
-                        try { rememberDialogFromMessage(data.message); renderKnownDialogs(); } catch (e) {}
+                        // Сразу обновляем превью в панели чатов (не ждём /api/dialogs)
+                        try {
+                            rememberDialogFromMessage(data.message);
+                            renderKnownDialogs();
+                        } catch (e) {}
 
                         notifyNewMessage(data.message, "private");
 
                         if (selectedUserId && (Number(data.message.sender_id) === Number(selectedUserId) || Number(data.message.receiver_id) === Number(selectedUserId))) {
 
-                            // галочки/прочтение только если чат реально открыт на экране
-
                             if (isDmChatVisible()) {
-
+                                // если сообщения ещё нет в DOM — быстрый append, потом полный reload
+                                try {
+                                    var mid = data.message.id;
+                                    var exists = mid && document.querySelector('.message-bubble[data-id="' + mid + '"]');
+                                    if (!exists) {
+                                        renderMessage(data.message);
+                                        try { scrollMessagesToEnd(true); } catch (e) {}
+                                    }
+                                } catch (e) {}
                                 await loadMessages(selectedUserId);
-
                                 if (!(currentUser && Number(data.message.sender_id) === Number(currentUser.id))) {
-
                                     animateLastMessages(1);
-
                                 }
-
-                            } else {
-
-                                // просто обновить список чатов, не помечать прочитанным
-
-                                try { await loadDialogs(); } catch (e) {}
-
                             }
 
                         }
 
-                        await loadDialogs();
+                        // синхронизация с сервером в фоне (не блокирует UI превью)
+                        try { loadDialogs(); } catch (e) {}
 
                         return;
 
@@ -8812,11 +8813,14 @@ body.theme-light .message-row.theirs .message-bubble {
             if (!isFinite(id)) return;
             var prev = knownDialogs[id] || {};
             var merged = Object.assign({}, prev, d, { id: id });
-            // не затирать last_message более старым
             if (prev.last_message && d.last_message) {
                 var pt = dialogSortKey({ last_message: prev.last_message });
                 var nt = dialogSortKey({ last_message: d.last_message });
-                if (pt > nt) merged.last_message = prev.last_message;
+                var pid = Number(prev.last_message.id) || 0;
+                var nid = Number(d.last_message.id) || 0;
+                if (pt > nt || (pt === nt && pid > nid)) {
+                    merged.last_message = prev.last_message;
+                }
             } else if (prev.last_message && !d.last_message) {
                 merged.last_message = prev.last_message;
             }
@@ -8824,6 +8828,61 @@ body.theme-light .message-row.theirs .message-bubble {
             knownDialogs[id] = merged;
             delete hiddenDialogs[id];
             try { saveKnownDialogs(); } catch (e) {}
+        }
+
+        function patchDialogListItem(peerId) {
+            peerId = Number(peerId);
+            if (!isFinite(peerId)) return;
+            var d = knownDialogs[peerId];
+            if (!d) return;
+            var container = document.getElementById("users");
+            if (!container) return;
+            var searchEl = document.getElementById("search");
+            if (searchEl && searchEl.value.trim()) return;
+
+            var el = container.querySelector('.dialog-item[data-peer-id="' + peerId + '"]');
+            if (!el) {
+                renderKnownDialogs();
+                return;
+            }
+            var sub = el.querySelector(".sub");
+            if (sub) sub.textContent = dialogLastText(d);
+
+            var badge = el.querySelector(".badge");
+            if (d.unread > 0) {
+                if (!badge) {
+                    badge = document.createElement("div");
+                    badge.className = "badge";
+                    el.appendChild(badge);
+                }
+                badge.textContent = d.unread > 99 ? "99+" : String(d.unread);
+            } else if (badge) {
+                badge.remove();
+            }
+
+            var header = container.querySelector(".dialogs-header");
+            if (header) {
+                if (header.nextSibling !== el) {
+                    container.insertBefore(el, header.nextSibling);
+                }
+            } else if (container.firstChild !== el) {
+                container.insertBefore(el, container.firstChild);
+            }
+
+            try {
+                var totalUnread = 0;
+                Object.keys(knownDialogs).forEach(function(k) {
+                    var dd = knownDialogs[k];
+                    if (dd && dd.unread > 0) totalUnread += Number(dd.unread) || 0;
+                });
+                var nb = document.getElementById("navChatsBadge");
+                if (nb) {
+                    if (totalUnread > 0) {
+                        nb.style.display = "";
+                        nb.textContent = totalUnread > 99 ? "99+" : String(totalUnread);
+                    } else nb.style.display = "none";
+                }
+            } catch (e) {}
         }
 
         function rememberDialogFromMessage(message) {
@@ -8851,16 +8910,20 @@ body.theme-light .message-row.theirs .message-bubble {
                 last_seen: prev.last_seen,
                 is_online: true,
                 last_message: {
+                    id: message.id,
                     text: message.text,
                     media_type: message.media_type,
                     deleted: message.deleted,
                     sender_id: message.sender_id,
                     created_at: message.created_at || message.timestamp || new Date().toISOString()
                 },
-                unread: (selectedUserId && Number(selectedUserId) === peerId)
+                unread: (selectedUserId && Number(selectedUserId) === peerId && isDmChatVisible())
                     ? 0
                     : (Number(prev.unread) || 0) + (sender === myId ? 0 : 1)
             });
+            try { patchDialogListItem(peerId); } catch (e) {
+                try { renderKnownDialogs(); } catch (e2) {}
+            }
         }
 
         async function loadDialogs() {
@@ -10759,10 +10822,16 @@ body.theme-light .message-row.theirs .message-bubble {
                             is_verified: currentChatPeer.is_verified,
                             last_seen: currentChatPeer.last_seen,
                             is_online: currentChatPeer.is_online,
-                            last_message: { text: text, sender_id: currentUser && currentUser.id, created_at: new Date().toISOString() },
+                            last_message: {
+                                id: d && d.message && d.message.id,
+                                text: text,
+                                sender_id: currentUser && currentUser.id,
+                                created_at: (d && d.message && d.message.created_at) || new Date().toISOString()
+                            },
                             unread: 0
                         });
                         renderKnownDialogs();
+                        try { patchDialogListItem(selectedUserId); } catch (e) {}
                     }
                 } catch (e) {}
 
