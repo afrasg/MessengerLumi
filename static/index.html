@@ -580,6 +580,29 @@
 
  }
 
+ .mobile-nav-inner {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 56px;
+  align-items: stretch;
+ }
+
+ .mobile-nav-indicator {
+  position: absolute;
+  top: 6px;
+  left: 0;
+  width: 25%;
+  height: calc(100% - 12px);
+  border-radius: 14px;
+  background: rgba(94, 181, 247, 0.16);
+  box-shadow: 0 0 0 1px rgba(94, 181, 247, 0.22) inset;
+  transform: translateX(0);
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+  z-index: 0;
+ }
+
  .mobile-nav button {
 
  flex: 1;
@@ -598,15 +621,20 @@
 
  padding: 6px 0;
 
- transition: color .15s;
+ transition: color .2s ease, transform .2s ease;
+ position: relative;
+ z-index: 1;
 
  }
+
+ .mobile-nav button:active { transform: scale(0.92); }
 
  .mobile-nav button svg, .mobile-nav button img {
 
  width: 24px; height: 24px;
 
  opacity: .7;
+ transition: opacity .2s ease, transform .28s cubic-bezier(0.22, 1, 0.36, 1);
 
  }
 
@@ -623,6 +651,7 @@
  opacity: 1;
 
  filter: none;
+ transform: scale(1.08);
 
  }
 
@@ -637,6 +666,89 @@
  body.theme-light .mobile-nav button { color: #8a8a8a; }
 
  body.theme-light .mobile-nav button.active { color: #3390ec; }
+
+ body.theme-light .mobile-nav-indicator {
+  background: rgba(51, 144, 236, 0.12);
+  box-shadow: 0 0 0 1px rgba(51, 144, 236, 0.18) inset;
+ }
+
+ /* Stories (Telegram-like) */
+ .stories-row {
+  display: flex; gap: 12px; overflow-x: auto;
+  padding: 4px 4px 12px; margin: 0 0 8px;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+ }
+ .stories-row::-webkit-scrollbar { display: none; }
+ .story-item { flex: 0 0 auto; width: 72px; text-align: center; cursor: pointer; }
+ .story-ring {
+  width: 64px; height: 64px; border-radius: 50%; padding: 3px;
+  background: linear-gradient(135deg, #f58529, #dd2a7b, #8134af, #515bd4);
+  margin: 0 auto 6px; box-sizing: border-box;
+ }
+ .story-ring.seen { background: #3a3a4a; }
+ .story-ring.add {
+  background: #2a2a38; border: 2px dashed #5eb5f7; padding: 2px;
+  display: flex; align-items: center; justify-content: center;
+  color: #5eb5f7; font-size: 28px; font-weight: 300; line-height: 1;
+ }
+ .story-ring img {
+  width: 100%; height: 100%; border-radius: 50%; object-fit: cover;
+  background: #1a1a24; border: 2px solid #0a0a0f; display: block;
+ }
+ .story-ring.add img { border: none; opacity: .85; }
+ .story-item .story-name {
+  font-size: 11px; color: #8a8a9a; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; max-width: 72px;
+ }
+ body.theme-light .story-ring.seen { background: #c8c8d0; }
+ body.theme-light .story-ring.add { background: #f0f2f5; border-color: #3390ec; color: #3390ec; }
+ body.theme-light .story-ring img { border-color: #fff; }
+ body.theme-light .story-item .story-name { color: #6a6a7a; }
+ .banner-avatar.has-story { box-shadow: 0 0 0 3px #0a0a0f, 0 0 0 5px #dd2a7b; cursor: pointer; }
+ body.theme-light .banner-avatar.has-story { box-shadow: 0 0 0 3px #fff, 0 0 0 5px #dd2a7b; }
+
+ #storyViewer {
+  position: fixed; inset: 0; z-index: 4000; background: #000;
+  display: none; flex-direction: column;
+ }
+ #storyViewer.open { display: flex; }
+ #storyViewer .sv-progress {
+  display: flex; gap: 4px; padding: 10px 10px 0;
+  padding-top: max(10px, env(safe-area-inset-top));
+ }
+ #storyViewer .sv-progress i {
+  flex: 1; height: 2px; background: rgba(255,255,255,.25);
+  border-radius: 2px; overflow: hidden;
+ }
+ #storyViewer .sv-progress i b { display: block; height: 100%; width: 0; background: #fff; }
+ #storyViewer .sv-progress i.done b { width: 100%; }
+ #storyViewer .sv-progress i.active b { animation: svFill linear forwards; }
+ @keyframes svFill { from { width: 0; } to { width: 100%; } }
+ #storyViewer .sv-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; color: #fff;
+ }
+ #storyViewer .sv-head img {
+  width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: #333;
+ }
+ #storyViewer .sv-head .sv-name { font-weight: 600; font-size: 14px; }
+ #storyViewer .sv-head .sv-time { font-size: 12px; opacity: .7; margin-left: 6px; }
+ #storyViewer .sv-close {
+  margin-left: auto; width: 36px; height: 36px; border-radius: 50%;
+  color: #fff; font-size: 22px; background: rgba(255,255,255,.12);
+ }
+ #storyViewer .sv-media {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+ }
+ #storyViewer .sv-media img, #storyViewer .sv-media video {
+  max-width: 100%; max-height: 100%; object-fit: contain;
+ }
+ #storyViewer .sv-tap-left, #storyViewer .sv-tap-right {
+  position: absolute; top: 0; bottom: 0; width: 40%; z-index: 2;
+ }
+ #storyViewer .sv-tap-left { left: 0; }
+ #storyViewer .sv-tap-right { right: 0; }
 
 
 
@@ -5248,6 +5360,7 @@ body.theme-light .message-row.theirs .message-bubble {
                                 <img id="bigAvatar" class="banner-avatar" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIbLnr8-3ZlGD7AB7TwXHhHdgujtsrXLmdI8laFLml5w&s=10" alt="">
                             </div>
                             <div class="profile-banner-spacer"></div>
+                            <div id="profileStoriesRow" class="stories-row" aria-label="Истории"></div>
                             <h2><img width="24" height="24" src="https://img.icons8.ru/ios-filled/50/user.png" alt="user"> Профиль</h2>
                             <div id="profileFollowStats" class="follow-stats">
                                 <div class="follow-stat" onclick="openFollowList('followers')">
@@ -5555,7 +5668,8 @@ body.theme-light .message-row.theirs .message-bubble {
         </main>
 
         <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
-            <div class="mobile-nav-inner">
+            <div class="mobile-nav-inner" id="mobileNavInner">
+            <div class="mobile-nav-indicator" id="mobileNavIndicator"></div>
             <button type="button" data-tab="chats" onclick="mobileTab('chats')" class="active">
                 <span class="mn-icon-wrap">
                   <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/></svg>
@@ -5583,6 +5697,21 @@ body.theme-light .message-row.theirs .message-bubble {
             </button>
             </div>
         </nav>
+
+        <div id="storyViewer">
+            <div class="sv-progress" id="svProgress"></div>
+            <div class="sv-head">
+                <img id="svAvatar" src="" alt="">
+                <span class="sv-name" id="svName"></span>
+                <span class="sv-time" id="svTime"></span>
+                <button type="button" class="sv-close" onclick="closeStoryViewer()" aria-label="Закрыть">×</button>
+            </div>
+            <div class="sv-media" id="svMedia">
+                <div class="sv-tap-left" id="svTapLeft"></div>
+                <div class="sv-tap-right" id="svTapRight"></div>
+            </div>
+            <input type="file" id="storyFileInput" accept="image/*,video/*" hidden>
+        </div>
 
     </div>
 
@@ -7837,10 +7966,28 @@ body.theme-light .message-row.theirs .message-bubble {
 
         // ===== Mobile Telegram-like navigation =====
 
+        var MOBILE_TABS = ["chats", "feed", "settings", "profile"];
+        var currentMobileTab = "chats";
+
         function isMobileLayout() {
 
             return window.matchMedia && window.matchMedia("(max-width: 768px)").matches;
 
+        }
+
+        function updateMobileNavIndicator(tab) {
+            var nav = document.getElementById("mobileNav");
+            var ind = document.getElementById("mobileNavIndicator");
+            if (!nav || !ind) return;
+            var btn = nav.querySelector('button[data-tab="' + tab + '"]');
+            if (!btn) return;
+            var inner = document.getElementById("mobileNavInner") || nav;
+            var ir = inner.getBoundingClientRect();
+            var br = btn.getBoundingClientRect();
+            var x = br.left - ir.left;
+            var w = br.width;
+            ind.style.width = w + "px";
+            ind.style.transform = "translateX(" + x + "px)";
         }
 
         function mobileSetTab(tab) {
@@ -7849,11 +7996,14 @@ body.theme-light .message-row.theirs .message-bubble {
 
             if (!nav) return;
 
-            nav.querySelectorAll("button").forEach(function(b) {
+            nav.querySelectorAll("button[data-tab]").forEach(function(b) {
 
                 b.classList.toggle("active", b.getAttribute("data-tab") === tab);
 
             });
+
+            currentMobileTab = tab || "chats";
+            try { updateMobileNavIndicator(currentMobileTab); } catch (e) {}
 
         }
 
@@ -7916,11 +8066,286 @@ body.theme-light .message-row.theirs .message-bubble {
             document.body.classList.remove("mobile-chat-open");
 
             if (tab === "feed") showFeed();
-            else if (tab === "profile") showProfile();
+            else if (tab === "profile") {
+                showProfile();
+                try { renderProfileStories(); } catch (e) {}
+            }
             else if (tab === "settings") {
                 showSettings();
                 try { showSettingsMenu(); } catch(e) {}
             }
+        }
+
+        function mobileSwipeTo(dir) {
+            if (!isMobileLayout()) return;
+            if (document.body.classList.contains("mobile-chat-open")) return;
+            var idx = MOBILE_TABS.indexOf(currentMobileTab);
+            if (idx < 0) idx = 0;
+            var next = idx + (dir < 0 ? 1 : -1);
+            if (next < 0 || next >= MOBILE_TABS.length) return;
+            mobileTab(MOBILE_TABS[next]);
+        }
+
+        (function setupMobileSwipe() {
+            var startX = 0, startY = 0, tracking = false;
+            function targetOk(t) {
+                if (!t || !t.closest) return false;
+                if (t.closest(".composer, input, textarea, select, .modal, #storyViewer, .sticker-panel")) return false;
+                return true;
+            }
+            function onStart(e) {
+                if (!isMobileLayout()) return;
+                if (document.body.classList.contains("mobile-chat-open")) return;
+                var t = e.touches && e.touches[0];
+                if (!t) return;
+                if (!targetOk(e.target)) return;
+                startX = t.clientX;
+                startY = t.clientY;
+                tracking = true;
+            }
+            function onEnd(e) {
+                if (!tracking) return;
+                tracking = false;
+                var t = e.changedTouches && e.changedTouches[0];
+                if (!t) return;
+                var dx = t.clientX - startX;
+                var dy = t.clientY - startY;
+                if (Math.abs(dx) < 60) return;
+                if (Math.abs(dx) < Math.abs(dy) * 1.2) return;
+                // свайп влево (контент уезжает влево) → следующая вкладка
+                mobileSwipeTo(dx < 0 ? -1 : 1);
+            }
+            document.addEventListener("touchstart", onStart, { passive: true });
+            document.addEventListener("touchend", onEnd, { passive: true });
+            window.addEventListener("resize", function() {
+                try { updateMobileNavIndicator(currentMobileTab); } catch (e) {}
+            });
+            setTimeout(function() {
+                try { updateMobileNavIndicator(currentMobileTab || "chats"); } catch (e) {}
+            }, 300);
+        })();
+
+        // ===== STORIES =====
+        var STORY_TTL_MS = 24 * 60 * 60 * 1000;
+        var __storyQueue = [];
+        var __storyIndex = 0;
+        var __storyTimer = null;
+        var __storyDuration = 5000;
+
+        function storiesStorageKey(uid) {
+            return "lumi_stories_" + (uid != null ? uid : "guest");
+        }
+        function loadStoriesForUser(uid) {
+            try {
+                var raw = localStorage.getItem(storiesStorageKey(uid));
+                var arr = raw ? JSON.parse(raw) : [];
+                if (!Array.isArray(arr)) return [];
+                var now = Date.now();
+                return arr.filter(function(s) {
+                    return s && s.createdAt && (now - s.createdAt) < STORY_TTL_MS;
+                });
+            } catch (e) { return []; }
+        }
+        function saveStoriesForUser(uid, list) {
+            try { localStorage.setItem(storiesStorageKey(uid), JSON.stringify(list || [])); } catch (e) {}
+        }
+        function isStorySeen(id) {
+            try {
+                var raw = localStorage.getItem("lumi_stories_seen");
+                var o = raw ? JSON.parse(raw) : {};
+                return !!(o && o[id]);
+            } catch (e) { return false; }
+        }
+        function markStorySeen(id) {
+            try {
+                var raw = localStorage.getItem("lumi_stories_seen");
+                var o = raw ? JSON.parse(raw) : {};
+                o[id] = Date.now();
+                localStorage.setItem("lumi_stories_seen", JSON.stringify(o));
+            } catch (e) {}
+        }
+        function storyTimeLabel(ts) {
+            var sec = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+            if (sec < 60) return "только что";
+            var m = Math.floor(sec / 60);
+            if (m < 60) return m + " мин";
+            var h = Math.floor(m / 60);
+            if (h < 24) return h + " ч";
+            return "давно";
+        }
+        function renderProfileStories() {
+            var row = document.getElementById("profileStoriesRow");
+            if (!row || !currentUser) return;
+            row.innerHTML = "";
+            var uid = currentUser.id;
+            var list = loadStoriesForUser(uid);
+
+            // Добавить историю
+            var add = document.createElement("div");
+            add.className = "story-item";
+            add.innerHTML = '<div class="story-ring add">+</div><div class="story-name">Добавить</div>';
+            add.onclick = function() { pickStoryFile(); };
+            row.appendChild(add);
+
+            list.slice().reverse().forEach(function(s) {
+                var item = document.createElement("div");
+                item.className = "story-item";
+                var seen = isStorySeen(s.id);
+                var ring = document.createElement("div");
+                ring.className = "story-ring" + (seen ? " seen" : "");
+                var img = document.createElement("img");
+                if (s.type === "video") {
+                    img.src = s.thumb || s.url || avatarSrc(currentUser.avatar_url);
+                } else {
+                    img.src = s.url || avatarSrc(currentUser.avatar_url);
+                }
+                ring.appendChild(img);
+                item.appendChild(ring);
+                var name = document.createElement("div");
+                name.className = "story-name";
+                name.textContent = storyTimeLabel(s.createdAt);
+                item.appendChild(name);
+                item.onclick = function() {
+                    openStoryViewer(list, list.indexOf(s), {
+                        name: currentUser.display_name || currentUser.username,
+                        avatar: avatarSrc(currentUser.avatar_url)
+                    });
+                };
+                row.appendChild(item);
+            });
+
+            var av = document.getElementById("bigAvatar");
+            if (av) {
+                av.classList.toggle("has-story", list.length > 0);
+                av.onclick = function() {
+                    if (!list.length) { pickStoryFile(); return; }
+                    openStoryViewer(list, 0, {
+                        name: currentUser.display_name || currentUser.username,
+                        avatar: avatarSrc(currentUser.avatar_url)
+                    });
+                };
+            }
+        }
+        function pickStoryFile() {
+            if (!requireAccount()) return;
+            var inp = document.getElementById("storyFileInput");
+            if (!inp) return;
+            inp.value = "";
+            inp.onchange = function() {
+                var f = inp.files && inp.files[0];
+                if (!f) return;
+                addStoryFromFile(f);
+            };
+            inp.click();
+        }
+        function addStoryFromFile(file) {
+            if (!currentUser) return;
+            var reader = new FileReader();
+            reader.onload = function() {
+                var url = reader.result;
+                var isVid = (file.type || "").indexOf("video/") === 0;
+                var list = loadStoriesForUser(currentUser.id);
+                list.push({
+                    id: "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+                    url: url,
+                    type: isVid ? "video" : "image",
+                    createdAt: Date.now()
+                });
+                // храним максимум 20
+                if (list.length > 20) list = list.slice(list.length - 20);
+                saveStoriesForUser(currentUser.id, list);
+                renderProfileStories();
+                if (typeof showToast === "function") showToast("История опубликована (24 ч)");
+            };
+            reader.readAsDataURL(file);
+        }
+        function openStoryViewer(list, startIndex, meta) {
+            if (!list || !list.length) return;
+            __storyQueue = list.slice();
+            __storyIndex = Math.max(0, Math.min(startIndex || 0, __storyQueue.length - 1));
+            var v = document.getElementById("storyViewer");
+            if (!v) return;
+            v.classList.add("open");
+            var av = document.getElementById("svAvatar");
+            var nm = document.getElementById("svName");
+            if (av) av.src = (meta && meta.avatar) || DEFAULT_AVATAR;
+            if (nm) nm.textContent = (meta && meta.name) || "";
+            var left = document.getElementById("svTapLeft");
+            var right = document.getElementById("svTapRight");
+            if (left) left.onclick = function() { storyPrev(); };
+            if (right) right.onclick = function() { storyNext(); };
+            showStoryAt(__storyIndex);
+        }
+        function closeStoryViewer() {
+            var v = document.getElementById("storyViewer");
+            if (v) v.classList.remove("open");
+            if (__storyTimer) { clearTimeout(__storyTimer); __storyTimer = null; }
+            var media = document.getElementById("svMedia");
+            if (media) {
+                var vid = media.querySelector("video");
+                if (vid) { try { vid.pause(); } catch (e) {} }
+            }
+        }
+        function showStoryAt(idx) {
+            if (idx < 0) { closeStoryViewer(); return; }
+            if (idx >= __storyQueue.length) { closeStoryViewer(); return; }
+            __storyIndex = idx;
+            var s = __storyQueue[idx];
+            markStorySeen(s.id);
+            var prog = document.getElementById("svProgress");
+            if (prog) {
+                prog.innerHTML = "";
+                __storyQueue.forEach(function(_, i) {
+                    var el = document.createElement("i");
+                    if (i < idx) el.className = "done";
+                    if (i === idx) el.className = "active";
+                    var b = document.createElement("b");
+                    if (i === idx) b.style.animationDuration = (__storyDuration / 1000) + "s";
+                    el.appendChild(b);
+                    prog.appendChild(el);
+                });
+            }
+            var timeEl = document.getElementById("svTime");
+            if (timeEl) timeEl.textContent = storyTimeLabel(s.createdAt);
+            var media = document.getElementById("svMedia");
+            if (!media) return;
+            // keep tap zones
+            var left = document.getElementById("svTapLeft");
+            var right = document.getElementById("svTapRight");
+            media.innerHTML = "";
+            if (left) media.appendChild(left);
+            if (right) media.appendChild(right);
+            if (s.type === "video") {
+                var v = document.createElement("video");
+                v.src = s.url;
+                v.autoplay = true;
+                v.playsInline = true;
+                v.controls = false;
+                media.appendChild(v);
+                v.onended = function() { storyNext(); };
+                __storyDuration = 15000;
+            } else {
+                var img = document.createElement("img");
+                img.src = s.url;
+                media.appendChild(img);
+                __storyDuration = 5000;
+            }
+            // restart progress animation duration
+            var active = prog && prog.querySelector("i.active b");
+            if (active) active.style.animationDuration = (__storyDuration / 1000) + "s";
+            if (__storyTimer) clearTimeout(__storyTimer);
+            if (s.type !== "video") {
+                __storyTimer = setTimeout(function() { storyNext(); }, __storyDuration);
+            }
+        }
+        function storyNext() {
+            if (__storyTimer) { clearTimeout(__storyTimer); __storyTimer = null; }
+            showStoryAt(__storyIndex + 1);
+        }
+        function storyPrev() {
+            if (__storyTimer) { clearTimeout(__storyTimer); __storyTimer = null; }
+            if (__storyIndex <= 0) { showStoryAt(0); return; }
+            showStoryAt(__storyIndex - 1);
         }
 
 
@@ -11776,6 +12201,8 @@ body.theme-light .message-row.theirs .message-bubble {
         // PROFILE
 
         async function showProfile() {
+            try { setTimeout(function(){ renderProfileStories(); }, 50); } catch (e) {}
+
 
             if (isMobileLayout() && typeof mobileOpenMain === "function") { mobileOpenMain(); mobileSetTab("profile"); document.body.classList.remove("mobile-chat-open"); }
 
@@ -11819,6 +12246,7 @@ body.theme-light .message-row.theirs .message-bubble {
             }
             if (avatar) avatar.src = avatarSrc(avUrl);
             if (avUrl && currentUser) currentUser.avatar_url = avUrl;
+            try { renderProfileStories(); } catch (e) {}
 
             try {
                 var burl = user.banner_url || null;
