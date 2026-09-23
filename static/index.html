@@ -8255,7 +8255,7 @@ body.theme-light .message-row.theirs .message-bubble {
         function storiesStorageKey(uid) {
             return "lumi_stories_" + (uid != null ? uid : "guest");
         }
-        function loadStoriesForUser(uid) {
+        function loadStoriesForUserLocal(uid) {
             try {
                 var raw = localStorage.getItem(storiesStorageKey(uid));
                 var arr = raw ? JSON.parse(raw) : [];
@@ -8270,8 +8270,49 @@ body.theme-light .message-row.theirs .message-bubble {
                 });
             } catch (e) { return []; }
         }
+        function loadStoriesForUser(uid) {
+            return loadStoriesForUserLocal(uid);
+        }
+        async function fetchStoriesForUser(uid) {
+            try {
+                var r = await req("/api/users/" + uid + "/stories");
+                if (!r.ok) return loadStoriesForUserLocal(uid);
+                var list = await safeJson(r);
+                if (!Array.isArray(list)) return loadStoriesForUserLocal(uid);
+                return list.map(function(s) {
+                    return {
+                        id: s.id,
+                        url: mediaUrl(s.media_url || s.url),
+                        type: (s.media_type === "video" || s.type === "video") ? "video" : "image",
+                        createdAt: s.created_at ? (Date.parse(s.created_at) || Date.now()) : (s.createdAt || Date.now()),
+                        likes: s.liked ? [String(currentUser && currentUser.id)] : [],
+                        likesCount: s.likes_count != null ? s.likes_count : 0,
+                        viewsCount: s.views_count != null ? s.views_count : 0,
+                        views: [],
+                        fromApi: true
+                    };
+                });
+            } catch (e) {
+                return loadStoriesForUserLocal(uid);
+            }
+        }
         function saveStoriesForUser(uid, list) {
             try { localStorage.setItem(storiesStorageKey(uid), JSON.stringify(list || [])); } catch (e) {}
+        }
+        var __usersWithStories = {};
+        async function refreshUsersWithStories() {
+            try {
+                var r = await req("/api/stories/active-users");
+                if (!r.ok) return;
+                var ids = await safeJson(r);
+                __usersWithStories = {};
+                if (Array.isArray(ids)) {
+                    ids.forEach(function(id){ __usersWithStories[Number(id)] = true; });
+                }
+            } catch (e) {}
+        }
+        function userHasStory(uid) {
+            return !!__usersWithStories[Number(uid)];
         }
         function isStorySeen(id) {
             try {
@@ -8316,10 +8357,40 @@ body.theme-light .message-row.theirs .message-bubble {
             list.unshift(Object.assign({ id: "a" + Date.now(), at: Date.now() }, item));
             saveActivity(list);
         }
-        function renderActivityList() {
+        async function renderActivityList() {
             var box = document.getElementById("activityList");
             if (!box) return;
-            var list = loadActivity();
+            box.innerHTML = "<div style='color:#8a8a9a;font-size:13px;padding:12px 0'>Загрузка…</div>";
+            var list = [];
+            try {
+                var r = await req("/api/activity");
+                if (r.ok) {
+                    var server = await safeJson(r);
+                    if (Array.isArray(server)) {
+                        list = server.map(function(a) {
+                            return {
+                                type: a.type,
+                                text: a.text,
+                                html: escapeHtml(a.text || ""),
+                                at: a.created_at ? (Date.parse(a.created_at) || Date.now()) : Date.now()
+                            };
+                        });
+                    }
+                }
+            } catch (e) {}
+            // локальные события (серия и т.п.)
+            try {
+                var local = loadActivity();
+                local.forEach(function(a) {
+                    list.push({
+                        type: a.type,
+                        text: a.text,
+                        html: a.html || escapeHtml(a.text || ""),
+                        at: a.at || Date.now()
+                    });
+                });
+            } catch (e) {}
+            list.sort(function(a, b){ return (b.at || 0) - (a.at || 0); });
             if (!list.length) {
                 box.innerHTML = "<div style='color:#8a8a9a;font-size:13px;padding:12px 0'>Пока нет событий</div>";
                 return;
@@ -8552,12 +8623,13 @@ body.theme-light .message-row.theirs .message-bubble {
             handleSeriesBroken(s);
         }
 
-        function renderProfileStories() {
+        async function renderProfileStories() {
             var row = document.getElementById("profileStoriesRow");
             if (!row || !currentUser) return;
             row.innerHTML = "";
             var uid = currentUser.id;
-            var list = loadStoriesForUser(uid);
+            var list = await fetchStoriesForUser(uid);
+            if (list.length) __usersWithStories[Number(uid)] = true;
 
             var add = document.createElement("div");
             add.className = "story-item";
@@ -8565,7 +8637,7 @@ body.theme-light .message-row.theirs .message-bubble {
             add.onclick = function() { pickStoryFile(); };
             row.appendChild(add);
 
-            list.slice().reverse().forEach(function(s) {
+            list.slice().reverse().forEach(function(s, idx) {
                 var item = document.createElement("div");
                 item.className = "story-item";
                 var seen = isStorySeen(s.id);
@@ -8593,7 +8665,6 @@ body.theme-light .message-row.theirs .message-bubble {
                 row.appendChild(item);
             });
 
-            // Кольцо на аве (клик = истории); клик по аве — как раньше (не открывает истории)
             var ringEl = document.getElementById("storyAvatarRing");
             var av = document.getElementById("bigAvatar");
             if (ringEl) {
@@ -8613,7 +8684,7 @@ body.theme-light .message-row.theirs .message-bubble {
                 }
             }
             if (av) {
-                av.onclick = null; // профиль/редактирование — без открытия историй
+                av.onclick = null;
             }
             updateSeriesMenuVisibility();
         }
@@ -8629,13 +8700,32 @@ body.theme-light .message-row.theirs .message-bubble {
             };
             inp.click();
         }
-        function addStoryFromFile(file) {
-            if (!currentUser) return;
+        async function addStoryFromFile(file) {
+            if (!currentUser || !file) return;
+            try {
+                if (file.type && file.type.indexOf("image/") === 0) {
+                    file = await compressImageFile(file, 1600, 0.84);
+                }
+            } catch (e) {}
+            // сервер
+            try {
+                var form = new FormData();
+                form.append("file", file, file.name || "story.jpg");
+                var r = await req("/api/stories", { method: "POST", body: form });
+                if (r.ok) {
+                    await renderProfileStories();
+                    onStoryPublishedForSeries();
+                    try { await refreshUsersWithStories(); } catch (e) {}
+                    if (typeof showToast === "function") showToast("История опубликована (24 ч)");
+                    return;
+                }
+            } catch (e) {}
+            // fallback local
             var reader = new FileReader();
             reader.onload = function() {
                 var url = reader.result;
                 var isVid = (file.type || "").indexOf("video/") === 0;
-                var list = loadStoriesForUser(currentUser.id);
+                var list = loadStoriesForUserLocal(currentUser.id);
                 list.push({
                     id: "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
                     url: url,
@@ -8682,37 +8772,29 @@ body.theme-light .message-row.theirs .message-bubble {
         }
         function registerStoryView(story) {
             if (!story || !currentUser) return;
-            var ownerId = __storyMeta && __storyMeta.ownerId;
-            if (ownerId == null) ownerId = currentUser.id;
-            // view once per user
+            if (story.fromApi && typeof story.id === "number") {
+                req("/api/stories/" + story.id + "/view", { method: "POST" }).then(async function(r) {
+                    if (!r.ok) return;
+                    var d = await safeJson(r);
+                    if (d && d.views_count != null) {
+                        story.viewsCount = d.views_count;
+                        updateStoryFooter(story);
+                    }
+                }).catch(function(){});
+            }
             if (!story.views) story.views = [];
             var myId = String(currentUser.id);
-            if (story.views.indexOf(myId) === -1) {
-                story.views.push(myId);
-                // persist if own or known
-                var list = loadStoriesForUser(ownerId);
-                var found = false;
-                list.forEach(function(s, i) {
-                    if (s.id === story.id) {
-                        list[i].views = story.views;
-                        list[i].likes = story.likes || list[i].likes || [];
-                        found = true;
-                    }
-                });
-                if (found) saveStoriesForUser(ownerId, list);
-                // activity for owner if not self
-                if (Number(ownerId) === Number(currentUser.id) && Number(myId) !== Number(ownerId)) {
-                    // other viewed my story — handled on their client; for self-view skip
-                }
-            }
+            if (story.views.indexOf(myId) === -1) story.views.push(myId);
             updateStoryFooter(story);
         }
         function updateStoryFooter(story) {
             var likesEl = document.getElementById("svLikes");
             var viewsEl = document.getElementById("svViews");
             var btn = document.getElementById("svLikeBtn");
-            var likes = (story && story.likes) ? story.likes.length : 0;
-            var views = (story && story.views) ? story.views.length : 0;
+            var likes = story && story.likesCount != null ? story.likesCount
+                : ((story && story.likes) ? story.likes.length : 0);
+            var views = story && story.viewsCount != null ? story.viewsCount
+                : ((story && story.views) ? story.views.length : 0);
             if (likesEl) likesEl.textContent = String(likes);
             if (viewsEl) viewsEl.textContent = "Просмотров: " + views;
             var myId = currentUser ? String(currentUser.id) : "";
@@ -8722,49 +8804,31 @@ body.theme-light .message-row.theirs .message-bubble {
                 btn.classList.toggle("liked", !!liked);
             }
         }
-        function toggleStoryLike() {
+        async function toggleStoryLike() {
             if (!currentUser || !__storyQueue.length) return;
             var story = __storyQueue[__storyIndex];
             if (!story) return;
             if (!story.likes) story.likes = [];
             var myId = String(currentUser.id);
-            var idx = story.likes.indexOf(myId);
-            var ownerId = (__storyMeta && __storyMeta.ownerId != null) ? __storyMeta.ownerId : currentUser.id;
-            if (idx >= 0) story.likes.splice(idx, 1);
-            else {
-                story.likes.push(myId);
-                if (Number(ownerId) === Number(currentUser.id)) {
-                    // self like — optional activity skip
-                } else {
-                    // notify owner activity when viewing someone else's — store on their activity key is server-side;
-                    // for local demo: if we are owner of story, record
-                }
-                // if viewing own story from another account isn't local; when someone likes our story on same device twin — push to activity
-                if (Number(ownerId) !== Number(currentUser.id)) {
-                    // push to owner's activity if we can
-                    try {
-                        var ak = "lumi_activity_" + ownerId;
-                        var raw = localStorage.getItem(ak);
-                        var arr = raw ? JSON.parse(raw) : [];
-                        if (!Array.isArray(arr)) arr = [];
-                        arr.unshift({
-                            id: "a" + Date.now(),
-                            at: Date.now(),
-                            type: "story_like",
-                            html: "<b>@" + escapeHtml(currentUser.username || "user") + "</b> поставил(а) лайк вашей истории"
-                        });
-                        localStorage.setItem(ak, JSON.stringify(arr.slice(0, 200)));
-                    } catch (e) {}
-                }
+            if (story.fromApi && typeof story.id === "number") {
+                try {
+                    var r = await req("/api/stories/" + story.id + "/like", { method: "POST" });
+                    if (r.ok) {
+                        var d = await safeJson(r);
+                        story.likesCount = d.likes_count != null ? d.likes_count : story.likesCount;
+                        if (d.liked) {
+                            if (story.likes.indexOf(myId) < 0) story.likes.push(myId);
+                        } else {
+                            story.likes = story.likes.filter(function(x){ return x !== myId; });
+                        }
+                        updateStoryFooter(story);
+                        return;
+                    }
+                } catch (e) {}
             }
-            var list = loadStoriesForUser(ownerId);
-            list.forEach(function(s, i) {
-                if (s.id === story.id) {
-                    list[i].likes = story.likes;
-                    list[i].views = story.views || list[i].views || [];
-                }
-            });
-            saveStoriesForUser(ownerId, list);
+            var idx = story.likes.indexOf(myId);
+            if (idx >= 0) story.likes.splice(idx, 1);
+            else story.likes.push(myId);
             updateStoryFooter(story);
         }
         function showStoryAt(idx) {
@@ -8903,6 +8967,7 @@ body.theme-light .message-row.theirs .message-bubble {
 
             applyTheme(resolvePreferredTheme(currentUser.theme || "dark"), { force: true });
             try { updateSeriesMenuVisibility(); checkSeriesOnAppStart(); } catch (e) {}
+            try { refreshUsersWithStories(); } catch (e) {}
 
             // language may come from settings; try apply from user or default
 
@@ -12521,8 +12586,61 @@ body.theme-light .message-row.theirs .message-bubble {
             await loadFeed();
         }
 
+        async function compressImageFile(file, maxSide, quality) {
+            maxSide = maxSide || 1920;
+            quality = quality == null ? 0.85 : quality;
+            try {
+                if (!file || !file.type || file.type.indexOf("image/") !== 0) return file;
+                if (file.type.indexOf("gif") >= 0) return file;
+                // мелкие файлы не трогаем
+                if (file.size && file.size < 900 * 1024) return file;
+                var bmp = null;
+                if (typeof createImageBitmap === "function") {
+                    try { bmp = await createImageBitmap(file); } catch (e) { bmp = null; }
+                }
+                var w, h;
+                if (bmp) {
+                    w = bmp.width; h = bmp.height;
+                } else {
+                    var url = URL.createObjectURL(file);
+                    var img = await new Promise(function(resolve, reject) {
+                        var i = new Image();
+                        i.onload = function(){ resolve(i); };
+                        i.onerror = reject;
+                        i.src = url;
+                    });
+                    w = img.naturalWidth || img.width;
+                    h = img.naturalHeight || img.height;
+                    URL.revokeObjectURL(url);
+                    bmp = img;
+                }
+                if (!w || !h) return file;
+                var scale = Math.min(1, maxSide / Math.max(w, h));
+                var nw = Math.max(1, Math.round(w * scale));
+                var nh = Math.max(1, Math.round(h * scale));
+                var canvas = document.createElement("canvas");
+                canvas.width = nw;
+                canvas.height = nh;
+                var ctx = canvas.getContext("2d");
+                ctx.drawImage(bmp, 0, 0, nw, nh);
+                if (bmp.close) try { bmp.close(); } catch (e) {}
+                var blob = await new Promise(function(resolve) {
+                    canvas.toBlob(function(b){ resolve(b); }, "image/jpeg", quality);
+                });
+                if (!blob) return file;
+                var name = (file.name || "photo.jpg").replace(/\.\w+$/, "") + ".jpg";
+                return new File([blob], name, { type: "image/jpeg" });
+            } catch (e) {
+                return file;
+            }
+        }
+
         async function uploadPostMedia(file, text) {
             if (!file) return;
+            // сжимаем большие фото с ПК (скрины монитора), чтобы проходили загрузку
+            if (file.type && file.type.indexOf("image/") === 0) {
+                try { file = await compressImageFile(file, 1920, 0.85); } catch (e) {}
+            }
             var form = new FormData();
             form.append("text", text || "");
             form.append("file", file, file.name || "upload.bin");
@@ -15282,16 +15400,22 @@ body.theme-light .message-row.theirs .message-bubble {
                     window.__lumiBannerCache[user.id] = bsrc;
                 } catch (e) {}
             }
-            // Баннер как в настройках профиля (градиент-fallback + аватар поверх)
+            // Баннер + аватар; обводка истории видна всем
+            var hasStory = !!(user.has_active_story || userHasStory(user.id));
             html += '<div style="position:relative;width:100%;margin:0 0 8px 0">';
             html += '<div style="width:100%;height:120px;border-radius:16px 16px 0 0;overflow:hidden;background:linear-gradient(135deg,#1a2a44,#3390ec 60%,#7289da)">';
             if (bsrc) {
                 html += '<img src="'+escapeHtml(bsrc)+'" alt="" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.style.display=\'none\'">';
             }
             html += '</div>';
-            html += '<img src="'+avatarSrc(user.avatar_url)+'" style="position:absolute;left:50%;bottom:-40px;transform:translateX(-50%);width:88px;height:88px;border-radius:50%;object-fit:cover;background:#2a2a38;border:4px solid #14141e;display:block;z-index:2">';
+            html += '<div style="position:absolute;left:50%;bottom:-44px;transform:translateX(-50%);width:96px;height:96px;z-index:2">';
+            if (hasStory) {
+                html += '<div id="modalStoryRing" data-uid="'+Number(user.id)+'" style="position:absolute;inset:0;border-radius:50%;padding:3px;background:linear-gradient(135deg,#00e676,#00bcd4,#3390ec,#00e5ff);box-shadow:0 0 12px rgba(0,229,255,.35);cursor:pointer;box-sizing:border-box"></div>';
+            }
+            html += '<img src="'+avatarSrc(user.avatar_url)+'" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:80px;height:80px;border-radius:50%;object-fit:cover;background:#2a2a38;border:3px solid #14141e;display:block;z-index:2">';
             html += '</div>';
-            html += '<div style="height:48px"></div>';
+            html += '</div>';
+            html += '<div style="height:52px"></div>';
 
             html += '<div style="font-size:20px;font-weight:700;color:#e8eaed;padding:0 8px">'+escapeHtml(user.display_name||user.username)+'</div>';
 
@@ -15347,6 +15471,27 @@ html += '<div id="userProfilePosts" style="margin-top:12px;text-align:left"></di
             var postsBox = document.getElementById("userProfilePosts");
 
             if (postsBox) loadUserPostsInto(postsBox, user.id);
+
+            // клик по кольцу истории в инфе о пользователе
+            try {
+                var mring = document.getElementById("modalStoryRing");
+                if (mring) {
+                    mring.onclick = async function(e) {
+                        e.stopPropagation();
+                        var uid = Number(mring.getAttribute("data-uid"));
+                        var stories = await fetchStoriesForUser(uid);
+                        if (!stories.length) {
+                            if (typeof showToast === "function") showToast("Нет активных историй");
+                            return;
+                        }
+                        openStoryViewer(stories, 0, {
+                            name: user.display_name || user.username,
+                            avatar: avatarSrc(user.avatar_url),
+                            ownerId: uid
+                        });
+                    };
+                }
+            } catch (e) {}
 
             // Перепроверка статуса через 1.5с (на случай устаревшего last_seen)
             (function(uid){
