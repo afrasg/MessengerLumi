@@ -704,8 +704,84 @@
  body.theme-light .story-ring.add { background: #f0f2f5; border-color: #3390ec; color: #3390ec; }
  body.theme-light .story-ring img { border-color: #fff; }
  body.theme-light .story-item .story-name { color: #6a6a7a; }
- .banner-avatar.has-story { box-shadow: 0 0 0 3px #0a0a0f, 0 0 0 5px #dd2a7b; cursor: pointer; }
- body.theme-light .banner-avatar.has-story { box-shadow: 0 0 0 3px #fff, 0 0 0 5px #dd2a7b; }
+ .banner-avatar-wrap {
+  position: absolute;
+  left: 20px;
+  bottom: -36px;
+  width: 88px;
+  height: 88px;
+  z-index: 2;
+ }
+ .banner-avatar-wrap .banner-avatar {
+  position: relative !important;
+  left: auto !important;
+  bottom: auto !important;
+  width: 80px !important;
+  height: 80px !important;
+  margin: 4px;
+  z-index: 2;
+ }
+ .story-avatar-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  padding: 3px;
+  background: linear-gradient(135deg, #00e676, #00bcd4, #3390ec, #00e5ff);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.35);
+  cursor: pointer;
+  z-index: 1;
+  animation: storyRingPulse 2.4s ease-in-out infinite;
+ }
+ .story-avatar-ring::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: #0a0a0f;
+ }
+ body.theme-light .story-avatar-ring::after { background: #fff; }
+ @keyframes storyRingPulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(0, 229, 255, 0.3); }
+  50% { box-shadow: 0 0 18px rgba(0, 230, 118, 0.55); }
+ }
+ #storyViewer .sv-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+  color: #fff;
+  background: linear-gradient(transparent, rgba(0,0,0,.55));
+ }
+ #storyViewer .sv-like-btn {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: rgba(255,255,255,.12);
+  color: #fff; font-size: 22px;
+  display: flex; align-items: center; justify-content: center;
+ }
+ #storyViewer .sv-like-btn.liked { color: #ff2d55; background: rgba(255,45,85,.2); }
+ #storyViewer .sv-likes { font-weight: 600; font-size: 14px; }
+ #storyViewer .sv-views { margin-left: auto; font-size: 13px; opacity: .85; }
+ .activity-list { max-height: 60vh; overflow-y: auto; }
+ .activity-item {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 12px 4px; border-bottom: 1px solid rgba(255,255,255,.06);
+  font-size: 14px; line-height: 1.35;
+ }
+ body.theme-light .activity-item { border-bottom-color: #e4e6eb; }
+ .activity-item .act-ico {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(51,144,236,.15); flex-shrink: 0; font-size: 16px;
+ }
+ .activity-item .act-text { flex: 1; min-width: 0; }
+ .activity-item .act-text b { color: #5eb5f7; }
+ body.theme-light .activity-item .act-text b { color: #3390ec; }
+ .activity-item .act-time { font-size: 12px; color: #8a8a9a; margin-top: 3px; }
+ .series-panel { text-align: center; padding: 16px 8px 8px; }
+ .series-flame { font-size: 48px; line-height: 1; margin-bottom: 8px; }
+ .series-count { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+ .series-type { font-size: 15px; color: #ff9f0a; font-weight: 600; margin-bottom: 10px; }
+ .series-desc { font-size: 14px; color: #8a8a9a; line-height: 1.45; }
 
  #storyViewer {
   position: fixed; inset: 0; z-index: 4000; background: #000;
@@ -5357,7 +5433,10 @@ body.theme-light .message-row.theirs .message-bubble {
                                 <div class="profile-banner-wrap" id="profileBannerWrap">
                                     <img id="profileBannerImg" class="profile-banner" alt="" style="display:none">
                                 </div>
-                                <img id="bigAvatar" class="banner-avatar" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIbLnr8-3ZlGD7AB7TwXHhHdgujtsrXLmdI8laFLml5w&s=10" alt="">
+                                <div class="banner-avatar-wrap" id="bannerAvatarWrap">
+                                    <div class="story-avatar-ring" id="storyAvatarRing" title="Истории" style="display:none"></div>
+                                    <img id="bigAvatar" class="banner-avatar" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSIbLnr8-3ZlGD7AB7TwXHhHdgujtsrXLmdI8laFLml5w&s=10" alt="">
+                                </div>
                             </div>
                             <div class="profile-banner-spacer"></div>
                             <div id="profileStoriesRow" class="stories-row" aria-label="Истории"></div>
@@ -5468,6 +5547,24 @@ body.theme-light .message-row.theirs .message-bubble {
                                 <span class="tg-set-text">
                                   <span class="tg-set-title">Группы и каналы</span>
                                   <span class="tg-set-sub">Группы, каналы, сообщества</span>
+                                </span>
+                            </button>
+                            <button type="button" class="tg-set-row" onclick="openSettingsSection('activity')">
+                                <span class="tg-set-ico" style="background:#ff2d55">
+                                  <svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+                                </span>
+                                <span class="tg-set-text">
+                                  <span class="tg-set-title">Активность</span>
+                                  <span class="tg-set-sub">Лайки, подписки, комментарии</span>
+                                </span>
+                            </button>
+                            <button type="button" class="tg-set-row" id="seriesMenuRow" style="display:none" onclick="openSettingsSection('series')">
+                                <span class="tg-set-ico" style="background:linear-gradient(135deg,#ff9500,#ff2d55)">
+                                  <svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z"/></svg>
+                                </span>
+                                <span class="tg-set-text">
+                                  <span class="tg-set-title">Серия</span>
+                                  <span class="tg-set-sub" id="seriesMenuSub">Огонёк историй</span>
                                 </span>
                             </button>
                             <button type="button" class="tg-set-row" id="adminMenuRow" style="display:none" onclick="openSettingsSection('admin')">
@@ -5641,6 +5738,23 @@ body.theme-light .message-row.theirs .message-bubble {
                                     <div id="communities" style="margin-top:8px"></div>
                                 </div>
                             </div>
+
+                            <div id="settingsTabActivity" class="settings-tab">
+                                <h3 style="margin-bottom:10px">Активность</h3>
+                                <div id="activityList" class="activity-list">
+                                    <div style="color:#8a8a9a;font-size:13px;padding:12px 0">Пока нет событий</div>
+                                </div>
+                            </div>
+
+                            <div id="settingsTabSeries" class="settings-tab">
+                                <div class="series-panel">
+                                    <div class="series-flame">🔥</div>
+                                    <div class="series-count" id="seriesCountLabel">Серия: 0</div>
+                                    <div class="series-type" id="seriesTypeLabel">Серия 1</div>
+                                    <p class="series-desc" id="seriesDesc">Публикуйте историю каждый день, чтобы серия росла.</p>
+                                    <button type="button" class="secondary" style="width:100%;padding:10px;border-radius:10px;margin-top:12px" onclick="showSeriesDetails()">Подробнее</button>
+                                </div>
+                            </div>
                         </div><!-- /settingsDetail -->
 
                     </div>
@@ -5709,6 +5823,11 @@ body.theme-light .message-row.theirs .message-bubble {
             <div class="sv-media" id="svMedia">
                 <div class="sv-tap-left" id="svTapLeft"></div>
                 <div class="sv-tap-right" id="svTapRight"></div>
+            </div>
+            <div class="sv-footer" id="svFooter">
+                <button type="button" class="sv-like-btn" id="svLikeBtn" onclick="toggleStoryLike()">♡</button>
+                <span class="sv-likes" id="svLikes">0</span>
+                <span class="sv-views" id="svViews">Просмотров: 0</span>
             </div>
             <input type="file" id="storyFileInput" accept="image/*,video/*" hidden>
         </div>
@@ -8125,12 +8244,13 @@ body.theme-light .message-row.theirs .message-bubble {
             }, 300);
         })();
 
-        // ===== STORIES =====
+        // ===== STORIES + ACTIVITY + SERIES =====
         var STORY_TTL_MS = 24 * 60 * 60 * 1000;
         var __storyQueue = [];
         var __storyIndex = 0;
         var __storyTimer = null;
         var __storyDuration = 5000;
+        var __storyMeta = null;
 
         function storiesStorageKey(uid) {
             return "lumi_stories_" + (uid != null ? uid : "guest");
@@ -8143,6 +8263,10 @@ body.theme-light .message-row.theirs .message-bubble {
                 var now = Date.now();
                 return arr.filter(function(s) {
                     return s && s.createdAt && (now - s.createdAt) < STORY_TTL_MS;
+                }).map(function(s) {
+                    if (!s.likes) s.likes = [];
+                    if (!s.views) s.views = [];
+                    return s;
                 });
             } catch (e) { return []; }
         }
@@ -8173,6 +8297,261 @@ body.theme-light .message-row.theirs .message-bubble {
             if (h < 24) return h + " ч";
             return "давно";
         }
+        function activityKey() {
+            return "lumi_activity_" + (currentUser && currentUser.id != null ? currentUser.id : "guest");
+        }
+        function loadActivity() {
+            try {
+                var raw = localStorage.getItem(activityKey());
+                var arr = raw ? JSON.parse(raw) : [];
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) { return []; }
+        }
+        function saveActivity(list) {
+            try { localStorage.setItem(activityKey(), JSON.stringify((list || []).slice(0, 200))); } catch (e) {}
+        }
+        function pushActivity(item) {
+            if (!currentUser || !item) return;
+            var list = loadActivity();
+            list.unshift(Object.assign({ id: "a" + Date.now(), at: Date.now() }, item));
+            saveActivity(list);
+        }
+        function renderActivityList() {
+            var box = document.getElementById("activityList");
+            if (!box) return;
+            var list = loadActivity();
+            if (!list.length) {
+                box.innerHTML = "<div style='color:#8a8a9a;font-size:13px;padding:12px 0'>Пока нет событий</div>";
+                return;
+            }
+            box.innerHTML = "";
+            list.forEach(function(a) {
+                var d = document.createElement("div");
+                d.className = "activity-item";
+                var ico = "•";
+                if (a.type === "story_like") ico = "❤️";
+                else if (a.type === "post_like") ico = "👍";
+                else if (a.type === "follow") ico = "👤";
+                else if (a.type === "comment") ico = "💬";
+                else if (a.type === "story_view") ico = "👁";
+                else if (a.type === "series") ico = "🔥";
+                d.innerHTML = '<div class="act-ico">' + ico + '</div><div class="act-text"><div>' + (a.html || escapeHtml(a.text || "")) + '</div><div class="act-time">' + storyTimeLabel(a.at) + '</div></div>';
+                box.appendChild(d);
+            });
+        }
+
+        // --- Series / streak ---
+        function seriesKey() {
+            return "lumi_series_" + (currentUser && currentUser.id != null ? currentUser.id : "guest");
+        }
+        function loadSeries() {
+            try {
+                var raw = localStorage.getItem(seriesKey());
+                return raw ? JSON.parse(raw) : null;
+            } catch (e) { return null; }
+        }
+        function saveSeries(s) {
+            try {
+                if (!s) localStorage.removeItem(seriesKey());
+                else localStorage.setItem(seriesKey(), JSON.stringify(s));
+            } catch (e) {}
+        }
+        function totalStoriesEverKey() {
+            return "lumi_stories_total_" + (currentUser && currentUser.id != null ? currentUser.id : "guest");
+        }
+        function getTotalStoriesEver() {
+            try { return parseInt(localStorage.getItem(totalStoriesEverKey()) || "0", 10) || 0; } catch (e) { return 0; }
+        }
+        function setTotalStoriesEver(n) {
+            try { localStorage.setItem(totalStoriesEverKey(), String(n)); } catch (e) {}
+        }
+        function dayKey(ts) {
+            var d = new Date(ts || Date.now());
+            return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+        }
+        function updateSeriesMenuVisibility() {
+            var row = document.getElementById("seriesMenuRow");
+            var s = loadSeries();
+            if (!row) return;
+            if (s && s.active) {
+                row.style.display = "";
+                var sub = document.getElementById("seriesMenuSub");
+                if (sub) sub.textContent = "🔥 " + (s.count || 0) + " дн. · серия " + (s.level || 1);
+            } else {
+                row.style.display = "none";
+            }
+        }
+        function renderSeriesPanel() {
+            var s = loadSeries();
+            var countEl = document.getElementById("seriesCountLabel");
+            var typeEl = document.getElementById("seriesTypeLabel");
+            var desc = document.getElementById("seriesDesc");
+            if (!s || !s.active) {
+                if (countEl) countEl.textContent = "Серия: 0";
+                if (typeEl) typeEl.textContent = "Нет активной серии";
+                if (desc) desc.textContent = "Опубликуйте 10 историй, чтобы бот предложил начать серию.";
+                return;
+            }
+            if (countEl) countEl.textContent = "Серия: " + (s.count || 0);
+            if (typeEl) typeEl.textContent = "Серия " + (s.level || 1);
+            if (desc) desc.textContent = "Публикуйте историю каждый день подряд. Пропуск дня завершит серию.";
+            updateSeriesMenuVisibility();
+        }
+        function showSeriesDetails() {
+            openModal(
+                '<h2>🔥 Серия историй</h2>' +
+                '<p style="color:#c8c8d0;font-size:14px;line-height:1.5;margin:12px 0">' +
+                'Серия увеличивается каждый день, когда вы публикуете хотя бы одну историю. ' +
+                'Чтобы сохранить серию, нужно публиковать историю каждый день подряд. ' +
+                'Если пропустить день, серия завершится. Чем дольше вы публикуете истории без пропусков, тем больше становится ваша серия. ' +
+                'Если серия потухла, бот напишет и предложит восстановить её (не больше 2 раз в месяц).' +
+                '</p>' +
+                '<button class="primary" style="width:100%;padding:10px;border-radius:10px" onclick="closeModal()">Понятно</button>'
+            );
+        }
+        function offerStartSeries() {
+            if (!currentUser) return;
+            var s = loadSeries();
+            if (s && s.active) return;
+            if (s && s.offeredStart) return;
+            openModal(
+                '<h2>🔥 Серия историй</h2>' +
+                '<p style="color:#c8c8d0;font-size:14px;line-height:1.5;margin:12px 0">' +
+                'Хотите начать серию историй? Каждый день подряд нужно будет выкладывать историю, иначе серия потухнет.' +
+                '</p>' +
+                '<div style="display:flex;flex-direction:column;gap:8px">' +
+                '<button class="primary" style="width:100%;padding:12px;border-radius:10px" onclick="acceptSeriesStart()">Начать серию</button>' +
+                '<button class="secondary" style="width:100%;padding:12px;border-radius:10px" onclick="showSeriesDetails()">Подробнее</button>' +
+                '<button class="secondary" style="width:100%;padding:12px;border-radius:10px" onclick="declineSeriesStart()">Не сейчас</button>' +
+                '</div>'
+            );
+            try {
+                var cur = loadSeries() || {};
+                cur.offeredStart = true;
+                saveSeries(cur);
+            } catch (e) {}
+        }
+        function acceptSeriesStart() {
+            saveSeries({
+                active: true,
+                count: 1,
+                level: 1,
+                lastDay: dayKey(),
+                restoresThisMonth: 0,
+                restoreMonth: (new Date()).getMonth(),
+                offeredStart: true
+            });
+            updateSeriesMenuVisibility();
+            pushActivity({ type: "series", html: "Вы начали <b>серию историй</b> 🔥" });
+            closeModal();
+            if (typeof showToast === "function") showToast("Серия начата! Публикуйте историю каждый день");
+            renderSeriesPanel();
+        }
+        function declineSeriesStart() {
+            var cur = loadSeries() || {};
+            cur.offeredStart = true;
+            cur.active = false;
+            saveSeries(cur);
+            closeModal();
+        }
+        function onStoryPublishedForSeries() {
+            var total = getTotalStoriesEver() + 1;
+            setTotalStoriesEver(total);
+            var s = loadSeries();
+            var today = dayKey();
+            if (s && s.active) {
+                if (s.lastDay === today) {
+                    // already counted today
+                } else {
+                    // check if yesterday-ish consecutive (simple: any previous day breaks if not yesterday)
+                    var yest = new Date();
+                    yest.setDate(yest.getDate() - 1);
+                    var yKey = dayKey(yest.getTime());
+                    if (s.lastDay === yKey) {
+                        s.count = (s.count || 0) + 1;
+                        if (s.count >= 30) s.level = 2;
+                        if (s.count >= 100) s.level = 3;
+                        s.lastDay = today;
+                        saveSeries(s);
+                    } else if (s.lastDay !== today) {
+                        // missed day
+                        handleSeriesBroken(s);
+                        return;
+                    }
+                }
+                updateSeriesMenuVisibility();
+                renderSeriesPanel();
+            } else {
+                // offer after 10 total stories
+                if (total >= 10 && (!s || !s.active)) {
+                    var already = s && s.offeredStart && !s.active;
+                    // allow re-offer after completing another 10 since last decline
+                    var lastOfferAt = (s && s.lastOfferTotal) || 0;
+                    if (!s || !s.offeredStart || (total - lastOfferAt >= 10)) {
+                        var ns = s || {};
+                        ns.offeredStart = false;
+                        ns.lastOfferTotal = total;
+                        saveSeries(ns);
+                        setTimeout(function() { offerStartSeries(); }, 600);
+                    }
+                }
+            }
+        }
+        function handleSeriesBroken(s) {
+            s.active = false;
+            s.brokenCount = s.count || 0;
+            saveSeries(s);
+            updateSeriesMenuVisibility();
+            var restores = s.restoresThisMonth || 0;
+            var month = (new Date()).getMonth();
+            if (s.restoreMonth !== month) { restores = 0; }
+            var canRestore = restores < 2;
+            openModal(
+                '<h2>🔥 Серия потухла</h2>' +
+                '<p style="color:#c8c8d0;font-size:14px;line-height:1.5;margin:12px 0">' +
+                'Вы пропустили день. Серия (' + (s.brokenCount || 0) + ' дн.) завершилась.' +
+                (canRestore ? ' Можно восстановить (осталось ' + (2 - restores) + ' из 2 в этом месяце).' : ' Восстановления в этом месяце закончились.') +
+                '</p>' +
+                '<div style="display:flex;flex-direction:column;gap:8px">' +
+                (canRestore ? '<button class="primary" style="width:100%;padding:12px;border-radius:10px" onclick="restoreSeries()">Восстановить серию</button>' : '') +
+                '<button class="secondary" style="width:100%;padding:12px;border-radius:10px" onclick="declineSeriesRestore()">Отказаться</button>' +
+                '</div>'
+            );
+            pushActivity({ type: "series", html: "Серия историй <b>потухла</b> (" + (s.brokenCount || 0) + " дн.)" });
+        }
+        function restoreSeries() {
+            var s = loadSeries() || {};
+            var month = (new Date()).getMonth();
+            if (s.restoreMonth !== month) { s.restoresThisMonth = 0; s.restoreMonth = month; }
+            s.restoresThisMonth = (s.restoresThisMonth || 0) + 1;
+            s.active = true;
+            s.count = s.brokenCount || s.count || 1;
+            s.lastDay = dayKey();
+            s.level = s.count >= 100 ? 3 : (s.count >= 30 ? 2 : 1);
+            saveSeries(s);
+            updateSeriesMenuVisibility();
+            renderSeriesPanel();
+            closeModal();
+            if (typeof showToast === "function") showToast("Серия восстановлена 🔥");
+            pushActivity({ type: "series", html: "Серия <b>восстановлена</b> 🔥" });
+        }
+        function declineSeriesRestore() {
+            saveSeries({ active: false, offeredStart: true, lastOfferTotal: getTotalStoriesEver() });
+            updateSeriesMenuVisibility();
+            closeModal();
+        }
+        function checkSeriesOnAppStart() {
+            var s = loadSeries();
+            if (!s || !s.active || !s.lastDay) return;
+            var today = dayKey();
+            if (s.lastDay === today) return;
+            var yest = new Date();
+            yest.setDate(yest.getDate() - 1);
+            if (s.lastDay === dayKey(yest.getTime())) return; // still ok until end of today
+            // if last day is older than yesterday — broken
+            handleSeriesBroken(s);
+        }
+
         function renderProfileStories() {
             var row = document.getElementById("profileStoriesRow");
             if (!row || !currentUser) return;
@@ -8180,7 +8559,6 @@ body.theme-light .message-row.theirs .message-bubble {
             var uid = currentUser.id;
             var list = loadStoriesForUser(uid);
 
-            // Добавить историю
             var add = document.createElement("div");
             add.className = "story-item";
             add.innerHTML = '<div class="story-ring add">+</div><div class="story-name">Добавить</div>';
@@ -8208,23 +8586,36 @@ body.theme-light .message-row.theirs .message-bubble {
                 item.onclick = function() {
                     openStoryViewer(list, list.indexOf(s), {
                         name: currentUser.display_name || currentUser.username,
-                        avatar: avatarSrc(currentUser.avatar_url)
+                        avatar: avatarSrc(currentUser.avatar_url),
+                        ownerId: currentUser.id
                     });
                 };
                 row.appendChild(item);
             });
 
+            // Кольцо на аве (клик = истории); клик по аве — как раньше (не открывает истории)
+            var ringEl = document.getElementById("storyAvatarRing");
             var av = document.getElementById("bigAvatar");
-            if (av) {
-                av.classList.toggle("has-story", list.length > 0);
-                av.onclick = function() {
-                    if (!list.length) { pickStoryFile(); return; }
-                    openStoryViewer(list, 0, {
-                        name: currentUser.display_name || currentUser.username,
-                        avatar: avatarSrc(currentUser.avatar_url)
-                    });
-                };
+            if (ringEl) {
+                if (list.length > 0) {
+                    ringEl.style.display = "";
+                    ringEl.onclick = function(e) {
+                        e.stopPropagation();
+                        openStoryViewer(list, 0, {
+                            name: currentUser.display_name || currentUser.username,
+                            avatar: avatarSrc(currentUser.avatar_url),
+                            ownerId: currentUser.id
+                        });
+                    };
+                } else {
+                    ringEl.style.display = "none";
+                    ringEl.onclick = null;
+                }
             }
+            if (av) {
+                av.onclick = null; // профиль/редактирование — без открытия историй
+            }
+            updateSeriesMenuVisibility();
         }
         function pickStoryFile() {
             if (!requireAccount()) return;
@@ -8249,12 +8640,14 @@ body.theme-light .message-row.theirs .message-bubble {
                     id: "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
                     url: url,
                     type: isVid ? "video" : "image",
-                    createdAt: Date.now()
+                    createdAt: Date.now(),
+                    likes: [],
+                    views: []
                 });
-                // храним максимум 20
                 if (list.length > 20) list = list.slice(list.length - 20);
                 saveStoriesForUser(currentUser.id, list);
                 renderProfileStories();
+                onStoryPublishedForSeries();
                 if (typeof showToast === "function") showToast("История опубликована (24 ч)");
             };
             reader.readAsDataURL(file);
@@ -8263,6 +8656,7 @@ body.theme-light .message-row.theirs .message-bubble {
             if (!list || !list.length) return;
             __storyQueue = list.slice();
             __storyIndex = Math.max(0, Math.min(startIndex || 0, __storyQueue.length - 1));
+            __storyMeta = meta || {};
             var v = document.getElementById("storyViewer");
             if (!v) return;
             v.classList.add("open");
@@ -8286,12 +8680,100 @@ body.theme-light .message-row.theirs .message-bubble {
                 if (vid) { try { vid.pause(); } catch (e) {} }
             }
         }
+        function registerStoryView(story) {
+            if (!story || !currentUser) return;
+            var ownerId = __storyMeta && __storyMeta.ownerId;
+            if (ownerId == null) ownerId = currentUser.id;
+            // view once per user
+            if (!story.views) story.views = [];
+            var myId = String(currentUser.id);
+            if (story.views.indexOf(myId) === -1) {
+                story.views.push(myId);
+                // persist if own or known
+                var list = loadStoriesForUser(ownerId);
+                var found = false;
+                list.forEach(function(s, i) {
+                    if (s.id === story.id) {
+                        list[i].views = story.views;
+                        list[i].likes = story.likes || list[i].likes || [];
+                        found = true;
+                    }
+                });
+                if (found) saveStoriesForUser(ownerId, list);
+                // activity for owner if not self
+                if (Number(ownerId) === Number(currentUser.id) && Number(myId) !== Number(ownerId)) {
+                    // other viewed my story — handled on their client; for self-view skip
+                }
+            }
+            updateStoryFooter(story);
+        }
+        function updateStoryFooter(story) {
+            var likesEl = document.getElementById("svLikes");
+            var viewsEl = document.getElementById("svViews");
+            var btn = document.getElementById("svLikeBtn");
+            var likes = (story && story.likes) ? story.likes.length : 0;
+            var views = (story && story.views) ? story.views.length : 0;
+            if (likesEl) likesEl.textContent = String(likes);
+            if (viewsEl) viewsEl.textContent = "Просмотров: " + views;
+            var myId = currentUser ? String(currentUser.id) : "";
+            var liked = story && story.likes && story.likes.indexOf(myId) >= 0;
+            if (btn) {
+                btn.textContent = liked ? "♥" : "♡";
+                btn.classList.toggle("liked", !!liked);
+            }
+        }
+        function toggleStoryLike() {
+            if (!currentUser || !__storyQueue.length) return;
+            var story = __storyQueue[__storyIndex];
+            if (!story) return;
+            if (!story.likes) story.likes = [];
+            var myId = String(currentUser.id);
+            var idx = story.likes.indexOf(myId);
+            var ownerId = (__storyMeta && __storyMeta.ownerId != null) ? __storyMeta.ownerId : currentUser.id;
+            if (idx >= 0) story.likes.splice(idx, 1);
+            else {
+                story.likes.push(myId);
+                if (Number(ownerId) === Number(currentUser.id)) {
+                    // self like — optional activity skip
+                } else {
+                    // notify owner activity when viewing someone else's — store on their activity key is server-side;
+                    // for local demo: if we are owner of story, record
+                }
+                // if viewing own story from another account isn't local; when someone likes our story on same device twin — push to activity
+                if (Number(ownerId) !== Number(currentUser.id)) {
+                    // push to owner's activity if we can
+                    try {
+                        var ak = "lumi_activity_" + ownerId;
+                        var raw = localStorage.getItem(ak);
+                        var arr = raw ? JSON.parse(raw) : [];
+                        if (!Array.isArray(arr)) arr = [];
+                        arr.unshift({
+                            id: "a" + Date.now(),
+                            at: Date.now(),
+                            type: "story_like",
+                            html: "<b>@" + escapeHtml(currentUser.username || "user") + "</b> поставил(а) лайк вашей истории"
+                        });
+                        localStorage.setItem(ak, JSON.stringify(arr.slice(0, 200)));
+                    } catch (e) {}
+                }
+            }
+            var list = loadStoriesForUser(ownerId);
+            list.forEach(function(s, i) {
+                if (s.id === story.id) {
+                    list[i].likes = story.likes;
+                    list[i].views = story.views || list[i].views || [];
+                }
+            });
+            saveStoriesForUser(ownerId, list);
+            updateStoryFooter(story);
+        }
         function showStoryAt(idx) {
             if (idx < 0) { closeStoryViewer(); return; }
             if (idx >= __storyQueue.length) { closeStoryViewer(); return; }
             __storyIndex = idx;
             var s = __storyQueue[idx];
             markStorySeen(s.id);
+            registerStoryView(s);
             var prog = document.getElementById("svProgress");
             if (prog) {
                 prog.innerHTML = "";
@@ -8309,7 +8791,6 @@ body.theme-light .message-row.theirs .message-bubble {
             if (timeEl) timeEl.textContent = storyTimeLabel(s.createdAt);
             var media = document.getElementById("svMedia");
             if (!media) return;
-            // keep tap zones
             var left = document.getElementById("svTapLeft");
             var right = document.getElementById("svTapRight");
             media.innerHTML = "";
@@ -8330,13 +8811,13 @@ body.theme-light .message-row.theirs .message-bubble {
                 media.appendChild(img);
                 __storyDuration = 5000;
             }
-            // restart progress animation duration
             var active = prog && prog.querySelector("i.active b");
             if (active) active.style.animationDuration = (__storyDuration / 1000) + "s";
             if (__storyTimer) clearTimeout(__storyTimer);
             if (s.type !== "video") {
                 __storyTimer = setTimeout(function() { storyNext(); }, __storyDuration);
             }
+            updateStoryFooter(s);
         }
         function storyNext() {
             if (__storyTimer) { clearTimeout(__storyTimer); __storyTimer = null; }
@@ -8421,6 +8902,7 @@ body.theme-light .message-row.theirs .message-bubble {
             await loadDialogs();
 
             applyTheme(resolvePreferredTheme(currentUser.theme || "dark"), { force: true });
+            try { updateSeriesMenuVisibility(); checkSeriesOnAppStart(); } catch (e) {}
 
             // language may come from settings; try apply from user or default
 
@@ -11644,6 +12126,21 @@ body.theme-light .message-row.theirs .message-bubble {
                     likeCount = count;
 
                     like.innerHTML = (isLiked ? likeIconFilled : likeIconEmpty) + ' ' + count;
+                    try {
+                        if (isLiked && post.author_id != null && currentUser && Number(post.author_id) !== Number(currentUser.id)) {
+                            var ak = "lumi_activity_" + post.author_id;
+                            var raw = localStorage.getItem(ak);
+                            var arr = raw ? JSON.parse(raw) : [];
+                            if (!Array.isArray(arr)) arr = [];
+                            arr.unshift({
+                                id: "a" + Date.now(),
+                                at: Date.now(),
+                                type: "post_like",
+                                html: "<b>@" + escapeHtml(currentUser.username || "user") + "</b> поставил(а) лайк вашему посту"
+                            });
+                            localStorage.setItem(ak, JSON.stringify(arr.slice(0, 200)));
+                        }
+                    } catch (e) {}
 
                     like.classList.toggle("liked", isLiked);
 
@@ -12707,6 +13204,8 @@ body.theme-light .message-row.theirs .message-bubble {
             accounts: "Аккаунт",
             calls: "Звонки",
             spaces: "Группы и каналы",
+            activity: "Активность",
+            series: "Серия",
             admin: "Админ панель"
         };
 
@@ -12742,6 +13241,12 @@ body.theme-light .message-row.theirs .message-bubble {
             if (tab === "spaces") {
                 try { loadGroups(); loadChannels(); loadCommunities(); } catch (e) {}
             }
+            if (tab === "activity") {
+                try { renderActivityList(); } catch (e) {}
+            }
+            if (tab === "series") {
+                try { renderSeriesPanel(); } catch (e) {}
+            }
         }
 
         function switchSettingsTab(tab) {
@@ -12773,6 +13278,10 @@ body.theme-light .message-row.theirs .message-bubble {
                 calls: "settingsTabCalls",
 
                 spaces: "settingsTabSpaces",
+
+                activity: "settingsTabActivity",
+
+                series: "settingsTabSeries",
 
                 admin: "settingsTabAdmin"
 
