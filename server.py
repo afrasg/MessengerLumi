@@ -1622,27 +1622,56 @@ def get_favorites(request: Request):
 # =========================================================
 
 @app.get("/api/feed")
-def feed(request: Request):
+def feed(request: Request, filter: str = "all"):
     user_id = get_auth_user(request)
+    mode = (filter or "all").strip().lower()
+    if mode not in ("all", "following", "subscriptions", "subs"):
+        mode = "all"
+    following_only = mode in ("following", "subscriptions", "subs")
 
     connection = db()
 
-    posts = connection.execute("""
-        SELECT
-            p.id, p.author_id, p.text, p.media_url, p.media_type, p.created_at,
-            u.username, u.display_name, u.avatar_url,
-            (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) AS likes,
-            (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) AS likes_count,
-            (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count,
-            (SELECT COUNT(*) FROM posts WHERE repost_of = p.id) AS reposts_count,
-            (SELECT COUNT(*) FROM post_views WHERE post_id = p.id) AS views_count,
-            EXISTS(SELECT 1 FROM post_likes WHERE post_id = p.id AND user_id = ?) AS liked
-        FROM posts p
-        JOIN users u ON u.id = p.author_id
-        WHERE p.repost_of IS NULL
-        ORDER BY p.id DESC
-        LIMIT 100
-    """, (user_id,)).fetchall()
+    if following_only:
+        posts = connection.execute("""
+            SELECT
+                p.id, p.author_id, p.text, p.media_url, p.media_type, p.created_at,
+                u.username, u.display_name, u.avatar_url,
+                (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) AS likes,
+                (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) AS likes_count,
+                (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count,
+                (SELECT COUNT(*) FROM posts WHERE repost_of = p.id) AS reposts_count,
+                (SELECT COUNT(*) FROM post_views WHERE post_id = p.id) AS views_count,
+                EXISTS(SELECT 1 FROM post_likes WHERE post_id = p.id AND user_id = ?) AS liked
+            FROM posts p
+            JOIN users u ON u.id = p.author_id
+            WHERE p.repost_of IS NULL
+              AND (
+                p.author_id = ?
+                OR EXISTS (
+                    SELECT 1 FROM follows f
+                    WHERE f.follower_id = ? AND f.following_id = p.author_id
+                )
+              )
+            ORDER BY p.id DESC
+            LIMIT 100
+        """, (user_id, user_id, user_id)).fetchall()
+    else:
+        posts = connection.execute("""
+            SELECT
+                p.id, p.author_id, p.text, p.media_url, p.media_type, p.created_at,
+                u.username, u.display_name, u.avatar_url,
+                (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) AS likes,
+                (SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) AS likes_count,
+                (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count,
+                (SELECT COUNT(*) FROM posts WHERE repost_of = p.id) AS reposts_count,
+                (SELECT COUNT(*) FROM post_views WHERE post_id = p.id) AS views_count,
+                EXISTS(SELECT 1 FROM post_likes WHERE post_id = p.id AND user_id = ?) AS liked
+            FROM posts p
+            JOIN users u ON u.id = p.author_id
+            WHERE p.repost_of IS NULL
+            ORDER BY p.id DESC
+            LIMIT 100
+        """, (user_id,)).fetchall()
 
     connection.close()
 
@@ -4215,6 +4244,36 @@ async def create_story(request: Request, file: UploadFile = File(...)):
     connection.commit()
     connection.close()
     return {"ok": True, "id": sid, "media_url": url, "media_type": media_type, "created_at": created}
+
+
+@app.delete("/api/stories/{story_id}")
+def delete_story(story_id: int, request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    story = connection.execute(
+        "SELECT id, user_id, media_url FROM stories WHERE id = ?", (story_id,)
+    ).fetchone()
+    if not story:
+        connection.close()
+        raise HTTPException(404, "История не найдена")
+    if story["user_id"] != user_id:
+        connection.close()
+        raise HTTPException(403, "Можно удалять только свои истории")
+    connection.execute("DELETE FROM story_likes WHERE story_id = ?", (story_id,))
+    connection.execute("DELETE FROM story_views WHERE story_id = ?", (story_id,))
+    connection.execute("DELETE FROM stories WHERE id = ?", (story_id,))
+    connection.commit()
+    connection.close()
+    # файл с диска — по возможности
+    try:
+        url = story["media_url"] or ""
+        if url.startswith("/uploads/"):
+            path = UPLOAD_DIR / url.split("/uploads/", 1)[-1]
+            if path.exists() and path.is_file():
+                path.unlink()
+    except Exception:
+        pass
+    return {"ok": True}
 
 
 @app.get("/api/users/{target_id}/stories")
