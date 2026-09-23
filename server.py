@@ -377,6 +377,39 @@ def init_db():
             created_at TEXT NOT NULL,
             UNIQUE(message_id, user_id)
         );
+
+        CREATE TABLE IF NOT EXISTS activities (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            actor_id INTEGER,
+            type TEXT NOT NULL,
+            text TEXT NOT NULL,
+            ref_id INTEGER,
+            created_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS stories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            media_url TEXT NOT NULL,
+            media_type TEXT DEFAULT 'image',
+            created_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS story_likes (
+            story_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE(story_id, user_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS story_views (
+            story_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE(story_id, user_id)
+        );
     """)
 
     # Добавляем недостающие колонки
@@ -1143,6 +1176,14 @@ def get_user_profile(user_id: int, request: Request):
         "SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?",
         (current_user_id, user_id)
     ).fetchone())
+    try:
+        result["has_active_story"] = bool(connection.execute(
+            """SELECT 1 FROM stories WHERE user_id = ?
+               AND (expires_at IS NULL OR expires_at > ?) LIMIT 1""",
+            (user_id, now()),
+        ).fetchone())
+    except Exception:
+        result["has_active_story"] = False
     result["follows_me"] = bool(connection.execute(
         "SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?",
         (user_id, current_user_id)
@@ -1793,6 +1834,13 @@ def like_post(post_id: int, request: Request):
 
     connection = db()
 
+    post_row = connection.execute(
+        "SELECT id, author_id FROM posts WHERE id = ?", (post_id,)
+    ).fetchone()
+    if not post_row:
+        connection.close()
+        raise HTTPException(404, "Пост не найден")
+
     existing = connection.execute(
         "SELECT id FROM post_likes WHERE post_id = ? AND user_id = ?", (post_id, user_id)
     ).fetchone()
@@ -1805,6 +1853,19 @@ def like_post(post_id: int, request: Request):
         connection.execute("INSERT INTO post_likes (post_id, user_id) VALUES (?, ?)",
                            (post_id, user_id))
         liked = True
+        if post_row["author_id"] != user_id:
+            actor = connection.execute(
+                "SELECT username FROM users WHERE id = ?", (user_id,)
+            ).fetchone()
+            uname = (actor["username"] if actor else "user") or "user"
+            add_activity(
+                connection,
+                post_row["author_id"],
+                user_id,
+                "post_like",
+                f"@{uname} поставил(а) лайк вашему посту",
+                post_id,
+            )
 
     count = connection.execute("SELECT COUNT(*) FROM post_likes WHERE post_id = ?",
                                (post_id,)).fetchone()[0]
@@ -2004,7 +2065,7 @@ def create_comment(post_id: int, data: CommentRequest, request: Request):
 
     connection = db()
 
-    post = connection.execute("SELECT id FROM posts WHERE id = ?", (post_id,)).fetchone()
+    post = connection.execute("SELECT id, author_id FROM posts WHERE id = ?", (post_id,)).fetchone()
 
     if not post:
         connection.close()
@@ -2025,6 +2086,20 @@ def create_comment(post_id: int, data: CommentRequest, request: Request):
     """, (post_id, user_id, data.parent_id, text, now()))
 
     comment_id = cursor.lastrowid
+
+    if post["author_id"] != user_id:
+        actor = connection.execute(
+            "SELECT username FROM users WHERE id = ?", (user_id,)
+        ).fetchone()
+        uname = (actor["username"] if actor else "user") or "user"
+        add_activity(
+            connection,
+            post["author_id"],
+            user_id,
+            "comment",
+            f"@{uname} прокомментировал(а) ваш пост",
+            post_id,
+        )
 
     connection.commit()
     connection.close()
@@ -3950,6 +4025,18 @@ async def respond_invite(invite_id: int, data: InviteActionRequest, request: Req
 # FOLLOWS / SUBSCRIPTIONS
 # =========================================================
 
+def add_activity(connection, user_id, actor_id, type_, text, ref_id=None):
+    """Пишет событие в ленту активности получателя."""
+    try:
+        connection.execute(
+            """INSERT INTO activities (user_id, actor_id, type, text, ref_id, created_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (user_id, actor_id, type_, text, ref_id, now()),
+        )
+    except Exception:
+        pass
+
+
 @app.post("/api/users/{target_id}/follow")
 def follow_user(target_id: int, request: Request):
     user_id = get_auth_user(request)
@@ -3962,10 +4049,30 @@ def follow_user(target_id: int, request: Request):
         connection.close()
         raise HTTPException(404, "Пользователь не найден")
 
+    existed = connection.execute(
+        "SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?",
+        (user_id, target_id),
+    ).fetchone()
+
     connection.execute("""
         INSERT OR IGNORE INTO follows (follower_id, following_id, created_at)
         VALUES (?, ?, ?)
     """, (user_id, target_id, now()))
+
+    if not existed:
+        actor = connection.execute(
+            "SELECT username, display_name FROM users WHERE id = ?", (user_id,)
+        ).fetchone()
+        uname = (actor["username"] if actor else "user") or "user"
+        add_activity(
+            connection,
+            target_id,
+            user_id,
+            "follow",
+            f"@{uname} подписался(ась) на вас",
+            user_id,
+        )
+
     connection.commit()
 
     followers = connection.execute(
@@ -4042,6 +4149,177 @@ def list_following(target_id: int, request: Request):
 def me_followers(request: Request):
     user_id = get_auth_user(request)
     return list_followers(user_id, request)
+
+
+@app.get("/api/activity")
+def get_activity(request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    rows = connection.execute("""
+        SELECT a.id, a.type, a.text, a.ref_id, a.created_at, a.actor_id,
+               u.username AS actor_username, u.display_name AS actor_name, u.avatar_url AS actor_avatar
+        FROM activities a
+        LEFT JOIN users u ON u.id = a.actor_id
+        WHERE a.user_id = ?
+        ORDER BY a.id DESC
+        LIMIT 100
+    """, (user_id,)).fetchall()
+    connection.close()
+    return [dict(r) for r in rows]
+
+
+@app.post("/api/stories")
+async def create_story(request: Request, file: UploadFile = File(...)):
+    user_id = get_auth_user(request)
+    ctype = (file.content_type or "").split(";")[0].strip().lower()
+    name = (file.filename or "story.bin").lower()
+    ext = Path(name).suffix.lower() or ".jpg"
+    media_type = "image"
+    if ctype.startswith("video/") or ext in {".mp4", ".webm", ".mov"}:
+        media_type = "video"
+        if ext not in {".mp4", ".webm", ".mov"}:
+            ext = ".mp4"
+    elif ctype.startswith("image/") or ext in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+        media_type = "image"
+        if ext not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+            ext = ".jpg"
+    else:
+        raise HTTPException(400, "Только фото или видео")
+
+    data_bytes = await file.read()
+    if not data_bytes:
+        raise HTTPException(400, "Пустой файл")
+    # до ~40 МБ
+    if len(data_bytes) > 40 * 1024 * 1024:
+        raise HTTPException(400, "Файл слишком большой (макс. 40 МБ)")
+
+    filename = f"story_{user_id}_{secrets.token_hex(10)}{ext}"
+    path = UPLOAD_DIR / filename
+    with open(path, "wb") as out:
+        out.write(data_bytes)
+    url = "/uploads/" + filename
+    created = now()
+    try:
+        exp_dt = datetime.utcnow() + timedelta(hours=24)
+        expires = exp_dt.isoformat() + "Z"
+    except Exception:
+        expires = created
+
+    connection = db()
+    cur = connection.execute(
+        """INSERT INTO stories (user_id, media_url, media_type, created_at, expires_at)
+           VALUES (?, ?, ?, ?, ?)""",
+        (user_id, url, media_type, created, expires),
+    )
+    sid = cur.lastrowid
+    connection.commit()
+    connection.close()
+    return {"ok": True, "id": sid, "media_url": url, "media_type": media_type, "created_at": created}
+
+
+@app.get("/api/users/{target_id}/stories")
+def get_user_stories(target_id: int, request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    rows = connection.execute("""
+        SELECT s.id, s.user_id, s.media_url, s.media_type, s.created_at, s.expires_at,
+               (SELECT COUNT(*) FROM story_likes WHERE story_id = s.id) AS likes_count,
+               (SELECT COUNT(*) FROM story_views WHERE story_id = s.id) AS views_count,
+               EXISTS(SELECT 1 FROM story_likes WHERE story_id = s.id AND user_id = ?) AS liked
+        FROM stories s
+        WHERE s.user_id = ? AND (s.expires_at IS NULL OR s.expires_at > ?)
+        ORDER BY s.id ASC
+    """, (user_id, target_id, now())).fetchall()
+    connection.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["liked"] = bool(d.get("liked"))
+        out.append(d)
+    return out
+
+
+@app.get("/api/stories/active-users")
+def stories_active_users(request: Request):
+    """id пользователей с активными историями (для обводок)."""
+    get_auth_user(request)
+    connection = db()
+    rows = connection.execute("""
+        SELECT DISTINCT user_id FROM stories
+        WHERE expires_at IS NULL OR expires_at > ?
+    """, (now(),)).fetchall()
+    connection.close()
+    return [r["user_id"] for r in rows]
+
+
+@app.post("/api/stories/{story_id}/view")
+def view_story(story_id: int, request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    story = connection.execute("SELECT id, user_id FROM stories WHERE id = ?", (story_id,)).fetchone()
+    if not story:
+        connection.close()
+        raise HTTPException(404, "История не найдена")
+    if story["user_id"] != user_id:
+        try:
+            connection.execute(
+                "INSERT OR IGNORE INTO story_views (story_id, user_id, created_at) VALUES (?, ?, ?)",
+                (story_id, user_id, now()),
+            )
+            connection.commit()
+        except Exception:
+            pass
+    cnt = connection.execute(
+        "SELECT COUNT(*) AS c FROM story_views WHERE story_id = ?", (story_id,)
+    ).fetchone()["c"]
+    connection.close()
+    return {"ok": True, "views_count": cnt}
+
+
+@app.post("/api/stories/{story_id}/like")
+def like_story(story_id: int, request: Request):
+    user_id = get_auth_user(request)
+    connection = db()
+    story = connection.execute("SELECT id, user_id FROM stories WHERE id = ?", (story_id,)).fetchone()
+    if not story:
+        connection.close()
+        raise HTTPException(404, "История не найдена")
+    existing = connection.execute(
+        "SELECT 1 FROM story_likes WHERE story_id = ? AND user_id = ?",
+        (story_id, user_id),
+    ).fetchone()
+    liked = False
+    if existing:
+        connection.execute(
+            "DELETE FROM story_likes WHERE story_id = ? AND user_id = ?",
+            (story_id, user_id),
+        )
+        liked = False
+    else:
+        connection.execute(
+            "INSERT INTO story_likes (story_id, user_id, created_at) VALUES (?, ?, ?)",
+            (story_id, user_id, now()),
+        )
+        liked = True
+        if story["user_id"] != user_id:
+            actor = connection.execute(
+                "SELECT username FROM users WHERE id = ?", (user_id,)
+            ).fetchone()
+            uname = (actor["username"] if actor else "user") or "user"
+            add_activity(
+                connection,
+                story["user_id"],
+                user_id,
+                "story_like",
+                f"@{uname} поставил(а) лайк вашей истории",
+                story_id,
+            )
+    count = connection.execute(
+        "SELECT COUNT(*) AS c FROM story_likes WHERE story_id = ?", (story_id,)
+    ).fetchone()["c"]
+    connection.commit()
+    connection.close()
+    return {"ok": True, "liked": liked, "likes_count": count}
 
 
 @app.get("/api/me/following")
